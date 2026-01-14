@@ -1,6 +1,6 @@
 window_title_regex: 'CHANGE_ME'
 phrase_regex: ""  # empty means any visible text
-poll_interval_seconds: 120
+poll_interval_seconds: 300
 max_history: 100
 state_file: "state.json"
 log_file: "logs/sentineltray.log"

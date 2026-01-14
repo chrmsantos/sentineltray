@@ -9,7 +9,7 @@ def test_load_config() -> None:
 
     assert config.window_title_regex == "Sino\\.Siscam\\.Desktop"
     assert config.phrase_regex == "ALERT"
-    assert config.poll_interval_seconds == 120
+    assert config.poll_interval_seconds == 300
     assert config.log_file == "logs/sentineltray.log"
     assert config.whatsapp.mode == "cloud_api"
     assert config.whatsapp.chat_target == ""
