@@ -31,7 +31,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - whatsapp.chat_target must match the chat name shown in WhatsApp Web
 - whatsapp.dry_run = false when ready to send
 
-Sensitive settings (like window_title_regex) can be stored in a local file:
+Sensitive settings (like window_title_regex and chat_target) can be stored in a local file:
 
 - %LOCALAPPDATA%\SentinelTray\config.local.yaml
 
@@ -53,3 +53,4 @@ python main.py --cli
 - Logs are kept with a max of 5 files in logs/.
 - state.json stores the last sent messages to avoid duplicates.
 - Runtime artifacts are ignored by git via .gitignore.
+- License: GPL-3.0-only.

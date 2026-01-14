@@ -10,3 +10,5 @@
 - Update Playwright dependency for Python 3.14.
 - Add local override config path for sensitive settings.
 - Rename project to SentinelTray.
+- Apply GPL-3.0-only license.
+- Remove chat_target from public configs.

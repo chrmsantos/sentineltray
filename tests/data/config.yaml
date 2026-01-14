@@ -6,7 +6,7 @@ state_file: "state.json"
 log_file: "logs/sentineltray.log"
 whatsapp:
   mode: "cloud_api"
-  chat_target: "Christian Martin dos Santos"
+  chat_target: ""
   user_data_dir: "whatsapp_session"
   timeout_seconds: 10
   dry_run: false
