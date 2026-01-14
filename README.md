@@ -26,7 +26,8 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - phrase_regex (empty means any visible text)
 - whatsapp.mode
 - whatsapp.chat_target or whatsapp.cloud_api
-- whatsapp.dry_run = false when ready
+- whatsapp.chat_target must match the chat name shown in WhatsApp Web
+- whatsapp.dry_run = false when ready to send
 
 ## Run
 

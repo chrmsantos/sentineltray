@@ -10,4 +10,6 @@ def test_load_config() -> None:
     assert config.window_title_regex == "Sino\\.Siscam\\.Desktop"
     assert config.phrase_regex == "ALERT"
     assert config.whatsapp.mode == "cloud_api"
+    assert config.whatsapp.chat_target == "Christian Martin dos Santos"
+    assert config.whatsapp.dry_run is False
     assert config.whatsapp.cloud_api.to == "5511999999999"

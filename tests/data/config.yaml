@@ -6,10 +6,10 @@ state_file: "state.json"
 log_file: "logs/notificator.log"
 whatsapp:
   mode: "cloud_api"
-  chat_target: ""
+  chat_target: "Christian Martin dos Santos"
   user_data_dir: "whatsapp_session"
   timeout_seconds: 10
-  dry_run: true
+  dry_run: false
   cloud_api:
     access_token: "token"
     phone_number_id: "123"
