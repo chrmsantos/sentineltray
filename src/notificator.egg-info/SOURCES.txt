@@ -8,10 +8,10 @@ src/sentineltray/logging_setup.py
 src/sentineltray/status.py
 src/sentineltray/tray_app.py
 src/sentineltray/whatsapp_sender.py
-src/notificator.egg-info/PKG-INFO
-src/notificator.egg-info/SOURCES.txt
-src/notificator.egg-info/dependency_links.txt
-src/notificator.egg-info/top_level.txt
+src/sentineltray.egg-info/PKG-INFO
+src/sentineltray.egg-info/SOURCES.txt
+src/sentineltray.egg-info/dependency_links.txt
+src/sentineltray.egg-info/top_level.txt
 tests/test_config.py
 tests/test_config_override.py
 tests/test_status.py
