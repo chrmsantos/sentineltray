@@ -7,6 +7,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - Windows user session (no admin required).
 - Python 3.11+.
 - WhatsApp Web login for web mode, or WhatsApp Cloud API credentials for cloud_api mode.
+- Python 3.14 uses PyYAML 6.0.3.
 
 ## Setup
 
@@ -24,6 +25,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 - window_title_regex
 - phrase_regex (empty means any visible text)
+- use single quotes for regex to avoid YAML escape issues
 - whatsapp.mode
 - whatsapp.chat_target or whatsapp.cloud_api
 - whatsapp.chat_target must match the chat name shown in WhatsApp Web

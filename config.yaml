@@ -1,4 +1,4 @@
-window_title_regex: "Sino\.Siscam\.Desktop"
+window_title_regex: 'Sino\.Siscam\.Desktop'
 phrase_regex: ""  # empty means any visible text
 poll_interval_seconds: 120
 max_history: 100

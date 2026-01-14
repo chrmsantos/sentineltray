@@ -3,3 +3,5 @@
 ## 2026-01-14
 
 - Initial notifier scaffold with window text detection and WhatsApp senders.
+- Update PyYAML dependency to support Python 3.14.
+- Fix YAML regex quoting to prevent parse errors.
