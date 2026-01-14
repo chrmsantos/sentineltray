@@ -1,0 +1,3 @@
+window_title_regex: 'SECRET_APP'
+whatsapp:
+  chat_target: "Local User"

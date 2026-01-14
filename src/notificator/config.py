@@ -41,9 +41,26 @@ def _get_required(data: dict[str, Any], key: str) -> Any:
     return data[key]
 
 
-def load_config(path: str) -> AppConfig:
-    config_path = Path(path)
-    data = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+def _load_yaml(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        raise FileNotFoundError(f"Config file not found: {path}")
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError("Config must be a mapping")
+    return data
+
+
+def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _merge_dicts(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _build_config(data: dict[str, Any]) -> AppConfig:
 
     whatsapp_data = _get_required(data, "whatsapp")
     cloud_data = _get_required(whatsapp_data, "cloud_api")
@@ -72,3 +89,15 @@ def load_config(path: str) -> AppConfig:
         log_file=str(_get_required(data, "log_file")),
         whatsapp=whatsapp,
     )
+
+
+def load_config(path: str) -> AppConfig:
+    data = _load_yaml(Path(path))
+    return _build_config(data)
+
+
+def load_config_with_override(base_path: str, override_path: str) -> AppConfig:
+    base = _load_yaml(Path(base_path))
+    override = _load_yaml(Path(override_path))
+    merged = _merge_dicts(base, override)
+    return _build_config(merged)

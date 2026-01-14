@@ -31,6 +31,13 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - whatsapp.chat_target must match the chat name shown in WhatsApp Web
 - whatsapp.dry_run = false when ready to send
 
+Sensitive settings (like window_title_regex) can be stored in a local file:
+
+- %LOCALAPPDATA%\Notificator\config.local.yaml
+
+This local file overrides config.yaml. You can also set NOTIFICATOR_CONFIG to
+point to a local config file.
+
 ## Run
 
 python main.py

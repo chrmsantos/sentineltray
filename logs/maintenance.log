@@ -1,7 +1,5 @@
-2026-01-14 config update: set chat_target and dry_run false
-2026-01-14 deps update: pyyaml 6.0.3 for py314
-2026-01-14 config fix: regex uses single quotes
-2026-01-14 cleanup: remove pycache and add gitignore
 2026-01-14 feature: tray app with live status
 2026-01-14 deps update: pillow 12.1.0 for py314
 2026-01-14 deps update: playwright 1.57.0 for py314
+2026-01-14 config: local override for sensitive fields
+2026-01-14 tests: add override config coverage

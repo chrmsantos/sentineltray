@@ -4,3 +4,5 @@ __pycache__/
 whatsapp_session/
 state.json
 logs/*.log
+config.local.yaml
+*.local.yaml
