@@ -1,0 +1,16 @@
+window_title_regex: "Sino\.Siscam\.Desktop"
+phrase_regex: "ALERT"
+poll_interval_seconds: 120
+max_history: 50
+state_file: "state.json"
+log_file: "logs/notificator.log"
+whatsapp:
+  mode: "cloud_api"
+  chat_target: ""
+  user_data_dir: "whatsapp_session"
+  timeout_seconds: 10
+  dry_run: true
+  cloud_api:
+    access_token: "token"
+    phone_number_id: "123"
+    to: "5511999999999"
