@@ -1,4 +1,4 @@
-from notificator.status import StatusStore, format_status
+from sentineltray.status import StatusStore, format_status
 
 
 def test_status_store_snapshot() -> None:

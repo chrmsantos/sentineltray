@@ -9,7 +9,7 @@
 - State is stored in state.json to prevent duplicate sends.
 - Logs rotate with a max of 5 files.
 - System tray UI shows status and controls exit.
-- Local override config can be loaded from %LOCALAPPDATA%\Notificator\config.local.yaml.
+- Local override config can be loaded from %LOCALAPPDATA%\SentinelTray\config.local.yaml.
 
 ## Data Flow
 

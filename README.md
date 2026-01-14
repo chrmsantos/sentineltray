@@ -1,4 +1,4 @@
-# Notificator
+# SentinelTray
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends a WhatsApp message when a phrase appears.
 
@@ -33,9 +33,9 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 Sensitive settings (like window_title_regex) can be stored in a local file:
 
-- %LOCALAPPDATA%\Notificator\config.local.yaml
+- %LOCALAPPDATA%\SentinelTray\config.local.yaml
 
-This local file overrides config.yaml. You can also set NOTIFICATOR_CONFIG to
+This local file overrides config.yaml. You can also set SENTINELTRAY_CONFIG to
 point to a local config file.
 
 ## Run

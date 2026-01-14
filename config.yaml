@@ -3,7 +3,7 @@ phrase_regex: ""  # empty means any visible text
 poll_interval_seconds: 120
 max_history: 100
 state_file: "state.json"
-log_file: "logs/notificator.log"
+log_file: "logs/sentineltray.log"
 whatsapp:
   mode: "web"  # web or cloud_api
   chat_target: ""  # chat name or phone with country code

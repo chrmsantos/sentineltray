@@ -4,9 +4,9 @@ import os
 import sys
 from pathlib import Path
 
-from notificator.app import run
-from notificator.config import load_config, load_config_with_override
-from notificator.tray_app import run_tray
+from sentineltray.app import run
+from sentineltray.config import load_config, load_config_with_override
+from sentineltray.tray_app import run_tray
 
 
 def main() -> int:
@@ -20,14 +20,14 @@ def main() -> int:
         else:
             override_path = Path(arg)
 
-    env_path = os.environ.get("NOTIFICATOR_CONFIG")
+    env_path = os.environ.get("SENTINELTRAY_CONFIG")
     if env_path:
         override_path = Path(env_path)
 
     if override_path is None:
         local_root = os.environ.get("LOCALAPPDATA")
         if local_root:
-            candidate = Path(local_root) / "Notificator" / "config.local.yaml"
+            candidate = Path(local_root) / "SentinelTray" / "config.local.yaml"
             if candidate.exists():
                 override_path = candidate
 

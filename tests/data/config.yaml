@@ -3,7 +3,7 @@ phrase_regex: "ALERT"
 poll_interval_seconds: 120
 max_history: 50
 state_file: "state.json"
-log_file: "logs/notificator.log"
+log_file: "logs/sentineltray.log"
 whatsapp:
   mode: "cloud_api"
   chat_target: "Christian Martin dos Santos"

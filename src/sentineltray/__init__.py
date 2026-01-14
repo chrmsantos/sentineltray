@@ -1,0 +1,1 @@
+"""SentinelTray package."""

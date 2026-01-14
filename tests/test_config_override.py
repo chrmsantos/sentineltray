@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from notificator.config import load_config_with_override
+from sentineltray.config import load_config_with_override
 
 
 def test_load_config_with_override() -> None:

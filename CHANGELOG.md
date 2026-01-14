@@ -9,3 +9,4 @@
 - Update Pillow dependency for Python 3.14 to 12.1.0.
 - Update Playwright dependency for Python 3.14.
 - Add local override config path for sensitive settings.
+- Rename project to SentinelTray.
