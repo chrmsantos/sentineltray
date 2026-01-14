@@ -8,6 +8,7 @@
   - cloud_api: WhatsApp Cloud API via HTTPS
 - State is stored in state.json to prevent duplicate sends.
 - Logs rotate with a max of 5 files.
+- System tray UI shows status and controls exit.
 
 ## Data Flow
 

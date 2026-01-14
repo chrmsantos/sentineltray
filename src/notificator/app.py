@@ -3,11 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import time
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
+from threading import Event
 
 from .config import AppConfig
 from .detector import WindowTextDetector
 from .logging_setup import setup_logging
+from .status import StatusStore
 from .whatsapp_sender import build_sender
 
 LOGGER = logging.getLogger(__name__)
@@ -33,33 +37,61 @@ def _normalize(text: str) -> str:
     return " ".join(text.split())
 
 
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).astimezone().replace(microsecond=0).isoformat()
+
+
+@dataclass
+class Notifier:
+    config: AppConfig
+    status: StatusStore
+
+    def __post_init__(self) -> None:
+        self._detector = WindowTextDetector(self.config.window_title_regex)
+        self._sender = build_sender(self.config.whatsapp)
+        self._state_path = Path(self.config.state_file)
+        self._history = _load_state(self._state_path)
+
+    def scan_once(self) -> None:
+        self.status.set_last_scan(_now_iso())
+        matches = self._detector.find_matches(self.config.phrase_regex)
+        normalized = [_normalize(text) for text in matches if text]
+        new_items = [text for text in normalized if text not in self._history]
+
+        if new_items:
+            self.status.set_last_match(new_items[0])
+
+        for text in new_items:
+            self._sender.send(text)
+            self.status.set_last_send(_now_iso())
+            LOGGER.info("Sent message")
+            self._history.append(text)
+
+        if len(self._history) > self.config.max_history:
+            self._history = self._history[-self.config.max_history :]
+            _save_state(self._state_path, self._history)
+        elif new_items:
+            _save_state(self._state_path, self._history)
+
+    def run_loop(self, stop_event: Event) -> None:
+        setup_logging(self.config.log_file)
+        LOGGER.info("Notifier started")
+        self.status.set_running(True)
+
+        while not stop_event.is_set():
+            try:
+                self.scan_once()
+            except Exception as exc:
+                self.status.set_last_error(str(exc))
+                LOGGER.exception("Loop error: %s", exc)
+
+            stop_event.wait(self.config.poll_interval_seconds)
+
+        self.status.set_running(False)
+
+
 def run(config: AppConfig) -> None:
-    setup_logging(config.log_file)
-    LOGGER.info("Notifier started")
-
-    detector = WindowTextDetector(config.window_title_regex)
-    sender = build_sender(config.whatsapp)
-
-    state_path = Path(config.state_file)
-    history = _load_state(state_path)
-
-    while True:
-        try:
-            matches = detector.find_matches(config.phrase_regex)
-            normalized = [_normalize(text) for text in matches if text]
-            new_items = [text for text in normalized if text not in history]
-
-            for text in new_items:
-                sender.send(text)
-                LOGGER.info("Sent message")
-                history.append(text)
-
-            if len(history) > config.max_history:
-                history = history[-config.max_history :]
-                _save_state(state_path, history)
-            elif new_items:
-                _save_state(state_path, history)
-        except Exception as exc:
-            LOGGER.exception("Loop error: %s", exc)
-
-        time.sleep(config.poll_interval_seconds)
+    status = StatusStore()
+    notifier = Notifier(config=config, status=status)
+    stop_event = Event()
+    notifier.run_loop(stop_event)

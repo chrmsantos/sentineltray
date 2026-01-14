@@ -35,6 +35,12 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 python main.py
 
+The app runs in the system tray by default. Use the tray menu to open Status.
+
+CLI mode (no tray):
+
+python main.py --cli
+
 ## Notes
 
 - Logs are kept with a max of 5 files in logs/.

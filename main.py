@@ -5,15 +5,24 @@ from pathlib import Path
 
 from notificator.app import run
 from notificator.config import load_config
+from notificator.tray_app import run_tray
 
 
 def main() -> int:
     config_path = Path("config.yaml")
-    if len(sys.argv) > 1:
-        config_path = Path(sys.argv[1])
+    use_cli = False
+    args = [arg for arg in sys.argv[1:] if arg]
+    for arg in args:
+        if arg == "--cli":
+            use_cli = True
+        else:
+            config_path = Path(arg)
 
     config = load_config(str(config_path))
-    run(config)
+    if use_cli:
+        run(config)
+    else:
+        run_tray(config)
     return 0
 
 

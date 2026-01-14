@@ -1,0 +1,95 @@
+from __future__ import annotations
+
+import logging
+from threading import Event, Thread
+from typing import Optional
+
+from PIL import Image, ImageDraw
+import pystray
+import tkinter as tk
+
+from .app import Notifier
+from .config import AppConfig
+from .status import StatusStore, format_status
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _build_image() -> Image.Image:
+    image = Image.new("RGB", (64, 64), color=(30, 30, 30))
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((8, 8, 56, 56), outline=(0, 200, 0), width=4)
+    draw.rectangle((20, 20, 44, 44), fill=(0, 200, 0))
+    return image
+
+
+def _start_notifier(config: AppConfig, status: StatusStore, stop_event: Event) -> Thread:
+    notifier = Notifier(config=config, status=status)
+    thread = Thread(target=notifier.run_loop, args=(stop_event,), daemon=True)
+    thread.start()
+    return thread
+
+
+def run_tray(config: AppConfig) -> None:
+    status = StatusStore()
+    stop_event = Event()
+    notifier_thread = _start_notifier(config, status, stop_event)
+
+    root = tk.Tk()
+    root.withdraw()
+
+    status_window: Optional[tk.Toplevel] = None
+    status_label: Optional[tk.Label] = None
+
+    def refresh_status() -> None:
+        nonlocal status_label
+        if status_label is not None and status_label.winfo_exists():
+            snapshot = status.snapshot()
+            status_label.config(text=format_status(snapshot))
+        root.after(1000, refresh_status)
+
+    def show_status() -> None:
+        nonlocal status_window, status_label
+        if status_window is not None and status_window.winfo_exists():
+            status_window.deiconify()
+            status_window.lift()
+            return
+
+        status_window = tk.Toplevel(root)
+        status_window.title("Notifier Status")
+        status_window.geometry("520x180")
+        status_window.resizable(False, False)
+
+        status_label = tk.Label(
+            status_window,
+            text=format_status(status.snapshot()),
+            justify="left",
+            anchor="nw",
+            font=("Consolas", 10),
+        )
+        status_label.pack(fill="both", expand=True, padx=10, pady=10)
+
+    def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:
+        root.after(0, show_status)
+
+    def on_exit(_: pystray.Icon, __: pystray.MenuItem) -> None:
+        stop_event.set()
+        root.after(0, root.quit)
+
+    icon = pystray.Icon(
+        "notificator",
+        _build_image(),
+        "Notificator",
+        menu=pystray.Menu(
+            pystray.MenuItem("Status", on_status),
+            pystray.MenuItem("Exit", on_exit),
+        ),
+    )
+
+    icon.run_detached()
+    root.after(1000, refresh_status)
+    root.mainloop()
+
+    icon.stop()
+    stop_event.set()
+    notifier_thread.join(timeout=5)

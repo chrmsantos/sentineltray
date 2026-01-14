@@ -5,3 +5,6 @@
 - Initial notifier scaffold with window text detection and WhatsApp senders.
 - Update PyYAML dependency to support Python 3.14.
 - Fix YAML regex quoting to prevent parse errors.
+- Add system tray UI with live status window.
+- Update Pillow dependency for Python 3.14 to 12.1.0.
+- Update Playwright dependency for Python 3.14.
