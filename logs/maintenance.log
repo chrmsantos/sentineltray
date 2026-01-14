@@ -1,5 +1,5 @@
-2026-01-14 deps update: pillow 12.1.0 for py314
 2026-01-14 deps update: playwright 1.57.0 for py314
 2026-01-14 config: local override for sensitive fields
 2026-01-14 tests: add override config coverage
 2026-01-14 rename: project to SentinelTray
+2026-01-14 cleanup: remove legacy wrappers
