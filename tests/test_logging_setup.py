@@ -22,6 +22,8 @@ def test_setup_logging_creates_run_log_and_prunes(tmp_path: Path) -> None:
     logs = sorted(log_dir.glob("sentineltray_*.log"))
     assert len(logs) == 5
     assert any(path not in existing for path in logs)
+    assert logging.getLogger("PIL").level == logging.WARNING
+    assert logging.getLogger("PIL.Image").level == logging.WARNING
 
     for handler in logging.getLogger().handlers:
         handler.close()

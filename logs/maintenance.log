@@ -3,3 +3,4 @@
 2026-01-14 license: add GPL-3.0-only
 2026-01-14 privacy: remove public chat_target
 2026-01-14 config: poll interval set to 300s
+2026-01-14 logging: suppress third-party debug noise

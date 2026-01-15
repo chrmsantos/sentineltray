@@ -15,3 +15,4 @@
 - Enforce WhatsApp Web as the only supported send mode.
 - Auto-create and open local override config when missing or invalid.
 - Create per-run detailed logs and retain only the last 5 files.
+- Suppress noisy third-party debug logs in per-run files.
