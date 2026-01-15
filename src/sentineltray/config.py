@@ -8,20 +8,12 @@ import yaml
 
 
 @dataclass(frozen=True)
-class CloudApiConfig:
-    access_token: str
-    phone_number_id: str
-    to: str
-
-
-@dataclass(frozen=True)
 class WhatsappConfig:
     mode: str
     chat_target: str
     user_data_dir: str
     timeout_seconds: int
     dry_run: bool
-    cloud_api: CloudApiConfig
 
 
 @dataclass(frozen=True)
@@ -62,21 +54,12 @@ def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, An
 
 def _build_config(data: dict[str, Any]) -> AppConfig:
     whatsapp_data = _get_required(data, "whatsapp")
-    cloud_data = _get_required(whatsapp_data, "cloud_api")
-
-    cloud_api = CloudApiConfig(
-        access_token=str(_get_required(cloud_data, "access_token")),
-        phone_number_id=str(_get_required(cloud_data, "phone_number_id")),
-        to=str(_get_required(cloud_data, "to")),
-    )
-
     whatsapp = WhatsappConfig(
         mode=str(_get_required(whatsapp_data, "mode")),
         chat_target=str(_get_required(whatsapp_data, "chat_target")),
         user_data_dir=str(_get_required(whatsapp_data, "user_data_dir")),
         timeout_seconds=int(_get_required(whatsapp_data, "timeout_seconds")),
         dry_run=bool(_get_required(whatsapp_data, "dry_run")),
-        cloud_api=cloud_api,
     )
 
     return AppConfig(

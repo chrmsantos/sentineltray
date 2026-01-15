@@ -12,3 +12,5 @@
 - Rename project to SentinelTray.
 - Apply GPL-3.0-only license.
 - Remove chat_target from public configs.
+- Enforce WhatsApp Web as the only supported send mode.
+- Auto-create and open local override config when missing or invalid.

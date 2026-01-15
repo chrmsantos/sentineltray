@@ -8,11 +8,57 @@ from sentineltray.app import run
 from sentineltray.config import load_config, load_config_with_override
 from sentineltray.tray_app import run_tray
 
+LOCAL_TEMPLATE = """# SentinelTray local overrides
+# Fill the values below and restart the app.
+
+window_title_regex: ""
+phrase_regex: ""
+whatsapp:
+  chat_target: ""
+"""
+
+
+def _open_for_editing(path: Path) -> None:
+    if hasattr(os, "startfile"):
+        try:
+            os.startfile(str(path))
+        except OSError:
+            return
+
+
+def _write_local_template(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(LOCAL_TEMPLATE, encoding="utf-8")
+
+
+def _ensure_local_override(path: Path) -> None:
+    if not path.exists():
+        _write_local_template(path)
+        _open_for_editing(path)
+        raise SystemExit(f"Local config created at {path}. Fill it and restart.")
+
+    content = path.read_text(encoding="utf-8").strip()
+    if not content:
+        _write_local_template(path)
+        _open_for_editing(path)
+        raise SystemExit(f"Local config is empty at {path}. Fill it and restart.")
+
+
+def _load_local_override(config_path: Path, override_path: Path):
+    try:
+        return load_config_with_override(str(config_path), str(override_path))
+    except Exception as exc:
+        _open_for_editing(override_path)
+        raise SystemExit(
+            f"Local config has errors at {override_path}. Fix and restart."
+        ) from exc
+
 
 def main() -> int:
     config_path = Path("config.yaml")
     use_cli = False
     override_path: Path | None = None
+    local_override: Path | None = None
     args = [arg for arg in sys.argv[1:] if arg]
     for arg in args:
         if arg == "--cli":
@@ -28,10 +74,14 @@ def main() -> int:
         local_root = os.environ.get("LOCALAPPDATA")
         if local_root:
             candidate = Path(local_root) / "SentinelTray" / "config.local.yaml"
+            local_override = candidate
             if candidate.exists():
                 override_path = candidate
 
-    if override_path is not None:
+    if local_override is not None and override_path == local_override:
+        _ensure_local_override(local_override)
+        config = _load_local_override(config_path, local_override)
+    elif override_path is not None:
         config = load_config_with_override(str(config_path), str(override_path))
     else:
         config = load_config(str(config_path))

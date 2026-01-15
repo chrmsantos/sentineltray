@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 
-import requests
 from playwright.sync_api import sync_playwright
 
 from .config import WhatsappConfig
@@ -52,41 +50,8 @@ class WebWhatsappSender(WhatsappSender):
             context.close()
 
 
-@dataclass
-class CloudApiWhatsappSender(WhatsappSender):
-    config: WhatsappConfig
-
-    def send(self, message: str) -> None:
-        if self.config.dry_run:
-            LOGGER.info("Dry run enabled, skipping send")
-            return
-
-        api = self.config.cloud_api
-        if not (api.access_token and api.phone_number_id and api.to):
-            raise ValueError("cloud_api access_token, phone_number_id, to are required")
-
-        url = (
-            f"https://graph.facebook.com/v19.0/"
-            f"{api.phone_number_id}/messages"
-        )
-        headers = {
-            "Authorization": f"Bearer {api.access_token}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": api.to,
-            "type": "text",
-            "text": {"body": message},
-        }
-        response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=30)
-        response.raise_for_status()
-
-
 def build_sender(config: WhatsappConfig) -> WhatsappSender:
     mode = config.mode.lower().strip()
     if mode == "web":
         return WebWhatsappSender(config=config)
-    if mode == "cloud_api":
-        return CloudApiWhatsappSender(config=config)
-    raise ValueError(f"Unsupported whatsapp mode: {config.mode}")
+    raise ValueError("Only web mode is supported")

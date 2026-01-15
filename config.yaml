@@ -1,16 +1,12 @@
-window_title_regex: 'CHANGE_ME'
+window_title_regex: 'Sino.Siscam.Desktop'
 phrase_regex: ""  # empty means any visible text
 poll_interval_seconds: 300
 max_history: 100
 state_file: "state.json"
 log_file: "logs/sentineltray.log"
 whatsapp:
-  mode: "web"  # web or cloud_api
+  mode: "web"  # web only
   chat_target: ""  # chat name or phone with country code
   user_data_dir: "whatsapp_session"
   timeout_seconds: 45
   dry_run: false
-  cloud_api:
-    access_token: ""
-    phone_number_id: ""
-    to: ""

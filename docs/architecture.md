@@ -3,15 +3,13 @@
 ## Overview
 
 - Window text detection uses UI Automation via pywinauto.
-- WhatsApp delivery supports two modes:
-  - web: WhatsApp Web via Playwright with persistent session
-  - cloud_api: WhatsApp Cloud API via HTTPS
+- WhatsApp delivery uses WhatsApp Web via Playwright with persistent session.
 - State is stored in state.json to prevent duplicate sends.
 - Logs rotate with a max of 5 files.
 - System tray UI shows status and controls exit.
 - Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
-- Cloud API send tests use mocked HTTP calls to avoid external traffic.
 - Local override config can be loaded from %LOCALAPPDATA%\SentinelTray\config.local.yaml.
+- Missing, empty, or invalid local override triggers file creation and edit prompt.
 
 ## Data Flow
 

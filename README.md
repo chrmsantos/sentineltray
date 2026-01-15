@@ -6,7 +6,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 - Windows user session (no admin required).
 - Python 3.11+.
-- WhatsApp Web login for web mode, or WhatsApp Cloud API credentials for cloud_api mode.
+- WhatsApp Web login for web mode.
 - Python 3.14 uses PyYAML 6.0.3.
 
 ## Setup
@@ -17,7 +17,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
    .venv\Scripts\activate
    pip install -r requirements.txt
 
-2. If using web mode, install Playwright browsers once:
+2. Install Playwright browsers once:
 
    python -m playwright install
 
@@ -27,7 +27,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - phrase_regex (empty means any visible text)
 - use single quotes for regex to avoid YAML escape issues
 - whatsapp.mode
-- whatsapp.chat_target or whatsapp.cloud_api
+- whatsapp.chat_target
 - whatsapp.chat_target must match the chat name shown in WhatsApp Web
 - whatsapp.dry_run = false when ready to send
 
@@ -37,6 +37,9 @@ Sensitive settings (like window_title_regex and chat_target) can be stored in a 
 
 This local file overrides config.yaml. You can also set SENTINELTRAY_CONFIG to
 point to a local config file.
+
+If config.local.yaml is missing, empty, or invalid, the app creates it,
+opens it for editing, and exits so you can fill it.
 
 ## Run
 
