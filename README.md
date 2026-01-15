@@ -33,7 +33,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 Sensitive settings (like window_title_regex and chat_target) can be stored in a local file:
 
-- %LOCALAPPDATA%\SentinelTray\config.local.yaml
+- %USERPROFILE%\sentineltray\config.local.yaml
 
 This local file overrides config.yaml. You can also set SENTINELTRAY_CONFIG to
 point to a local config file.

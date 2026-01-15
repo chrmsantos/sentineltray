@@ -71,9 +71,9 @@ def main() -> int:
         override_path = Path(env_path)
 
     if override_path is None:
-        local_root = os.environ.get("LOCALAPPDATA")
-        if local_root:
-            candidate = Path(local_root) / "SentinelTray" / "config.local.yaml"
+        user_root = os.environ.get("USERPROFILE")
+        if user_root:
+            candidate = Path(user_root) / "sentineltray" / "config.local.yaml"
             local_override = candidate
             if candidate.exists():
                 override_path = candidate
