@@ -18,8 +18,8 @@ LOGGER = logging.getLogger(__name__)
 def _build_image() -> Image.Image:
     image = Image.new("RGB", (64, 64), color=(30, 30, 30))
     draw = ImageDraw.Draw(image)
-    draw.rectangle((8, 8), (56, 56), outline=(0, 200, 0), width=4)
-    draw.rectangle((20, 20), (44, 44), fill=(0, 200, 0))
+    draw.rectangle((8, 8, 56, 56), outline=(0, 200, 0), width=4)
+    draw.rectangle((20, 20, 44, 44), fill=(0, 200, 0))
     return image
 
 

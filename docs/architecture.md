@@ -9,6 +9,7 @@
 - State is stored in state.json to prevent duplicate sends.
 - Logs rotate with a max of 5 files.
 - System tray UI shows status and controls exit.
+- Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
 - Local override config can be loaded from %LOCALAPPDATA%\SentinelTray\config.local.yaml.
 
 ## Data Flow
