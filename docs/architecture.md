@@ -10,6 +10,7 @@
 - Logs rotate with a max of 5 files.
 - System tray UI shows status and controls exit.
 - Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
+- Cloud API send tests use mocked HTTP calls to avoid external traffic.
 - Local override config can be loaded from %LOCALAPPDATA%\SentinelTray\config.local.yaml.
 
 ## Data Flow
