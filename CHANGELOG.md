@@ -17,3 +17,4 @@
 - Create per-run detailed logs and retain only the last 5 files.
 - Suppress noisy third-party debug logs in per-run files.
 - Move local override config to %USERPROFILE%\sentineltray.
+- Add local template files with commented guidance.

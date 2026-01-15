@@ -11,6 +11,7 @@
 - Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
 - Local override config can be loaded from %USERPROFILE%\sentineltray\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
+- Local file templates live under templates/local/.
 
 ## Data Flow
 

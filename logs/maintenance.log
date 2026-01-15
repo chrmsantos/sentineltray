@@ -5,3 +5,4 @@
 2026-01-14 config: poll interval set to 300s
 2026-01-14 logging: suppress third-party debug noise
 2026-01-14 config: local override path moved to %USERPROFILE%\sentineltray
+2026-01-14 docs: add local file templates

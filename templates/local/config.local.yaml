@@ -1,0 +1,12 @@
+# Template de configuracao local (copie para %USERPROFILE%\sentineltray\config.local.yaml)
+# Edite os valores abaixo e reinicie o app.
+
+# Janela alvo (regex). Use aspas simples para evitar escapes do YAML.
+window_title_regex: 'Sino\.Siscam\.Desktop'
+
+# Filtro de texto (regex). Vazio significa qualquer texto.
+phrase_regex: 'ALERTA TESTE'
+
+whatsapp:
+  # Nome exato do contato/grupo exibido no WhatsApp Web.
+  chat_target: 'Operador Exemplo'

@@ -41,6 +41,9 @@ point to a local config file.
 If config.local.yaml is missing, empty, or invalid, the app creates it,
 opens it for editing, and exits so you can fill it.
 
+Local templates are available at templates/local/ with commented instructions
+and sample data.
+
 ## Run
 
 python main.py
