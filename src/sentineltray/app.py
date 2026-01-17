@@ -5,6 +5,7 @@ import hashlib
 import importlib.metadata
 import json
 import logging
+import os
 import shutil
 import time
 from dataclasses import dataclass
