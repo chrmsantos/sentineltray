@@ -15,6 +15,7 @@
 - Validate configuration values at startup.
 - Add watchdog for long scan stalls.
 - Auto-create local override config on startup when missing.
+- Enforce sensitive data paths under user local sentineltray folder.
 
 ## 2026-01-14
 

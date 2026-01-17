@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+import os
 from pathlib import Path
 from typing import Any
 
@@ -95,8 +96,39 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         watchdog_restart=bool(_get_required(data, "watchdog_restart")),
         whatsapp=whatsapp,
     )
+    config = _apply_sensitive_path_policy(config)
     _validate_config(config)
     return config
+
+
+def _resolve_sensitive_path(base: Path, value: str) -> str:
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        return str(base / candidate)
+    try:
+        if candidate.resolve().is_relative_to(base.resolve()):
+            return str(candidate)
+    except OSError:
+        pass
+    return str(base / candidate.name)
+
+
+def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
+    user_root = os.environ.get("USERPROFILE")
+    if not user_root:
+        raise ValueError("USERPROFILE is required for sensitive data storage")
+    base = Path(user_root) / "sentineltray"
+
+    return replace(
+        config,
+        state_file=_resolve_sensitive_path(base, config.state_file),
+        log_file=_resolve_sensitive_path(base, config.log_file),
+        telemetry_file=_resolve_sensitive_path(base, config.telemetry_file),
+        whatsapp=replace(
+            config.whatsapp,
+            user_data_dir=_resolve_sensitive_path(base, config.whatsapp.user_data_dir),
+        ),
+    )
 
 
 def _validate_config(config: AppConfig) -> None:

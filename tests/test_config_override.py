@@ -1,9 +1,12 @@
 from pathlib import Path
 
+import pytest
+
 from sentineltray.config import load_config_with_override
 
 
-def test_load_config_with_override() -> None:
+def test_load_config_with_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
     base_path = Path(__file__).parent / "data" / "config.yaml"
     override_path = Path(__file__).parent / "data" / "config_override.yaml"
 

@@ -73,3 +73,4 @@ python main.py --cli
 - WhatsApp Web login expiration is detected and reported as a specific error.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
+- Sensitive data is always stored under %USERPROFILE%\sentineltray.

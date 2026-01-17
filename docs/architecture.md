@@ -21,6 +21,7 @@
 - WhatsApp Web login expiration is detected and reported as a specific error.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
+- Sensitive data paths are enforced under %USERPROFILE%\sentineltray.
 - Local override config can be loaded from %USERPROFILE%\sentineltray\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
 - Local file templates live under templates/local/.

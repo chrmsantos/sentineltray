@@ -2,7 +2,7 @@
 # Edite os valores abaixo e reinicie o app.
 
 # Janela alvo (regex). Use aspas simples para evitar escapes do YAML.
-window_title_regex: 'Sino\.Siscam\.Desktop'
+window_title_regex: ''
 
 # Filtro de texto (regex). Vazio significa qualquer texto.
 phrase_regex: 'ALERTA TESTE'
@@ -17,7 +17,7 @@ error_backoff_max_seconds: 300
 # Debounce de mensagens repetidas.
 debounce_seconds: 600
 
-# Arquivo de telemetria local.
+# Arquivo de telemetria local. Caminhos sensiveis sao mantidos em %USERPROFILE%\sentineltray.
 telemetry_file: "logs/telemetry.json"
 
 # Modo silencioso (nao abre janela de erro).
