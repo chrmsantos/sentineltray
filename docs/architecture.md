@@ -9,6 +9,7 @@
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
 - Errors in each polling iteration are reported on screen and via WhatsApp.
+- A startup test message is sent via WhatsApp on each run to confirm delivery.
 - Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
 - Local override config can be loaded from %USERPROFILE%\sentineltray\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.

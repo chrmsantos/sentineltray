@@ -60,5 +60,6 @@ python main.py --cli
 - Third-party debug logs are suppressed to keep logs actionable.
 - state.json stores the last sent messages to avoid duplicates.
 - Errors detected in each polling iteration are reported on screen and via WhatsApp.
+- A startup test message is sent via WhatsApp on each run to confirm delivery.
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.

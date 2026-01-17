@@ -3,6 +3,7 @@
 ## 2026-01-16
 
 - Report per-iteration monitoring errors on screen and via WhatsApp.
+- Send a startup WhatsApp test message on each run.
 
 ## 2026-01-14
 

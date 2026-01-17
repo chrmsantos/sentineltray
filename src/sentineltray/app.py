@@ -81,10 +81,21 @@ class Notifier:
         except Exception as exc:
             LOGGER.exception("Failed to send error notification: %s", exc)
 
+    def _send_startup_test(self) -> None:
+        message = "info: startup test message"
+        try:
+            self._sender.send(message)
+            self.status.set_last_send(_now_iso())
+            LOGGER.info("Sent startup test message")
+        except Exception as exc:
+            error_message = f"error: startup test send failed: {exc}"
+            self._handle_error(error_message)
+
     def run_loop(self, stop_event: Event) -> None:
         setup_logging(self.config.log_file)
         LOGGER.info("SentinelTray started")
         self.status.set_running(True)
+        self._send_startup_test()
 
         while not stop_event.is_set():
             try:
