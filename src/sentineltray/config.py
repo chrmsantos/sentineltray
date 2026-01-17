@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,12 @@ class AppConfig:
     max_history: int
     state_file: str
     log_file: str
+    log_level: str
+    log_console_level: str
+    log_console_enabled: bool
+    log_max_bytes: int
+    log_backup_count: int
+    log_run_files_keep: int
     telemetry_file: str
     status_export_file: str
     status_export_csv: str
@@ -117,6 +124,12 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         max_history=int(_get_required(data, "max_history")),
         state_file=str(_get_required(data, "state_file")),
         log_file=str(_get_required(data, "log_file")),
+        log_level=str(_get_required(data, "log_level")),
+        log_console_level=str(_get_required(data, "log_console_level")),
+        log_console_enabled=bool(_get_required(data, "log_console_enabled")),
+        log_max_bytes=int(_get_required(data, "log_max_bytes")),
+        log_backup_count=int(_get_required(data, "log_backup_count")),
+        log_run_files_keep=int(_get_required(data, "log_run_files_keep")),
         telemetry_file=str(_get_required(data, "telemetry_file")),
         status_export_file=str(_get_required(data, "status_export_file")),
         status_export_csv=str(_get_required(data, "status_export_csv")),
@@ -183,6 +196,16 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("state_file is required")
     if not config.log_file:
         raise ValueError("log_file is required")
+    if config.log_max_bytes < 1024:
+        raise ValueError("log_max_bytes must be >= 1024")
+    if config.log_backup_count < 0:
+        raise ValueError("log_backup_count must be >= 0")
+    if config.log_run_files_keep < 1:
+        raise ValueError("log_run_files_keep must be >= 1")
+    if str(config.log_level).upper() not in logging._nameToLevel:
+        raise ValueError("log_level must be a valid logging level")
+    if str(config.log_console_level).upper() not in logging._nameToLevel:
+        raise ValueError("log_console_level must be a valid logging level")
     if not config.telemetry_file:
         raise ValueError("telemetry_file is required")
     if not config.status_export_file:
