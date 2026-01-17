@@ -11,8 +11,17 @@ def test_prepare_window_restores_minimized(monkeypatch) -> None:
         def is_minimized(self) -> bool:
             return True
 
+        def is_maximized(self) -> bool:
+            return False
+
         def restore(self) -> None:
             calls.append("restore")
+
+        def maximize(self) -> None:
+            calls.append("maximize")
+
+        def minimize(self) -> None:
+            calls.append("minimize")
 
         def set_focus(self) -> None:
             calls.append("focus")
@@ -33,3 +42,5 @@ def test_prepare_window_restores_minimized(monkeypatch) -> None:
 
     assert "restore" in calls
     assert "focus" in calls
+    assert "maximize" in calls
+    assert "minimize" in calls
