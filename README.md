@@ -63,5 +63,6 @@ python main.py --cli
 - A startup test message is sent via WhatsApp on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via WhatsApp.
 - Consecutive errors trigger exponential backoff before the next scan.
+- Repeated messages are debounced by time window to avoid spam.
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.

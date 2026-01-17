@@ -11,6 +11,7 @@ def test_handle_error_sets_status_and_sends() -> None:
         healthcheck_interval_seconds=3600,
         error_backoff_base_seconds=5,
         error_backoff_max_seconds=300,
+        debounce_seconds=600,
         max_history=10,
         state_file="state.json",
         log_file="logs/sentineltray.log",

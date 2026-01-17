@@ -13,6 +13,7 @@ def test_load_config() -> None:
     assert config.healthcheck_interval_seconds == 3600
     assert config.error_backoff_base_seconds == 5
     assert config.error_backoff_max_seconds == 300
+    assert config.debounce_seconds == 600
     assert config.log_file == "logs/sentineltray.log"
     assert config.whatsapp.mode == "web"
     assert config.whatsapp.chat_target == ""

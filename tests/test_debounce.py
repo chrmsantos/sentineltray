@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta, timezone
+
 from sentineltray.app import Notifier
 from sentineltray.config import AppConfig, WhatsappConfig
 from sentineltray.status import StatusStore
 
 
-def test_send_startup_test_message_sends_and_updates_status() -> None:
+def test_debounce_skips_recent_messages() -> None:
     config = AppConfig(
         window_title_regex="APP",
         phrase_regex="ALERT",
@@ -26,16 +28,27 @@ def test_send_startup_test_message_sends_and_updates_status() -> None:
     status = StatusStore()
     notifier = Notifier(config=config, status=status)
 
-    sent: list[str] = []
+    now = datetime.now(timezone.utc)
+    notifier._last_sent = {
+        "recent": now,
+        "old": now - timedelta(seconds=700),
+    }
+
+    class FakeDetector:
+        def find_matches(self, _: str) -> list[str]:
+            return ["recent", "old"]
 
     class FakeSender:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
         def send(self, message: str) -> None:
-            sent.append(message)
+            self.sent.append(message)
 
-    notifier._sender = FakeSender()
+    notifier._detector = FakeDetector()
+    sender = FakeSender()
+    notifier._sender = sender
 
-    notifier._send_startup_test()
+    notifier.scan_once()
 
-    snapshot = status.snapshot()
-    assert sent == ["info: startup test message"]
-    assert snapshot.last_send
+    assert sender.sent == ["old"]

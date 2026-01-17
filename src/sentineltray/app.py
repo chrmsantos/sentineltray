@@ -17,19 +17,30 @@ from .whatsapp_sender import build_sender
 LOGGER = logging.getLogger(__name__)
 
 
-def _load_state(path: Path) -> list[str]:
+def _load_state(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(data, list):
-            return [str(item) for item in data]
+            if all(isinstance(item, str) for item in data):
+                now = _now_iso()
+                return [{"text": str(item), "sent_at": now} for item in data]
+            items: list[dict[str, str]] = []
+            for item in data:
+                if not isinstance(item, dict):
+                    continue
+                text = item.get("text")
+                sent_at = item.get("sent_at")
+                if isinstance(text, str) and isinstance(sent_at, str):
+                    items.append({"text": text, "sent_at": sent_at})
+            return items
     except Exception:
         return []
     return []
 
 
-def _save_state(path: Path, items: list[str]) -> None:
+def _save_state(path: Path, items: list[dict[str, str]]) -> None:
     path.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
@@ -55,28 +66,57 @@ class Notifier:
         self._sender = build_sender(self.config.whatsapp)
         self._state_path = Path(self.config.state_file)
         self._history = _load_state(self._state_path)
+        self._last_sent = self._build_last_sent_map(self._history)
         self._started_at = datetime.now(timezone.utc)
         self._next_healthcheck = time.monotonic() + self.config.healthcheck_interval_seconds
+
+    def _build_last_sent_map(self, history: list[dict[str, str]]) -> dict[str, datetime]:
+        last_sent: dict[str, datetime] = {}
+        for item in history:
+            text = item.get("text")
+            sent_at = item.get("sent_at")
+            if not isinstance(text, str) or not isinstance(sent_at, str):
+                continue
+            try:
+                timestamp = datetime.fromisoformat(sent_at)
+            except ValueError:
+                continue
+            last_sent[text] = timestamp
+        return last_sent
 
     def scan_once(self) -> None:
         self.status.set_last_scan(_now_iso())
         matches = self._detector.find_matches(self.config.phrase_regex)
         normalized = [_normalize(text) for text in matches if text]
-        new_items = [text for text in normalized if text not in self._history]
+        now = datetime.now(timezone.utc)
+        send_items: list[str] = []
+        for text in normalized:
+            last_sent = self._last_sent.get(text)
+            if last_sent is None:
+                send_items.append(text)
+                continue
+            age_seconds = int((now - last_sent).total_seconds())
+            if age_seconds >= self.config.debounce_seconds:
+                send_items.append(text)
+            else:
+                LOGGER.info("Debounce active for %s (age %s seconds)", text, age_seconds)
 
-        if new_items:
-            self.status.set_last_match(new_items[0])
+        if normalized:
+            self.status.set_last_match(normalized[0])
 
-        for text in new_items:
+        for text in send_items:
             self._sender.send(text)
             self.status.set_last_send(_now_iso())
             LOGGER.info("Sent message")
-            self._history.append(text)
+            sent_at = _now_iso()
+            self._history.append({"text": text, "sent_at": sent_at})
+            self._last_sent[text] = datetime.fromisoformat(sent_at)
 
         if len(self._history) > self.config.max_history:
             self._history = self._history[-self.config.max_history :]
+            self._last_sent = self._build_last_sent_map(self._history)
             _save_state(self._state_path, self._history)
-        elif new_items:
+        elif send_items:
             _save_state(self._state_path, self._history)
 
     def _handle_error(self, message: str) -> None:
