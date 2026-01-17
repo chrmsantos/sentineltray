@@ -12,6 +12,7 @@
 - Add local telemetry file for diagnostics.
 - Add silent mode for error popup suppression.
 - Detect WhatsApp Web login expiration.
+- Validate configuration values at startup.
 
 ## 2026-01-14
 

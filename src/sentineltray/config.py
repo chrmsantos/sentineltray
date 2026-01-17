@@ -68,7 +68,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         dry_run=bool(_get_required(whatsapp_data, "dry_run")),
     )
 
-    return AppConfig(
+    config = AppConfig(
         window_title_regex=str(_get_required(data, "window_title_regex")),
         phrase_regex=str(_get_required(data, "phrase_regex")),
         poll_interval_seconds=int(_get_required(data, "poll_interval_seconds")),
@@ -89,6 +89,31 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         show_error_window=bool(_get_required(data, "show_error_window")),
         whatsapp=whatsapp,
     )
+    _validate_config(config)
+    return config
+
+
+def _validate_config(config: AppConfig) -> None:
+    if config.poll_interval_seconds < 1:
+        raise ValueError("poll_interval_seconds must be >= 1")
+    if config.healthcheck_interval_seconds < 1:
+        raise ValueError("healthcheck_interval_seconds must be >= 1")
+    if config.error_backoff_base_seconds < 1:
+        raise ValueError("error_backoff_base_seconds must be >= 1")
+    if config.error_backoff_max_seconds < config.error_backoff_base_seconds:
+        raise ValueError("error_backoff_max_seconds must be >= error_backoff_base_seconds")
+    if config.debounce_seconds < 0:
+        raise ValueError("debounce_seconds must be >= 0")
+    if config.max_history < 1:
+        raise ValueError("max_history must be >= 1")
+    if not config.state_file:
+        raise ValueError("state_file is required")
+    if not config.log_file:
+        raise ValueError("log_file is required")
+    if not config.telemetry_file:
+        raise ValueError("telemetry_file is required")
+    if config.whatsapp.timeout_seconds < 1:
+        raise ValueError("whatsapp.timeout_seconds must be >= 1")
 
 
 def load_config(path: str) -> AppConfig:
