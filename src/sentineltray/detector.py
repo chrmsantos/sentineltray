@@ -32,15 +32,34 @@ class WindowTextDetector:
         except Exception as exc:
             raise RuntimeError("Target window could not be restored") from exc
 
-        try:
-            window.wait("visible", timeout=2)
-        except Exception:
+        last_exc: Exception | None = None
+        timeouts = (2, 3, 4)
+        for timeout in timeouts:
             try:
-                if hasattr(window, "restore"):
-                    window.restore()
-                window.wait("visible", timeout=2)
+                window.wait("visible", timeout=timeout)
+                return
             except Exception as exc:
-                raise RuntimeError("Target window not visible") from exc
+                last_exc = exc
+                LOGGER.info(
+                    "Target window not visible (retrying)",
+                    extra={"category": "scan"},
+                )
+                try:
+                    if hasattr(window, "restore"):
+                        window.restore()
+                    if hasattr(window, "set_focus"):
+                        window.set_focus()
+                    if hasattr(window, "is_maximized") and not window.is_maximized():
+                        if hasattr(window, "maximize"):
+                            window.maximize()
+                except Exception:
+                    LOGGER.debug("Window restore retry failed", exc_info=True)
+                time.sleep(0.5)
+                try:
+                    window = self._get_window()
+                except Exception:
+                    continue
+        raise RuntimeError("Target window not visible") from last_exc
 
     def _minimize_window(self, window) -> None:
         if not self._allow_window_restore:
