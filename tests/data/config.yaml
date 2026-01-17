@@ -12,9 +12,13 @@ telemetry_file: "logs/telemetry.json"
 show_error_window: true
 watchdog_timeout_seconds: 60
 watchdog_restart: true
-whatsapp:
-  mode: "web"
-  chat_target: ""
-  user_data_dir: "whatsapp_session"
+email:
+  smtp_host: "smtp.local"
+  smtp_port: 587
+  smtp_username: ""
+  smtp_password: ""
+  from_address: "alerts@example.com"
+  to_addresses: ["ops@example.com"]
+  use_tls: true
   timeout_seconds: 10
   dry_run: false

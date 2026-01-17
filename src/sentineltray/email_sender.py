@@ -1,0 +1,55 @@
+from __future__ import annotations
+
+import logging
+import smtplib
+from dataclasses import dataclass
+from email.message import EmailMessage
+
+from .config import EmailConfig
+
+LOGGER = logging.getLogger(__name__)
+
+
+def _to_ascii(text: str) -> str:
+    return text.encode("ascii", "backslashreplace").decode("ascii")
+
+
+class EmailSender:
+    def send(self, message: str) -> None:
+        raise NotImplementedError()
+
+
+@dataclass
+class SmtpEmailSender(EmailSender):
+    config: EmailConfig
+
+    def send(self, message: str) -> None:
+        if self.config.dry_run:
+            LOGGER.info("Dry run enabled, skipping send", extra={"category": "send"})
+            return
+
+        if not self.config.smtp_host:
+            raise ValueError("smtp_host is required")
+        if not self.config.from_address:
+            raise ValueError("from_address is required")
+        if not self.config.to_addresses:
+            raise ValueError("to_addresses is required")
+
+        safe_message = _to_ascii(message)
+
+        email = EmailMessage()
+        email["From"] = self.config.from_address
+        email["To"] = ", ".join(self.config.to_addresses)
+        email["Subject"] = "SentinelTray Notification"
+        email.set_content(safe_message)
+
+        with smtplib.SMTP(self.config.smtp_host, self.config.smtp_port, timeout=self.config.timeout_seconds) as client:
+            if self.config.use_tls:
+                client.starttls()
+            if self.config.smtp_username or self.config.smtp_password:
+                client.login(self.config.smtp_username, self.config.smtp_password)
+            client.send_message(email)
+
+
+def build_sender(config: EmailConfig) -> EmailSender:
+    return SmtpEmailSender(config=config)

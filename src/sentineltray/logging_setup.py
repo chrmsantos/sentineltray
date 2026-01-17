@@ -55,6 +55,4 @@ def setup_logging(log_file: str) -> None:
 
     logging.getLogger("PIL").setLevel(logging.WARNING)
     logging.getLogger("PIL.Image").setLevel(logging.WARNING)
-    logging.getLogger("playwright").setLevel(logging.INFO)
-
     _cleanup_old_logs(run_path.parent, base_path.stem, base_path.suffix, keep=5)

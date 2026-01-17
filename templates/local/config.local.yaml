@@ -27,6 +27,13 @@ show_error_window: true
 watchdog_timeout_seconds: 60
 watchdog_restart: true
 
-whatsapp:
-  # Nome exato do contato/grupo exibido no WhatsApp Web.
-  chat_target: 'Operador Exemplo'
+email:
+  smtp_host: "smtp.exemplo.local"
+  smtp_port: 587
+  smtp_username: "usuario"
+  smtp_password: ""
+  from_address: "sentineltray@exemplo.local"
+  to_addresses: ["operador@exemplo.local"]
+  use_tls: true
+  timeout_seconds: 45
+  dry_run: true

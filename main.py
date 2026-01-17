@@ -13,8 +13,16 @@ LOCAL_TEMPLATE = """# SentinelTray local overrides
 
 window_title_regex: ""
 phrase_regex: ""
-whatsapp:
-  chat_target: ""
+email:
+    smtp_host: ""
+    smtp_port: 587
+    smtp_username: ""
+    smtp_password: ""
+    from_address: ""
+    to_addresses: []
+    use_tls: true
+    timeout_seconds: 45
+    dry_run: true
 """
 
 

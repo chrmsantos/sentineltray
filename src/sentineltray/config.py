@@ -9,10 +9,14 @@ import yaml
 
 
 @dataclass(frozen=True)
-class WhatsappConfig:
-    mode: str
-    chat_target: str
-    user_data_dir: str
+class EmailConfig:
+    smtp_host: str
+    smtp_port: int
+    smtp_username: str
+    smtp_password: str
+    from_address: str
+    to_addresses: list[str]
+    use_tls: bool
     timeout_seconds: int
     dry_run: bool
 
@@ -33,7 +37,7 @@ class AppConfig:
     show_error_window: bool
     watchdog_timeout_seconds: int
     watchdog_restart: bool
-    whatsapp: WhatsappConfig
+    email: EmailConfig
 
 
 def _get_required(data: dict[str, Any], key: str) -> Any:
@@ -62,13 +66,25 @@ def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, An
 
 
 def _build_config(data: dict[str, Any]) -> AppConfig:
-    whatsapp_data = _get_required(data, "whatsapp")
-    whatsapp = WhatsappConfig(
-        mode=str(_get_required(whatsapp_data, "mode")),
-        chat_target=str(_get_required(whatsapp_data, "chat_target")),
-        user_data_dir=str(_get_required(whatsapp_data, "user_data_dir")),
-        timeout_seconds=int(_get_required(whatsapp_data, "timeout_seconds")),
-        dry_run=bool(_get_required(whatsapp_data, "dry_run")),
+    email_data = _get_required(data, "email")
+    to_raw = _get_required(email_data, "to_addresses")
+    if isinstance(to_raw, str):
+        to_addresses = [item.strip() for item in to_raw.split(",") if item.strip()]
+    elif isinstance(to_raw, list):
+        to_addresses = [str(item).strip() for item in to_raw if str(item).strip()]
+    else:
+        raise ValueError("email.to_addresses must be a list or comma-separated string")
+
+    email = EmailConfig(
+        smtp_host=str(_get_required(email_data, "smtp_host")),
+        smtp_port=int(_get_required(email_data, "smtp_port")),
+        smtp_username=str(_get_required(email_data, "smtp_username")),
+        smtp_password=str(_get_required(email_data, "smtp_password")),
+        from_address=str(_get_required(email_data, "from_address")),
+        to_addresses=to_addresses,
+        use_tls=bool(_get_required(email_data, "use_tls")),
+        timeout_seconds=int(_get_required(email_data, "timeout_seconds")),
+        dry_run=bool(_get_required(email_data, "dry_run")),
     )
 
     config = AppConfig(
@@ -94,7 +110,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
             _get_required(data, "watchdog_timeout_seconds")
         ),
         watchdog_restart=bool(_get_required(data, "watchdog_restart")),
-        whatsapp=whatsapp,
+        email=email,
     )
     config = _apply_sensitive_path_policy(config)
     _validate_config(config)
@@ -124,10 +140,6 @@ def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
         state_file=_resolve_sensitive_path(base, config.state_file),
         log_file=_resolve_sensitive_path(base, config.log_file),
         telemetry_file=_resolve_sensitive_path(base, config.telemetry_file),
-        whatsapp=replace(
-            config.whatsapp,
-            user_data_dir=_resolve_sensitive_path(base, config.whatsapp.user_data_dir),
-        ),
     )
 
 
@@ -150,8 +162,17 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("log_file is required")
     if not config.telemetry_file:
         raise ValueError("telemetry_file is required")
-    if config.whatsapp.timeout_seconds < 1:
-        raise ValueError("whatsapp.timeout_seconds must be >= 1")
+    if config.email.timeout_seconds < 1:
+        raise ValueError("email.timeout_seconds must be >= 1")
+    if config.email.smtp_port < 1:
+        raise ValueError("email.smtp_port must be >= 1")
+    if not config.email.dry_run:
+        if not config.email.smtp_host:
+            raise ValueError("email.smtp_host is required")
+        if not config.email.from_address:
+            raise ValueError("email.from_address is required")
+        if not config.email.to_addresses:
+            raise ValueError("email.to_addresses is required")
     if config.watchdog_timeout_seconds < 1:
         raise ValueError("watchdog_timeout_seconds must be >= 1")
 

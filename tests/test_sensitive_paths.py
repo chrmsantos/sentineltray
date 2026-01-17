@@ -31,10 +31,14 @@ def test_sensitive_paths_forced_to_user_root(
                 "show_error_window: true",
                 "watchdog_timeout_seconds: 60",
                 "watchdog_restart: true",
-                "whatsapp:",
-                "  mode: 'web'",
-                "  chat_target: ''",
-                f"  user_data_dir: '{other_root / 'session'}'",
+                "email:",
+                "  smtp_host: ''",
+                "  smtp_port: 587",
+                "  smtp_username: ''",
+                "  smtp_password: ''",
+                "  from_address: ''",
+                "  to_addresses: []",
+                "  use_tls: true",
                 "  timeout_seconds: 10",
                 "  dry_run: true",
             ]
@@ -48,4 +52,3 @@ def test_sensitive_paths_forced_to_user_root(
     assert config.state_file == str(base / "state.json")
     assert config.log_file == str(base / "sentineltray.log")
     assert config.telemetry_file == str(base / "telemetry.json")
-    assert config.whatsapp.user_data_dir == str(base / "session")

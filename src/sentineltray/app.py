@@ -12,8 +12,8 @@ from .config import AppConfig
 from .detector import WindowTextDetector
 from .logging_setup import setup_logging
 from .status import StatusStore
+from .email_sender import build_sender
 from .telemetry import TelemetryWriter
-from .whatsapp_sender import build_sender
 
 LOGGER = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class Notifier:
 
     def __post_init__(self) -> None:
         self._detector = WindowTextDetector(self.config.window_title_regex)
-        self._sender = build_sender(self.config.whatsapp)
+        self._sender = build_sender(self.config.email)
         self._state_path = Path(self.config.state_file)
         self._history = _load_state(self._state_path)
         self._last_sent = self._build_last_sent_map(self._history)
@@ -74,7 +74,7 @@ class Notifier:
 
     def _reset_components(self) -> None:
         self._detector = WindowTextDetector(self.config.window_title_regex)
-        self._sender = build_sender(self.config.whatsapp)
+        self._sender = build_sender(self.config.email)
 
     def _build_last_sent_map(self, history: list[dict[str, str]]) -> dict[str, datetime]:
         last_sent: dict[str, datetime] = {}

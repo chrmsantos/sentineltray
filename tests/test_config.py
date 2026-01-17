@@ -23,9 +23,10 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.show_error_window is True
     assert config.watchdog_timeout_seconds == 60
     assert config.watchdog_restart is True
-    assert config.whatsapp.mode == "web"
-    assert config.whatsapp.chat_target == ""
-    assert config.whatsapp.dry_run is False
+    assert config.email.smtp_host == "smtp.local"
+    assert config.email.smtp_port == 587
+    assert config.email.from_address == "alerts@example.com"
+    assert config.email.to_addresses == ["ops@example.com"]
+    assert config.email.dry_run is False
     assert config.state_file == str(base / "state.json")
     assert config.telemetry_file == str(base / "logs" / "telemetry.json")
-    assert config.whatsapp.user_data_dir == str(base / "whatsapp_session")

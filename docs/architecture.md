@@ -3,14 +3,14 @@
 ## Overview
 
 - Window text detection uses UI Automation via pywinauto.
-- WhatsApp delivery uses WhatsApp Web via Playwright with persistent session.
+- Email delivery uses SMTP with optional TLS.
 - State is stored in state.json to prevent duplicate sends.
 - Logs are created per execution with detailed fields and kept with a max of 5 files.
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
-- Errors in each polling iteration are reported on screen and via WhatsApp.
-- A startup test message is sent via WhatsApp on each run to confirm delivery.
-- Periodic healthchecks send uptime and last activity via WhatsApp.
+- Errors in each polling iteration are reported on screen and via email.
+- A startup test message is sent via email on each run to confirm delivery.
+- Periodic healthchecks send uptime and last activity via email.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
 - Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
@@ -18,7 +18,7 @@
 - Logs include a structured category field (scan/send/error/etc).
 - Local telemetry file captures last activity for quick diagnostics.
 - Silent mode can suppress the error popup while keeping tray status updated.
-- WhatsApp Web login expiration is detected and reported as a specific error.
+- Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Sensitive data paths are enforced under %USERPROFILE%\sentineltray.

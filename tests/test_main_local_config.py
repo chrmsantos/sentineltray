@@ -39,7 +39,7 @@ def test_ensure_local_override_handles_empty_file(tmp_path: Path, monkeypatch: p
     with pytest.raises(SystemExit):
         main._ensure_local_override(local_path)
 
-    assert "whatsapp" in local_path.read_text(encoding="utf-8")
+    assert "email" in local_path.read_text(encoding="utf-8")
     assert opened["path"] == str(local_path)
 
 
@@ -53,7 +53,7 @@ def test_load_local_override_opens_on_error(tmp_path: Path, monkeypatch: pytest.
 
     base_path = Path(__file__).parent / "data" / "config.yaml"
     local_path = tmp_path / "config.local.yaml"
-    local_path.write_text("whatsapp: [", encoding="utf-8")
+    local_path.write_text("email: [", encoding="utf-8")
 
     with pytest.raises(SystemExit):
         main._load_local_override(base_path, local_path)

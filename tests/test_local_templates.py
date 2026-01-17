@@ -13,4 +13,4 @@ def test_local_templates_exist() -> None:
 
     content = config_path.read_text(encoding="utf-8")
     assert "window_title_regex" in content
-    assert "whatsapp" in content
+    assert "email" in content

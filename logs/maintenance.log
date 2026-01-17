@@ -1,8 +1,0 @@
-2026-01-14 rename: project to SentinelTray
-2026-01-14 cleanup: remove legacy name references
-2026-01-14 license: add GPL-3.0-only
-2026-01-14 privacy: remove public chat_target
-2026-01-14 config: poll interval set to 300s
-2026-01-14 logging: suppress third-party debug noise
-2026-01-14 config: local override path moved to %USERPROFILE%\sentineltray
-2026-01-14 docs: add local file templates

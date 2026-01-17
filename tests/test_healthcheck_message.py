@@ -1,5 +1,5 @@
 from sentineltray.app import Notifier
-from sentineltray.config import AppConfig, WhatsappConfig
+from sentineltray.config import AppConfig, EmailConfig
 from sentineltray.status import StatusStore
 
 
@@ -19,10 +19,14 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
         show_error_window=True,
         watchdog_timeout_seconds=60,
         watchdog_restart=True,
-        whatsapp=WhatsappConfig(
-            mode="web",
-            chat_target="Operator",
-            user_data_dir="session",
+        email=EmailConfig(
+            smtp_host="smtp.local",
+            smtp_port=587,
+            smtp_username="",
+            smtp_password="",
+            from_address="alerts@example.com",
+            to_addresses=["ops@example.com"],
+            use_tls=True,
             timeout_seconds=10,
             dry_run=True,
         ),
