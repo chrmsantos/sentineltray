@@ -11,6 +11,7 @@
 - Add structured log categories.
 - Add local telemetry file for diagnostics.
 - Add silent mode for error popup suppression.
+- Detect WhatsApp Web login expiration.
 
 ## 2026-01-14
 

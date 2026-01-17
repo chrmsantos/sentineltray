@@ -70,3 +70,4 @@ python main.py --cli
 - Logs include a structured category field.
 - Local telemetry file captures last activity for quick diagnostics.
 - Silent mode can suppress the error popup while keeping tray status updated.
+- WhatsApp Web login expiration is detected and reported as a specific error.
