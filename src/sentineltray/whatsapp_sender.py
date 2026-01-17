@@ -21,7 +21,7 @@ class WebWhatsappSender(WhatsappSender):
 
     def send(self, message: str) -> None:
         if self.config.dry_run:
-            LOGGER.info("Dry run enabled, skipping send")
+            LOGGER.info("Dry run enabled, skipping send", extra={"category": "send"})
             return
 
         if not self.config.chat_target:

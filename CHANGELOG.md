@@ -8,6 +8,7 @@
 - Add exponential backoff for consecutive errors.
 - Debounce repeated messages within a time window.
 - Track error count in tray status.
+- Add structured log categories.
 
 ## 2026-01-14
 

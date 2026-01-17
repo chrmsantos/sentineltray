@@ -4,6 +4,13 @@ from datetime import datetime
 from pathlib import Path
 
 
+class CategoryFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "category"):
+            record.category = "general"
+        return True
+
+
 def _build_run_log_path(log_file: str) -> Path:
     base_path = Path(log_file)
     if not base_path.suffix:
@@ -34,11 +41,12 @@ def setup_logging(log_file: str) -> None:
 
     handler = logging.FileHandler(run_path, encoding="utf-8")
     formatter = logging.Formatter(
-        "%(asctime)s %(levelname)s %(name)s %(filename)s:%(lineno)d "
+        "%(asctime)s %(levelname)s %(category)s %(name)s %(filename)s:%(lineno)d "
         "%(funcName)s %(process)d %(threadName)s %(message)s"
     )
     handler.setFormatter(formatter)
     handler.setLevel(logging.DEBUG)
+    handler.addFilter(CategoryFilter())
 
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)

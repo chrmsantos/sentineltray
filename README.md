@@ -67,3 +67,4 @@ python main.py --cli
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.
 - Tray status shows error count and last error reason.
+- Logs include a structured category field.

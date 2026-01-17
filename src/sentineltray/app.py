@@ -99,7 +99,12 @@ class Notifier:
             if age_seconds >= self.config.debounce_seconds:
                 send_items.append(text)
             else:
-                LOGGER.info("Debounce active for %s (age %s seconds)", text, age_seconds)
+                LOGGER.info(
+                    "Debounce active for %s (age %s seconds)",
+                    text,
+                    age_seconds,
+                    extra={"category": "send"},
+                )
 
         if normalized:
             self.status.set_last_match(normalized[0])
@@ -107,7 +112,7 @@ class Notifier:
         for text in send_items:
             self._sender.send(text)
             self.status.set_last_send(_now_iso())
-            LOGGER.info("Sent message")
+            LOGGER.info("Sent message", extra={"category": "send"})
             sent_at = _now_iso()
             self._history.append({"text": text, "sent_at": sent_at})
             self._last_sent[text] = datetime.fromisoformat(sent_at)
@@ -125,16 +130,20 @@ class Notifier:
         try:
             self._sender.send(safe_message)
             self.status.set_last_send(_now_iso())
-            LOGGER.info("Sent error notification")
+            LOGGER.info("Sent error notification", extra={"category": "error"})
         except Exception as exc:
-            LOGGER.exception("Failed to send error notification: %s", exc)
+            LOGGER.exception(
+                "Failed to send error notification: %s",
+                exc,
+                extra={"category": "error"},
+            )
 
     def _send_startup_test(self) -> None:
         message = "info: startup test message"
         try:
             self._sender.send(message)
             self.status.set_last_send(_now_iso())
-            LOGGER.info("Sent startup test message")
+            LOGGER.info("Sent startup test message", extra={"category": "send"})
         except Exception as exc:
             error_message = f"error: startup test send failed: {exc}"
             self._handle_error(error_message)
@@ -155,7 +164,7 @@ class Notifier:
             self._sender.send(safe_message)
             self.status.set_last_send(_now_iso())
             self.status.set_last_healthcheck(_now_iso())
-            LOGGER.info("Sent healthcheck message")
+            LOGGER.info("Sent healthcheck message", extra={"category": "send"})
         except Exception as exc:
             error_message = f"error: healthcheck send failed: {exc}"
             self._handle_error(error_message)
@@ -170,7 +179,7 @@ class Notifier:
 
     def run_loop(self, stop_event: Event) -> None:
         setup_logging(self.config.log_file)
-        LOGGER.info("SentinelTray started")
+        LOGGER.info("SentinelTray started", extra={"category": "startup"})
         self.status.set_running(True)
         self.status.set_uptime_seconds(0)
         self._send_startup_test()
@@ -184,7 +193,7 @@ class Notifier:
             except Exception as exc:
                 message = f"error: {exc}"
                 self._handle_error(message)
-                LOGGER.exception("Loop error: %s", exc)
+                LOGGER.exception("Loop error: %s", exc, extra={"category": "error"})
                 error_count += 1
                 self.status.increment_error_count()
 
@@ -199,7 +208,11 @@ class Notifier:
             backoff_seconds = self._compute_backoff_seconds(error_count)
             wait_seconds = max(self.config.poll_interval_seconds, backoff_seconds)
             if backoff_seconds:
-                LOGGER.info("Backoff enabled: %s seconds", backoff_seconds)
+                LOGGER.info(
+                    "Backoff enabled: %s seconds",
+                    backoff_seconds,
+                    extra={"category": "error"},
+                )
             stop_event.wait(wait_seconds)
 
         self.status.set_running(False)
