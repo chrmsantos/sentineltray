@@ -75,8 +75,7 @@ def main() -> int:
         if user_root:
             candidate = Path(user_root) / "sentineltray" / "config.local.yaml"
             local_override = candidate
-            if candidate.exists():
-                override_path = candidate
+            override_path = candidate
 
     if local_override is not None and override_path == local_override:
         _ensure_local_override(local_override)

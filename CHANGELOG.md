@@ -14,6 +14,7 @@
 - Detect WhatsApp Web login expiration.
 - Validate configuration values at startup.
 - Add watchdog for long scan stalls.
+- Auto-create local override config on startup when missing.
 
 ## 2026-01-14
 
