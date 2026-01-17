@@ -137,6 +137,7 @@ def run_tray(config: AppConfig) -> None:
 
         config_path = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray", "config.local.yaml")
         data_dir = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray")
+        logs_dir = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray", "logs")
 
         def open_config() -> None:
             if config_path:
@@ -155,11 +156,37 @@ def run_tray(config: AppConfig) -> None:
                 except OSError:
                     return
 
+        def open_logs_dir() -> None:
+            if logs_dir:
+                try:
+                    os.startfile(logs_dir)
+                except OSError:
+                    return
+
+        def copy_status() -> None:
+            text = format_status(status.snapshot())
+            try:
+                status_window.clipboard_clear()
+                status_window.clipboard_append(text)
+            except tk.TclError:
+                return
+
+        def refresh_now() -> None:
+            snapshot = status.snapshot()
+            if status_label is not None and status_label.winfo_exists():
+                status_label.config(text=format_status(snapshot))
+
         btn_config = tk.Button(links, text="Abrir configuracoes", command=open_config)
-        btn_repo = tk.Button(links, text="Abrir repositorio", command=open_repo)
         btn_dir = tk.Button(links, text="Abrir pasta de dados", command=open_data_dir)
+        btn_logs = tk.Button(links, text="Abrir logs", command=open_logs_dir)
+        btn_copy = tk.Button(links, text="Copiar status", command=copy_status)
+        btn_refresh = tk.Button(links, text="Atualizar agora", command=refresh_now)
+        btn_repo = tk.Button(links, text="Abrir repositorio", command=open_repo)
         btn_config.pack(side="left")
         btn_dir.pack(side="left", padx=(8, 0))
+        btn_logs.pack(side="left", padx=(8, 0))
+        btn_copy.pack(side="left", padx=(8, 0))
+        btn_refresh.pack(side="left", padx=(8, 0))
         btn_repo.pack(side="right")
 
     def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:

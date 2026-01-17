@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from typing import Iterable
 
 from pywinauto import Desktop
@@ -53,7 +54,11 @@ class WindowTextDetector:
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
         if not window.exists(timeout=2):
-            raise RuntimeError("Target window not found")
+            LOGGER.info("Target window not found, retrying", extra={"category": "scan"})
+            time.sleep(1)
+            window = self._get_window()
+            if not window.exists(timeout=2):
+                raise RuntimeError("Target window not found")
 
         self._prepare_window(window)
 
