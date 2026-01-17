@@ -13,6 +13,7 @@
 - Add silent mode for error popup suppression.
 - Detect WhatsApp Web login expiration.
 - Validate configuration values at startup.
+- Add watchdog for long scan stalls.
 
 ## 2026-01-14
 

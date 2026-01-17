@@ -1,11 +1,9 @@
-from datetime import datetime, timedelta, timezone
-
 from sentineltray.app import Notifier
 from sentineltray.config import AppConfig, WhatsappConfig
 from sentineltray.status import StatusStore
 
 
-def test_debounce_skips_recent_messages() -> None:
+def test_watchdog_triggers_restart() -> None:
     config = AppConfig(
         window_title_regex="APP",
         phrase_regex="ALERT",
@@ -29,30 +27,21 @@ def test_debounce_skips_recent_messages() -> None:
             dry_run=True,
         ),
     )
-    status = StatusStore()
-    notifier = Notifier(config=config, status=status)
+    notifier = Notifier(config=config, status=StatusStore())
 
-    now = datetime.now(timezone.utc)
-    notifier._last_sent = {
-        "recent": now,
-        "old": now - timedelta(seconds=700),
-    }
+    captured: dict[str, str] = {}
+    restarted: dict[str, bool] = {"value": False}
 
-    class FakeDetector:
-        def find_matches(self, _: str) -> list[str]:
-            return ["recent", "old"]
+    def fake_handle_error(message: str) -> None:
+        captured["message"] = message
 
-    class FakeSender:
-        def __init__(self) -> None:
-            self.sent: list[str] = []
+    def fake_reset_components() -> None:
+        restarted["value"] = True
 
-        def send(self, message: str) -> None:
-            self.sent.append(message)
+    notifier._handle_error = fake_handle_error
+    notifier._reset_components = fake_reset_components
 
-    notifier._detector = FakeDetector()
-    sender = FakeSender()
-    notifier._sender = sender
+    notifier._handle_watchdog(70.0)
 
-    notifier.scan_once()
-
-    assert sender.sent == ["old"]
+    assert "watchdog timeout" in captured["message"]
+    assert restarted["value"] is True

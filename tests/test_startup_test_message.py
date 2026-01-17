@@ -17,6 +17,8 @@ def test_send_startup_test_message_sends_and_updates_status() -> None:
         log_file="logs/sentineltray.log",
         telemetry_file="logs/telemetry.json",
         show_error_window=True,
+        watchdog_timeout_seconds=60,
+        watchdog_restart=True,
         whatsapp=WhatsappConfig(
             mode="web",
             chat_target="Operator",

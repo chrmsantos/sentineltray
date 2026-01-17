@@ -17,6 +17,8 @@ def test_load_config() -> None:
     assert config.log_file == "logs/sentineltray.log"
     assert config.telemetry_file == "logs/telemetry.json"
     assert config.show_error_window is True
+    assert config.watchdog_timeout_seconds == 60
+    assert config.watchdog_restart is True
     assert config.whatsapp.mode == "web"
     assert config.whatsapp.chat_target == ""
     assert config.whatsapp.dry_run is False

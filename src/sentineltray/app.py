@@ -72,6 +72,10 @@ class Notifier:
         self._next_healthcheck = time.monotonic() + self.config.healthcheck_interval_seconds
         self._telemetry = TelemetryWriter(Path(self.config.telemetry_file))
 
+    def _reset_components(self) -> None:
+        self._detector = WindowTextDetector(self.config.window_title_regex)
+        self._sender = build_sender(self.config.whatsapp)
+
     def _build_last_sent_map(self, history: list[dict[str, str]]) -> dict[str, datetime]:
         last_sent: dict[str, datetime] = {}
         for item in history:
@@ -197,6 +201,15 @@ class Notifier:
         except Exception as exc:
             LOGGER.exception("Telemetry write failed: %s", exc, extra={"category": "error"})
 
+    def _handle_watchdog(self, duration_seconds: float) -> None:
+        if duration_seconds <= self.config.watchdog_timeout_seconds:
+            return
+        message = f"error: watchdog timeout after {duration_seconds:.1f}s"
+        self._handle_error(message)
+        if self.config.watchdog_restart:
+            self._reset_components()
+            LOGGER.info("Watchdog restart completed", extra={"category": "error"})
+
     def run_loop(self, stop_event: Event) -> None:
         setup_logging(self.config.log_file)
         LOGGER.info("SentinelTray started", extra={"category": "startup"})
@@ -207,6 +220,7 @@ class Notifier:
         error_count = 0
 
         while not stop_event.is_set():
+            started_at = time.monotonic()
             try:
                 self.scan_once()
                 self.status.set_last_error("")
@@ -217,6 +231,9 @@ class Notifier:
                 LOGGER.exception("Loop error: %s", exc, extra={"category": "error"})
                 error_count += 1
                 self.status.increment_error_count()
+            finally:
+                duration = time.monotonic() - started_at
+                self._handle_watchdog(duration)
 
             self.status.set_uptime_seconds(
                 int((datetime.now(timezone.utc) - self._started_at).total_seconds())

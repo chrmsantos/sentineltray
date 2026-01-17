@@ -30,6 +30,8 @@ class AppConfig:
     log_file: str
     telemetry_file: str
     show_error_window: bool
+    watchdog_timeout_seconds: int
+    watchdog_restart: bool
     whatsapp: WhatsappConfig
 
 
@@ -87,6 +89,10 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         log_file=str(_get_required(data, "log_file")),
         telemetry_file=str(_get_required(data, "telemetry_file")),
         show_error_window=bool(_get_required(data, "show_error_window")),
+        watchdog_timeout_seconds=int(
+            _get_required(data, "watchdog_timeout_seconds")
+        ),
+        watchdog_restart=bool(_get_required(data, "watchdog_restart")),
         whatsapp=whatsapp,
     )
     _validate_config(config)
@@ -114,6 +120,8 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("telemetry_file is required")
     if config.whatsapp.timeout_seconds < 1:
         raise ValueError("whatsapp.timeout_seconds must be >= 1")
+    if config.watchdog_timeout_seconds < 1:
+        raise ValueError("watchdog_timeout_seconds must be >= 1")
 
 
 def load_config(path: str) -> AppConfig:

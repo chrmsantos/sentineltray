@@ -22,6 +22,8 @@ def test_invalid_poll_interval_rejected(tmp_path: Path) -> None:
                 "log_file: 'logs/sentineltray.log'",
                 "telemetry_file: 'logs/telemetry.json'",
                 "show_error_window: true",
+                "watchdog_timeout_seconds: 60",
+                "watchdog_restart: true",
                 "whatsapp:",
                 "  mode: 'web'",
                 "  chat_target: ''",

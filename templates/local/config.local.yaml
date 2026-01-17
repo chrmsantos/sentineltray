@@ -23,6 +23,10 @@ telemetry_file: "logs/telemetry.json"
 # Modo silencioso (nao abre janela de erro).
 show_error_window: true
 
+# Watchdog para travas longas.
+watchdog_timeout_seconds: 60
+watchdog_restart: true
+
 whatsapp:
   # Nome exato do contato/grupo exibido no WhatsApp Web.
   chat_target: 'Operador Exemplo'
