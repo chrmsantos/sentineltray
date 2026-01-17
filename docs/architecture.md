@@ -18,6 +18,7 @@
 - Logs include a structured category field (scan/send/error/etc).
 - Local telemetry file captures last activity for quick diagnostics.
 - Status export JSON supports local integrations.
+- Tray abre automaticamente o status na inicializacao e usa icone em formato de olho.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.
