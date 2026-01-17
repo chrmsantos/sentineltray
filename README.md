@@ -62,5 +62,6 @@ python main.py --cli
 - Errors detected in each polling iteration are reported on screen and via WhatsApp.
 - A startup test message is sent via WhatsApp on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via WhatsApp.
+- Consecutive errors trigger exponential backoff before the next scan.
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.

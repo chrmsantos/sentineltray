@@ -10,6 +10,10 @@ phrase_regex: 'ALERTA TESTE'
 # Intervalo de healthcheck em segundos.
 healthcheck_interval_seconds: 3600
 
+# Backoff em erros consecutivos.
+error_backoff_base_seconds: 5
+error_backoff_max_seconds: 300
+
 whatsapp:
   # Nome exato do contato/grupo exibido no WhatsApp Web.
   chat_target: 'Operador Exemplo'

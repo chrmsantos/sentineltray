@@ -120,21 +120,32 @@ class Notifier:
             error_message = f"error: healthcheck send failed: {exc}"
             self._handle_error(error_message)
 
+    def _compute_backoff_seconds(self, error_count: int) -> int:
+        if error_count <= 0:
+            return 0
+        base = max(1, self.config.error_backoff_base_seconds)
+        maximum = max(base, self.config.error_backoff_max_seconds)
+        backoff = base * (2 ** (error_count - 1))
+        return min(maximum, backoff)
+
     def run_loop(self, stop_event: Event) -> None:
         setup_logging(self.config.log_file)
         LOGGER.info("SentinelTray started")
         self.status.set_running(True)
         self.status.set_uptime_seconds(0)
         self._send_startup_test()
+        error_count = 0
 
         while not stop_event.is_set():
             try:
                 self.scan_once()
                 self.status.set_last_error("")
+                error_count = 0
             except Exception as exc:
                 message = f"error: {exc}"
                 self._handle_error(message)
                 LOGGER.exception("Loop error: %s", exc)
+                error_count += 1
 
             self.status.set_uptime_seconds(
                 int((datetime.now(timezone.utc) - self._started_at).total_seconds())
@@ -144,7 +155,11 @@ class Notifier:
                 self._send_healthcheck()
                 self._next_healthcheck = now + self.config.healthcheck_interval_seconds
 
-            stop_event.wait(self.config.poll_interval_seconds)
+            backoff_seconds = self._compute_backoff_seconds(error_count)
+            wait_seconds = max(self.config.poll_interval_seconds, backoff_seconds)
+            if backoff_seconds:
+                LOGGER.info("Backoff enabled: %s seconds", backoff_seconds)
+            stop_event.wait(wait_seconds)
 
         self.status.set_running(False)
 

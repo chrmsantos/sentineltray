@@ -2,6 +2,8 @@ window_title_regex: 'Sino.Siscam.Desktop'
 phrase_regex: ""  # empty means any visible text
 poll_interval_seconds: 300
 healthcheck_interval_seconds: 3600
+error_backoff_base_seconds: 5
+error_backoff_max_seconds: 300
 max_history: 100
 state_file: "state.json"
 log_file: "logs/sentineltray.log"

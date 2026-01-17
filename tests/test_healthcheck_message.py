@@ -9,6 +9,8 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
         phrase_regex="ALERT",
         poll_interval_seconds=1,
         healthcheck_interval_seconds=3600,
+        error_backoff_base_seconds=5,
+        error_backoff_max_seconds=300,
         max_history=10,
         state_file="state.json",
         log_file="logs/sentineltray.log",
