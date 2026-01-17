@@ -9,6 +9,7 @@ max_history: 50
 state_file: "state.json"
 log_file: "logs/sentineltray.log"
 telemetry_file: "logs/telemetry.json"
+status_export_file: "logs/status.json"
 show_error_window: true
 watchdog_timeout_seconds: 60
 watchdog_restart: true
@@ -21,4 +22,7 @@ email:
   to_addresses: ["ops@example.com"]
   use_tls: true
   timeout_seconds: 10
+  subject: "SentinelTray Notification"
+  retry_attempts: 2
+  retry_backoff_seconds: 3
   dry_run: false

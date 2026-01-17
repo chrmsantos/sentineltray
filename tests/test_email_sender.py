@@ -12,6 +12,9 @@ def test_build_sender_returns_smtp_sender() -> None:
         to_addresses=["ops@example.com"],
         use_tls=True,
         timeout_seconds=30,
+        subject="SentinelTray Notification",
+        retry_attempts=0,
+        retry_backoff_seconds=0,
         dry_run=True,
     )
 

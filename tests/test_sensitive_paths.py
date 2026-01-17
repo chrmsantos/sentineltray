@@ -28,6 +28,7 @@ def test_sensitive_paths_forced_to_user_root(
                 f"state_file: '{other_root / 'state.json'}'",
                 f"log_file: '{other_root / 'logs' / 'sentineltray.log'}'",
                 f"telemetry_file: '{other_root / 'telemetry.json'}'",
+                f"status_export_file: '{other_root / 'status.json'}'",
                 "show_error_window: true",
                 "watchdog_timeout_seconds: 60",
                 "watchdog_restart: true",
@@ -40,6 +41,9 @@ def test_sensitive_paths_forced_to_user_root(
                 "  to_addresses: []",
                 "  use_tls: true",
                 "  timeout_seconds: 10",
+                "  subject: 'SentinelTray Notification'",
+                "  retry_attempts: 0",
+                "  retry_backoff_seconds: 0",
                 "  dry_run: true",
             ]
         ),
@@ -52,3 +56,4 @@ def test_sensitive_paths_forced_to_user_root(
     assert config.state_file == str(base / "state.json")
     assert config.log_file == str(base / "sentineltray.log")
     assert config.telemetry_file == str(base / "telemetry.json")
+    assert config.status_export_file == str(base / "status.json")

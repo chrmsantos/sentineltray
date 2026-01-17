@@ -20,6 +20,7 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     base = tmp_path / "sentineltray"
     assert config.log_file == str(base / "logs" / "sentineltray.log")
     assert config.telemetry_file == str(base / "logs" / "telemetry.json")
+    assert config.status_export_file == str(base / "logs" / "status.json")
     assert config.show_error_window is True
     assert config.watchdog_timeout_seconds == 60
     assert config.watchdog_restart is True
@@ -27,6 +28,9 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.email.smtp_port == 587
     assert config.email.from_address == "alerts@example.com"
     assert config.email.to_addresses == ["ops@example.com"]
+    assert config.email.subject == "SentinelTray Notification"
+    assert config.email.retry_attempts == 2
+    assert config.email.retry_backoff_seconds == 3
     assert config.email.dry_run is False
     assert config.state_file == str(base / "state.json")
     assert config.telemetry_file == str(base / "logs" / "telemetry.json")

@@ -22,6 +22,7 @@
 - Open status on left-click and refresh tray UI in PT-BR.
 - Add Gmail SMTP example to local template.
 - Add single-instance guard and installer script.
+- Add email subject, retries, regex validation, and status export.
 
 ## 2026-01-14
 

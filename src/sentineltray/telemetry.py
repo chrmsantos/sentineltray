@@ -7,7 +7,7 @@ from typing import Any
 
 
 @dataclass
-class TelemetryWriter:
+class JsonWriter:
     path: Path
 
     def write(self, payload: dict[str, Any]) -> None:
