@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import atexit
 import os
+import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
@@ -56,6 +58,49 @@ def _ask_reedit(path: Path, reason: str) -> bool:
         return False
 
 
+def _pid_file_path() -> Path:
+    user_root = os.environ.get("USERPROFILE")
+    if not user_root:
+        raise ValueError("USERPROFILE nao definido")
+    return Path(user_root) / "sentineltray" / "sentineltray.pid"
+
+
+def _terminate_previous(pid: int) -> None:
+    try:
+        subprocess.run(
+            ["taskkill", "/PID", str(pid), "/T", "/F"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except Exception:
+        return
+
+
+def _ensure_single_instance() -> None:
+    pid_path = _pid_file_path()
+    pid_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if pid_path.exists():
+        try:
+            existing_pid = int(pid_path.read_text(encoding="utf-8").strip())
+        except Exception:
+            existing_pid = 0
+        if existing_pid > 0 and existing_pid != os.getpid():
+            _terminate_previous(existing_pid)
+
+    pid_path.write_text(str(os.getpid()), encoding="utf-8")
+
+    def _cleanup() -> None:
+        try:
+            if pid_path.exists() and pid_path.read_text(encoding="utf-8").strip() == str(os.getpid()):
+                pid_path.unlink()
+        except Exception:
+            return
+
+    atexit.register(_cleanup)
+
+
 def _write_local_template(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(LOCAL_TEMPLATE, encoding="utf-8")
@@ -105,6 +150,7 @@ def _load_local_override(config_path: Path, override_path: Path):
 
 
 def main() -> int:
+    _ensure_single_instance()
     config_path = Path("config.yaml")
     use_cli = False
     override_path: Path | None = None
