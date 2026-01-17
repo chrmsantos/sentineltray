@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from threading import Event, Thread
 from typing import Optional
 
@@ -102,7 +103,7 @@ def run_tray(config: AppConfig) -> None:
 
         status_window = tk.Toplevel(root)
         status_window.title("SentinelTray - Status")
-        status_window.geometry("540x220")
+        status_window.geometry("560x260")
         status_window.resizable(False, False)
 
         title = tk.Label(
