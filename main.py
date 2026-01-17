@@ -8,8 +8,8 @@ from sentineltray.app import run
 from sentineltray.config import load_config, load_config_with_override
 from sentineltray.tray_app import run_tray
 
-LOCAL_TEMPLATE = """# SentinelTray local overrides
-# Fill the values below and restart the app.
+LOCAL_TEMPLATE = """# SentinelTray sobrescritas locais
+# Preencha os valores abaixo e reinicie o app.
 
 window_title_regex: ""
 phrase_regex: ""

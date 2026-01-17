@@ -1,4 +1,4 @@
-# Template de configuracao local (copie para %USERPROFILE%\sentineltray\config.local.yaml)
+# Template de configuração local (copie para %USERPROFILE%\sentineltray\config.local.yaml)
 # Edite os valores abaixo e reinicie o app.
 
 # Janela alvo (regex). Use aspas simples para evitar escapes do YAML.
@@ -17,10 +17,10 @@ error_backoff_max_seconds: 300
 # Debounce de mensagens repetidas.
 debounce_seconds: 600
 
-# Arquivo de telemetria local. Caminhos sensiveis sao mantidos em %USERPROFILE%\sentineltray.
+# Arquivo de telemetria local. Caminhos sensíveis são mantidos em %USERPROFILE%\sentineltray.
 telemetry_file: "logs/telemetry.json"
 
-# Modo silencioso (nao abre janela de erro).
+# Modo silencioso (não abre janela de erro).
 show_error_window: true
 
 # Watchdog para travas longas.
