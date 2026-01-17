@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.metadata
 import json
 import logging
 import time
@@ -13,7 +14,7 @@ from .detector import WindowTextDetector
 from .logging_setup import setup_logging
 from .status import StatusStore
 from .email_sender import build_sender
-from .telemetry import TelemetryWriter
+from .telemetry import JsonWriter
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,6 +58,29 @@ def _to_ascii(text: str) -> str:
     return text.encode("ascii", "backslashreplace").decode("ascii")
 
 
+def _get_version() -> str:
+    try:
+        return importlib.metadata.version("sentineltray")
+    except importlib.metadata.PackageNotFoundError:
+        return "0.0.0"
+
+
+def _get_commit_hash() -> str:
+    try:
+        base = Path(__file__).resolve().parents[2]
+        head_path = base / ".git" / "HEAD"
+        if not head_path.exists():
+            return ""
+        ref = head_path.read_text(encoding="utf-8").strip()
+        if ref.startswith("ref:"):
+            ref_path = base / ".git" / ref.replace("ref:", "").strip()
+            if ref_path.exists():
+                return ref_path.read_text(encoding="utf-8").strip()
+        return ref
+    except Exception:
+        return ""
+
+
 @dataclass
 class Notifier:
     config: AppConfig
@@ -70,7 +94,10 @@ class Notifier:
         self._last_sent = self._build_last_sent_map(self._history)
         self._started_at = datetime.now(timezone.utc)
         self._next_healthcheck = time.monotonic() + self.config.healthcheck_interval_seconds
-        self._telemetry = TelemetryWriter(Path(self.config.telemetry_file))
+        self._telemetry = JsonWriter(Path(self.config.telemetry_file))
+        self._status_export = JsonWriter(Path(self.config.status_export_file))
+        self._app_version = _get_version()
+        self._commit_hash = _get_commit_hash()
 
     def _reset_components(self) -> None:
         self._detector = WindowTextDetector(self.config.window_title_regex)
@@ -187,6 +214,8 @@ class Notifier:
         snapshot = self.status.snapshot()
         payload = {
             "updated_at": _now_iso(),
+            "app_version": self._app_version,
+            "commit_hash": self._commit_hash,
             "running": snapshot.running,
             "uptime_seconds": snapshot.uptime_seconds,
             "last_scan": _to_ascii(snapshot.last_scan),
@@ -200,6 +229,21 @@ class Notifier:
             self._telemetry.write(payload)
         except Exception as exc:
             LOGGER.exception("Telemetry write failed: %s", exc, extra={"category": "error"})
+
+        status_payload = {
+            "running": snapshot.running,
+            "last_scan": snapshot.last_scan,
+            "last_match": snapshot.last_match,
+            "last_send": snapshot.last_send,
+            "last_error": snapshot.last_error,
+            "last_healthcheck": snapshot.last_healthcheck,
+            "uptime_seconds": snapshot.uptime_seconds,
+            "error_count": snapshot.error_count,
+        }
+        try:
+            self._status_export.write(status_payload)
+        except Exception as exc:
+            LOGGER.exception("Status export failed: %s", exc, extra={"category": "error"})
 
     def _handle_watchdog(self, duration_seconds: float) -> None:
         if duration_seconds <= self.config.watchdog_timeout_seconds:

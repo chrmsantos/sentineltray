@@ -25,6 +25,9 @@ email:
     to_addresses: []
     use_tls: true
     timeout_seconds: 45
+    subject: "SentinelTray Notification"
+    retry_attempts: 3
+    retry_backoff_seconds: 5
     dry_run: true
 """
 

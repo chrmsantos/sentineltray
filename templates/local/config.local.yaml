@@ -20,6 +20,9 @@ debounce_seconds: 600
 # Arquivo de telemetria local. Caminhos sensíveis são mantidos em %USERPROFILE%\sentineltray.
 telemetry_file: "logs/telemetry.json"
 
+# Exportacao de status em JSON (para integracoes locais).
+status_export_file: "logs/status.json"
+
 # Modo silencioso (não abre janela de erro).
 show_error_window: true
 
@@ -44,4 +47,7 @@ email:
   to_addresses: ["operador@exemplo.local"]
   use_tls: true
   timeout_seconds: 45
+  subject: "SentinelTray Notification"
+  retry_attempts: 3
+  retry_backoff_seconds: 5
   dry_run: true

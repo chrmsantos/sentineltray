@@ -25,6 +25,9 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - email.smtp_host
 - email.from_address
 - email.to_addresses
+- email.subject
+- email.retry_attempts
+- email.retry_backoff_seconds
 - email.dry_run = false when ready to send
 
 Sensitive settings (like window_title_regex and email credentials) can be stored in a local file:
@@ -71,6 +74,7 @@ python main.py --cli
 - Tray status shows error count and last error reason.
 - Logs include a structured category field.
 - Local telemetry file captures last activity for quick diagnostics.
+- Status export JSON available at status_export_file.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.

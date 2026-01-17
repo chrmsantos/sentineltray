@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import smtplib
+import time
 from dataclasses import dataclass
 from email.message import EmailMessage
 
@@ -40,15 +41,35 @@ class SmtpEmailSender(EmailSender):
         email = EmailMessage()
         email["From"] = self.config.from_address
         email["To"] = ", ".join(self.config.to_addresses)
-        email["Subject"] = "SentinelTray Notification"
+        email["Subject"] = self.config.subject
         email.set_content(safe_message)
 
-        with smtplib.SMTP(self.config.smtp_host, self.config.smtp_port, timeout=self.config.timeout_seconds) as client:
-            if self.config.use_tls:
-                client.starttls()
-            if self.config.smtp_username or self.config.smtp_password:
-                client.login(self.config.smtp_username, self.config.smtp_password)
-            client.send_message(email)
+        attempts = max(0, self.config.retry_attempts)
+        backoff = max(0, self.config.retry_backoff_seconds)
+
+        for attempt in range(attempts + 1):
+            try:
+                with smtplib.SMTP(
+                    self.config.smtp_host,
+                    self.config.smtp_port,
+                    timeout=self.config.timeout_seconds,
+                ) as client:
+                    if self.config.use_tls:
+                        client.starttls()
+                    if self.config.smtp_username or self.config.smtp_password:
+                        client.login(self.config.smtp_username, self.config.smtp_password)
+                    client.send_message(email)
+                return
+            except smtplib.SMTPException as exc:
+                if attempt >= attempts:
+                    raise
+                LOGGER.warning(
+                    "SMTP failure, retrying: %s",
+                    exc,
+                    extra={"category": "send"},
+                )
+                if backoff:
+                    time.sleep(backoff * (2**attempt))
 
 
 def build_sender(config: EmailConfig) -> EmailSender:

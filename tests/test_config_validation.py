@@ -24,6 +24,7 @@ def test_invalid_poll_interval_rejected(
                 "state_file: 'state.json'",
                 "log_file: 'logs/sentineltray.log'",
                 "telemetry_file: 'logs/telemetry.json'",
+                "status_export_file: 'logs/status.json'",
                 "show_error_window: true",
                 "watchdog_timeout_seconds: 60",
                 "watchdog_restart: true",
@@ -36,6 +37,9 @@ def test_invalid_poll_interval_rejected(
                 "  to_addresses: []",
                 "  use_tls: true",
                 "  timeout_seconds: 10",
+                "  subject: 'SentinelTray Notification'",
+                "  retry_attempts: 0",
+                "  retry_backoff_seconds: 0",
                 "  dry_run: true",
             ]
         ),

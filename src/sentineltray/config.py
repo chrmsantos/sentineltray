@@ -18,6 +18,9 @@ class EmailConfig:
     to_addresses: list[str]
     use_tls: bool
     timeout_seconds: int
+    subject: str
+    retry_attempts: int
+    retry_backoff_seconds: int
     dry_run: bool
 
 
@@ -34,6 +37,7 @@ class AppConfig:
     state_file: str
     log_file: str
     telemetry_file: str
+    status_export_file: str
     show_error_window: bool
     watchdog_timeout_seconds: int
     watchdog_restart: bool
@@ -84,6 +88,9 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         to_addresses=to_addresses,
         use_tls=bool(_get_required(email_data, "use_tls")),
         timeout_seconds=int(_get_required(email_data, "timeout_seconds")),
+        subject=str(_get_required(email_data, "subject")),
+        retry_attempts=int(_get_required(email_data, "retry_attempts")),
+        retry_backoff_seconds=int(_get_required(email_data, "retry_backoff_seconds")),
         dry_run=bool(_get_required(email_data, "dry_run")),
     )
 
@@ -105,6 +112,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         state_file=str(_get_required(data, "state_file")),
         log_file=str(_get_required(data, "log_file")),
         telemetry_file=str(_get_required(data, "telemetry_file")),
+        status_export_file=str(_get_required(data, "status_export_file")),
         show_error_window=bool(_get_required(data, "show_error_window")),
         watchdog_timeout_seconds=int(
             _get_required(data, "watchdog_timeout_seconds")
@@ -140,6 +148,7 @@ def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
         state_file=_resolve_sensitive_path(base, config.state_file),
         log_file=_resolve_sensitive_path(base, config.log_file),
         telemetry_file=_resolve_sensitive_path(base, config.telemetry_file),
+        status_export_file=_resolve_sensitive_path(base, config.status_export_file),
     )
 
 
@@ -162,10 +171,16 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("log_file is required")
     if not config.telemetry_file:
         raise ValueError("telemetry_file is required")
+    if not config.status_export_file:
+        raise ValueError("status_export_file is required")
     if config.email.timeout_seconds < 1:
         raise ValueError("email.timeout_seconds must be >= 1")
     if config.email.smtp_port < 1:
         raise ValueError("email.smtp_port must be >= 1")
+    if config.email.retry_attempts < 0:
+        raise ValueError("email.retry_attempts must be >= 0")
+    if config.email.retry_backoff_seconds < 0:
+        raise ValueError("email.retry_backoff_seconds must be >= 0")
     if not config.email.dry_run:
         if not config.email.smtp_host:
             raise ValueError("email.smtp_host is required")
@@ -173,8 +188,21 @@ def _validate_config(config: AppConfig) -> None:
             raise ValueError("email.from_address is required")
         if not config.email.to_addresses:
             raise ValueError("email.to_addresses is required")
+    if config.window_title_regex:
+        _validate_regex("window_title_regex", config.window_title_regex)
+    if config.phrase_regex:
+        _validate_regex("phrase_regex", config.phrase_regex)
     if config.watchdog_timeout_seconds < 1:
         raise ValueError("watchdog_timeout_seconds must be >= 1")
+
+
+def _validate_regex(label: str, value: str) -> None:
+    import re
+
+    try:
+        re.compile(value)
+    except re.error as exc:
+        raise ValueError(f"{label} invalid regex: {exc}") from exc
 
 
 def load_config(path: str) -> AppConfig:

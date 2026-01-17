@@ -18,6 +18,7 @@ def test_debounce_skips_recent_messages() -> None:
         state_file="state.json",
         log_file="logs/sentineltray.log",
         telemetry_file="logs/telemetry.json",
+        status_export_file="logs/status.json",
         show_error_window=True,
         watchdog_timeout_seconds=60,
         watchdog_restart=True,
@@ -30,6 +31,9 @@ def test_debounce_skips_recent_messages() -> None:
             to_addresses=["ops@example.com"],
             use_tls=True,
             timeout_seconds=10,
+            subject="SentinelTray Notification",
+            retry_attempts=0,
+            retry_backoff_seconds=0,
             dry_run=True,
         ),
     )
