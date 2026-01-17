@@ -54,6 +54,7 @@ python main.py
 
 The app runs in the system tray by default. Use the tray menu to open Status.
 Clique com o botão esquerdo no ícone para abrir o Status. A janela abre automaticamente ao iniciar.
+No Status, use os botões para abrir o arquivo de configurações e o repositório.
 
 CLI mode (no tray):
 
