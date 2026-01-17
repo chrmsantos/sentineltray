@@ -21,6 +21,7 @@
 - Add config error prompt with edit or exit option.
 - Open status on left-click and refresh tray UI in PT-BR.
 - Add Gmail SMTP example to local template.
+- Add single-instance guard and installer script.
 
 ## 2026-01-14
 

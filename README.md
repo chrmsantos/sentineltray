@@ -40,6 +40,11 @@ opens it for editing, and exits so you can fill it.
 Local templates are available at templates/local/ with commented instructions
 and sample data.
 
+## Instalacao automatica (Windows CMD)
+
+Use o script em scripts/install.cmd para baixar o projeto do GitHub e instalar
+Python, dependencias e o ambiente virtual.
+
 ## Run
 
 python main.py

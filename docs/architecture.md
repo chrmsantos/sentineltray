@@ -23,6 +23,7 @@
 - Watchdog detects long scans and can reset components.
 - Sensitive data paths are enforced under %USERPROFILE%\sentineltray.
 - Politica de privacidade detalhada em PRIVACY.md.
+- Instalacao automatica disponivel via scripts/install.cmd.
 - Local override config can be loaded from %USERPROFILE%\sentineltray\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
 - Local file templates live under templates/local/.
