@@ -1,7 +1,7 @@
 # Template de configuração local (copie para %USERPROFILE%\sentineltray\config.local.yaml)
 # Edite os valores abaixo e reinicie o app.
 
-# Janela alvo (regex). Use aspas simples para evitar escapes do YAML.
+# Janela alvo (regex). Pode usar apenas o prefixo do titulo, desde que nao coincida com outra janela aberta. Use aspas simples para evitar escapes do YAML.
 window_title_regex: ''
 
 # Filtro de texto (regex). Vazio significa qualquer texto.

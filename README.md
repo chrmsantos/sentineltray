@@ -19,7 +19,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 2. Edit config.yaml and set:
 
-- window_title_regex
+- window_title_regex (prefixo unico do titulo e suficiente)
 - phrase_regex (empty means any visible text)
 - use single quotes for regex to avoid YAML escape issues
 - email.smtp_host
