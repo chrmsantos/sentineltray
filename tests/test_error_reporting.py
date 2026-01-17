@@ -16,6 +16,7 @@ def test_handle_error_sets_status_and_sends() -> None:
         state_file="state.json",
         log_file="logs/sentineltray.log",
         telemetry_file="logs/telemetry.json",
+        show_error_window=True,
         whatsapp=WhatsappConfig(
             mode="web",
             chat_target="Operator",

@@ -9,6 +9,7 @@ max_history: 50
 state_file: "state.json"
 log_file: "logs/sentineltray.log"
 telemetry_file: "logs/telemetry.json"
+show_error_window: true
 whatsapp:
   mode: "web"
   chat_target: ""

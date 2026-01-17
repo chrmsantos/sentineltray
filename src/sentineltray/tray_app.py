@@ -49,7 +49,11 @@ def run_tray(config: AppConfig) -> None:
         snapshot = status.snapshot()
         if status_label is not None and status_label.winfo_exists():
             status_label.config(text=format_status(snapshot))
-        if snapshot.last_error and snapshot.last_error != last_error_shown:
+        if (
+            config.show_error_window
+            and snapshot.last_error
+            and snapshot.last_error != last_error_shown
+        ):
             show_error(snapshot.last_error)
         root.after(1000, refresh_status)
 

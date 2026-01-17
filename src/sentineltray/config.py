@@ -29,6 +29,7 @@ class AppConfig:
     state_file: str
     log_file: str
     telemetry_file: str
+    show_error_window: bool
     whatsapp: WhatsappConfig
 
 
@@ -85,6 +86,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         state_file=str(_get_required(data, "state_file")),
         log_file=str(_get_required(data, "log_file")),
         telemetry_file=str(_get_required(data, "telemetry_file")),
+        show_error_window=bool(_get_required(data, "show_error_window")),
         whatsapp=whatsapp,
     )
 

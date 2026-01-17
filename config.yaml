@@ -9,6 +9,7 @@ max_history: 100
 state_file: "state.json"
 log_file: "logs/sentineltray.log"
 telemetry_file: "logs/telemetry.json"
+show_error_window: true
 whatsapp:
   mode: "web"  # web only
   chat_target: ""  # chat name or phone with country code

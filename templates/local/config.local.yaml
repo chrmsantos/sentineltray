@@ -20,6 +20,9 @@ debounce_seconds: 600
 # Arquivo de telemetria local.
 telemetry_file: "logs/telemetry.json"
 
+# Modo silencioso (nao abre janela de erro).
+show_error_window: true
+
 whatsapp:
   # Nome exato do contato/grupo exibido no WhatsApp Web.
   chat_target: 'Operador Exemplo'
