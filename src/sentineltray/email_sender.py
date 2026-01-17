@@ -24,6 +24,13 @@ class EmailSender:
 class SmtpEmailSender(EmailSender):
     config: EmailConfig
 
+    def _is_auth_error(self, exc: smtplib.SMTPException) -> bool:
+        if isinstance(exc, smtplib.SMTPAuthenticationError):
+            return True
+        if isinstance(exc, smtplib.SMTPResponseException):
+            return exc.smtp_code in {534, 535}
+        return False
+
     def send(self, message: str) -> None:
         if self.config.dry_run:
             LOGGER.info("Dry run enabled, skipping send", extra={"category": "send"})
@@ -61,6 +68,12 @@ class SmtpEmailSender(EmailSender):
                     client.send_message(email)
                 return
             except smtplib.SMTPException as exc:
+                if self._is_auth_error(exc):
+                    LOGGER.error(
+                        "SMTP authentication failed (check app password)",
+                        extra={"category": "send"},
+                    )
+                    raise
                 if attempt >= attempts:
                     raise
                 LOGGER.warning(
