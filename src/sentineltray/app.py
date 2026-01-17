@@ -313,7 +313,15 @@ class Notifier:
             LOGGER.info("Watchdog restart completed", extra={"category": "error"})
 
     def run_loop(self, stop_event: Event) -> None:
-        setup_logging(self.config.log_file)
+        setup_logging(
+            self.config.log_file,
+            log_level=self.config.log_level,
+            log_console_level=self.config.log_console_level,
+            log_console_enabled=self.config.log_console_enabled,
+            log_max_bytes=self.config.log_max_bytes,
+            log_backup_count=self.config.log_backup_count,
+            log_run_files_keep=self.config.log_run_files_keep,
+        )
         LOGGER.info("SentinelTray started", extra={"category": "startup"})
         self.status.set_running(True)
         self.status.set_uptime_seconds(0)

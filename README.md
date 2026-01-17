@@ -13,9 +13,11 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 1. Create a virtual environment and install dependencies:
 
+   ```powershell
    python -m venv .venv
    .venv\Scripts\activate
    pip install -r requirements.txt
+   ```
 
 2. Edit config.yaml and set:
 
@@ -29,8 +31,10 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - email.retry_attempts
 - email.retry_backoff_seconds
 - email.dry_run = false when ready to send
- - status_export_csv, status_refresh_seconds, allow_window_restore
- - log_only_mode, config_checksum_file, min_free_disk_mb
+- status_export_csv, status_refresh_seconds, allow_window_restore
+- log_only_mode, config_checksum_file, min_free_disk_mb
+- log_level, log_console_level, log_console_enabled
+- log_max_bytes, log_backup_count, log_run_files_keep
 
 Sensitive settings (like window_title_regex and email credentials) can be stored in a local file:
 
@@ -61,11 +65,14 @@ O título da interface mostra o nome e a descrição do projeto.
 
 CLI mode (no tray):
 
+```powershell
 python main.py --cli
+```
 
 ## Notes
 
 - Logs are written per execution with detailed fields and kept with a max of 5 files in logs/.
+- Logs rotate by size using log_max_bytes and log_backup_count.
 - Third-party debug logs are suppressed to keep logs actionable.
 - state.json stores the last sent messages to avoid duplicates.
 - Errors detected in each polling iteration are reported on screen and via email.

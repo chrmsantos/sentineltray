@@ -19,6 +19,12 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.debounce_seconds == 600
     base = tmp_path / "sentineltray"
     assert config.log_file == str(base / "logs" / "sentineltray.log")
+    assert config.log_level == "INFO"
+    assert config.log_console_level == "WARNING"
+    assert config.log_console_enabled is True
+    assert config.log_max_bytes == 5000000
+    assert config.log_backup_count == 5
+    assert config.log_run_files_keep == 5
     assert config.telemetry_file == str(base / "logs" / "telemetry.json")
     assert config.status_export_file == str(base / "logs" / "status.json")
     assert config.status_export_csv == str(base / "logs" / "status.csv")

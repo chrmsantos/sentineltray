@@ -35,6 +35,14 @@ allow_window_restore: true
 # Modo somente log (nao envia email).
 log_only_mode: false
 
+# Configuracao de logs.
+log_level: "INFO"
+log_console_level: "WARNING"
+log_console_enabled: true
+log_max_bytes: 5000000
+log_backup_count: 5
+log_run_files_keep: 5
+
 # Checksum do config.local.yaml para auditoria.
 config_checksum_file: "logs/config.checksum"
 
