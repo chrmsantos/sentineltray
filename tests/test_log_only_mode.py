@@ -3,7 +3,7 @@ from sentineltray.config import AppConfig, EmailConfig
 from sentineltray.status import StatusStore
 
 
-def test_send_healthcheck_updates_status_and_sends() -> None:
+def test_log_only_mode_skips_send() -> None:
     config = AppConfig(
         window_title_regex="APP",
         phrase_regex="ALERT",
@@ -20,7 +20,7 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
         status_export_csv="logs/status.csv",
         status_refresh_seconds=1,
         allow_window_restore=True,
-        log_only_mode=False,
+        log_only_mode=True,
         config_checksum_file="logs/config.checksum",
         min_free_disk_mb=100,
         show_error_window=True,
@@ -38,27 +38,19 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
             subject="SentinelTray Notification",
             retry_attempts=0,
             retry_backoff_seconds=0,
-            dry_run=True,
+            dry_run=False,
         ),
     )
-    status = StatusStore()
-    notifier = Notifier(config=config, status=status)
 
-    sent: list[str] = []
+    notifier = Notifier(config=config, status=StatusStore())
+
+    calls = {"count": 0}
 
     class FakeSender:
-        def send(self, message: str) -> None:
-            sent.append(message)
+        def send(self, _message: str) -> None:
+            calls["count"] += 1
 
     notifier._sender = FakeSender()
-    status.set_last_scan("t1")
-    status.set_last_send("s1")
-    status.set_last_error("")
+    notifier._handle_error("error: test")
 
-    notifier._send_healthcheck()
-
-    snapshot = status.snapshot()
-    assert sent
-    assert sent[0].startswith("info: healthcheck")
-    assert snapshot.last_healthcheck
-    assert snapshot.uptime_seconds >= 0
+    assert calls["count"] == 0

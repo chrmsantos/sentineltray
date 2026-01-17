@@ -57,7 +57,7 @@ def run_tray(config: AppConfig) -> None:
             and snapshot.last_error != last_error_shown
         ):
             show_error(snapshot.last_error)
-        root.after(1000, refresh_status)
+        root.after(int(config.status_refresh_seconds * 1000), refresh_status)
 
     def show_error(message: str) -> None:
         nonlocal error_window, error_label, last_error_shown
@@ -135,6 +135,7 @@ def run_tray(config: AppConfig) -> None:
         links.pack(fill="x", padx=12, pady=(0, 12))
 
         config_path = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray", "config.local.yaml")
+        data_dir = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray")
 
         def open_config() -> None:
             if config_path:
@@ -146,9 +147,18 @@ def run_tray(config: AppConfig) -> None:
         def open_repo() -> None:
             webbrowser.open("https://github.com/chrmsantos/sentineltray")
 
+        def open_data_dir() -> None:
+            if data_dir:
+                try:
+                    os.startfile(data_dir)
+                except OSError:
+                    return
+
         btn_config = tk.Button(links, text="Abrir configuracoes", command=open_config)
         btn_repo = tk.Button(links, text="Abrir repositorio", command=open_repo)
+        btn_dir = tk.Button(links, text="Abrir pasta de dados", command=open_data_dir)
         btn_config.pack(side="left")
+        btn_dir.pack(side="left", padx=(8, 0))
         btn_repo.pack(side="right")
 
     def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:

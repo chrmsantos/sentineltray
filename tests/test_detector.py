@@ -26,7 +26,7 @@ def test_prepare_window_restores_minimized(monkeypatch) -> None:
         def descendants(self):
             return []
 
-    detector = WindowTextDetector("APP")
+    detector = WindowTextDetector("APP", allow_window_restore=True)
     monkeypatch.setattr(detector, "_get_window", lambda: FakeWindow())
 
     detector.find_matches("ALERT")

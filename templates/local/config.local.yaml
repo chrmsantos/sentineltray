@@ -23,6 +23,24 @@ telemetry_file: "logs/telemetry.json"
 # Exportacao de status em JSON (para integracoes locais).
 status_export_file: "logs/status.json"
 
+# Exportacao de status em CSV.
+status_export_csv: "logs/status.csv"
+
+# Intervalo de refresh do status (segundos).
+status_refresh_seconds: 1
+
+# Permite restaurar janela minimizada para leitura.
+allow_window_restore: true
+
+# Modo somente log (nao envia email).
+log_only_mode: false
+
+# Checksum do config.local.yaml para auditoria.
+config_checksum_file: "logs/config.checksum"
+
+# Espaco minimo em disco para gravacao (MB).
+min_free_disk_mb: 100
+
 # Modo silencioso (não abre janela de erro).
 show_error_window: true
 

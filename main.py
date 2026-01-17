@@ -29,6 +29,12 @@ email:
     retry_attempts: 3
     retry_backoff_seconds: 5
     dry_run: true
+status_export_csv: "logs/status.csv"
+status_refresh_seconds: 1
+allow_window_restore: true
+log_only_mode: false
+config_checksum_file: "logs/config.checksum"
+min_free_disk_mb: 100
 """
 
 

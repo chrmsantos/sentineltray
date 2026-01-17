@@ -21,6 +21,12 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.log_file == str(base / "logs" / "sentineltray.log")
     assert config.telemetry_file == str(base / "logs" / "telemetry.json")
     assert config.status_export_file == str(base / "logs" / "status.json")
+    assert config.status_export_csv == str(base / "logs" / "status.csv")
+    assert config.status_refresh_seconds == 1
+    assert config.allow_window_restore is True
+    assert config.log_only_mode is False
+    assert config.config_checksum_file == str(base / "logs" / "config.checksum")
+    assert config.min_free_disk_mb == 100
     assert config.show_error_window is True
     assert config.watchdog_timeout_seconds == 60
     assert config.watchdog_restart is True

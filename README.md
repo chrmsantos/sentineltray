@@ -29,6 +29,8 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - email.retry_attempts
 - email.retry_backoff_seconds
 - email.dry_run = false when ready to send
+ - status_export_csv, status_refresh_seconds, allow_window_restore
+ - log_only_mode, config_checksum_file, min_free_disk_mb
 
 Sensitive settings (like window_title_regex and email credentials) can be stored in a local file:
 
@@ -78,6 +80,9 @@ python main.py --cli
 - Logs include a structured category field.
 - Local telemetry file captures last activity for quick diagnostics.
 - Status export JSON available at status_export_file.
+- Status export CSV available at status_export_csv.
+- UI refresh interval is configurable via status_refresh_seconds.
+- Data folder shortcut available in the Status window.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.

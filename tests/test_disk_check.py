@@ -1,9 +1,11 @@
+import pytest
+
 from sentineltray.app import Notifier
 from sentineltray.config import AppConfig, EmailConfig
 from sentineltray.status import StatusStore
 
 
-def test_send_healthcheck_updates_status_and_sends() -> None:
+def test_low_disk_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     config = AppConfig(
         window_title_regex="APP",
         phrase_regex="ALERT",
@@ -41,24 +43,13 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
             dry_run=True,
         ),
     )
-    status = StatusStore()
-    notifier = Notifier(config=config, status=status)
 
-    sent: list[str] = []
+    notifier = Notifier(config=config, status=StatusStore())
 
-    class FakeSender:
-        def send(self, message: str) -> None:
-            sent.append(message)
+    class Usage:
+        free = 0
 
-    notifier._sender = FakeSender()
-    status.set_last_scan("t1")
-    status.set_last_send("s1")
-    status.set_last_error("")
+    monkeypatch.setattr("shutil.disk_usage", lambda _path: Usage())
 
-    notifier._send_healthcheck()
-
-    snapshot = status.snapshot()
-    assert sent
-    assert sent[0].startswith("info: healthcheck")
-    assert snapshot.last_healthcheck
-    assert snapshot.uptime_seconds >= 0
+    with pytest.raises(RuntimeError, match="Low disk space"):
+        notifier._ensure_free_disk()

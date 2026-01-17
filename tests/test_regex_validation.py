@@ -5,17 +5,15 @@ import pytest
 from sentineltray.config import load_config
 
 
-def test_invalid_poll_interval_rejected(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_invalid_regex_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         "\n".join(
             [
-                "window_title_regex: 'APP'",
+                "window_title_regex: '('",
                 "phrase_regex: 'ALERT'",
-                "poll_interval_seconds: 0",
+                "poll_interval_seconds: 1",
                 "healthcheck_interval_seconds: 60",
                 "error_backoff_base_seconds: 5",
                 "error_backoff_max_seconds: 10",
@@ -52,5 +50,5 @@ def test_invalid_poll_interval_rejected(
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="poll_interval_seconds"):
+    with pytest.raises(ValueError, match="window_title_regex invalid regex"):
         load_config(str(config_path))

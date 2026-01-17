@@ -29,6 +29,12 @@ def test_sensitive_paths_forced_to_user_root(
                 f"log_file: '{other_root / 'logs' / 'sentineltray.log'}'",
                 f"telemetry_file: '{other_root / 'telemetry.json'}'",
                 f"status_export_file: '{other_root / 'status.json'}'",
+                f"status_export_csv: '{other_root / 'status.csv'}'",
+                "status_refresh_seconds: 1",
+                "allow_window_restore: true",
+                "log_only_mode: false",
+                "config_checksum_file: 'logs/config.checksum'",
+                "min_free_disk_mb: 100",
                 "show_error_window: true",
                 "watchdog_timeout_seconds: 60",
                 "watchdog_restart: true",
@@ -57,3 +63,4 @@ def test_sensitive_paths_forced_to_user_root(
     assert config.log_file == str(base / "sentineltray.log")
     assert config.telemetry_file == str(base / "telemetry.json")
     assert config.status_export_file == str(base / "status.json")
+    assert config.status_export_csv == str(base / "status.csv")

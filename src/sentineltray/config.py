@@ -38,6 +38,12 @@ class AppConfig:
     log_file: str
     telemetry_file: str
     status_export_file: str
+    status_export_csv: str
+    status_refresh_seconds: int
+    allow_window_restore: bool
+    log_only_mode: bool
+    config_checksum_file: str
+    min_free_disk_mb: int
     show_error_window: bool
     watchdog_timeout_seconds: int
     watchdog_restart: bool
@@ -113,6 +119,12 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         log_file=str(_get_required(data, "log_file")),
         telemetry_file=str(_get_required(data, "telemetry_file")),
         status_export_file=str(_get_required(data, "status_export_file")),
+        status_export_csv=str(_get_required(data, "status_export_csv")),
+        status_refresh_seconds=int(_get_required(data, "status_refresh_seconds")),
+        allow_window_restore=bool(_get_required(data, "allow_window_restore")),
+        log_only_mode=bool(_get_required(data, "log_only_mode")),
+        config_checksum_file=str(_get_required(data, "config_checksum_file")),
+        min_free_disk_mb=int(_get_required(data, "min_free_disk_mb")),
         show_error_window=bool(_get_required(data, "show_error_window")),
         watchdog_timeout_seconds=int(
             _get_required(data, "watchdog_timeout_seconds")
@@ -149,6 +161,8 @@ def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
         log_file=_resolve_sensitive_path(base, config.log_file),
         telemetry_file=_resolve_sensitive_path(base, config.telemetry_file),
         status_export_file=_resolve_sensitive_path(base, config.status_export_file),
+        status_export_csv=_resolve_sensitive_path(base, config.status_export_csv),
+        config_checksum_file=_resolve_sensitive_path(base, config.config_checksum_file),
     )
 
 
@@ -173,6 +187,12 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("telemetry_file is required")
     if not config.status_export_file:
         raise ValueError("status_export_file is required")
+    if not config.status_export_csv:
+        raise ValueError("status_export_csv is required")
+    if config.status_refresh_seconds < 1:
+        raise ValueError("status_refresh_seconds must be >= 1")
+    if config.min_free_disk_mb < 1:
+        raise ValueError("min_free_disk_mb must be >= 1")
     if config.email.timeout_seconds < 1:
         raise ValueError("email.timeout_seconds must be >= 1")
     if config.email.smtp_port < 1:
