@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 from sentineltray.app import run
 from sentineltray.config import load_config, load_config_with_override
@@ -34,6 +35,27 @@ def _open_for_editing(path: Path) -> None:
             return
 
 
+def _ask_reedit(path: Path, reason: str) -> bool:
+    message = (
+        "Erro nas configuracoes.\n\n"
+        f"Arquivo: {path}\n"
+        f"Motivo: {reason}\n\n"
+        "Deseja reabrir o arquivo para editar?"
+    )
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+
+        root = tk.Tk()
+        root.withdraw()
+        try:
+            return messagebox.askyesno("SentinelTray", message)
+        finally:
+            root.destroy()
+    except Exception:
+        return False
+
+
 def _write_local_template(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(LOCAL_TEMPLATE, encoding="utf-8")
@@ -52,14 +74,34 @@ def _ensure_local_override(path: Path) -> None:
         raise SystemExit(f"Local config is empty at {path}. Fill it and restart.")
 
 
+def _handle_config_error(path: Path, exc: Exception) -> None:
+    reason = str(exc)
+    if _ask_reedit(path, reason):
+        _open_for_editing(path)
+        raise SystemExit(f"Reabra e edite o arquivo: {path}") from exc
+    raise SystemExit("Execucao encerrada pelo usuario.") from exc
+
+
+def _ensure_local_config_path(path: Path) -> None:
+    user_root = os.environ.get("USERPROFILE")
+    if not user_root:
+        raise ValueError("USERPROFILE nao definido")
+    base = (Path(user_root) / "sentineltray").resolve()
+    try:
+        if path.resolve().is_relative_to(base):
+            return
+    except OSError:
+        pass
+    raise ValueError(
+        f"Configuracoes pessoais devem ficar em {base}."
+    )
+
+
 def _load_local_override(config_path: Path, override_path: Path):
     try:
         return load_config_with_override(str(config_path), str(override_path))
     except Exception as exc:
-        _open_for_editing(override_path)
-        raise SystemExit(
-            f"Local config has errors at {override_path}. Fix and restart."
-        ) from exc
+        _handle_config_error(override_path, exc)
 
 
 def main() -> int:
@@ -85,13 +127,17 @@ def main() -> int:
             local_override = candidate
             override_path = candidate
 
-    if local_override is not None and override_path == local_override:
-        _ensure_local_override(local_override)
-        config = _load_local_override(config_path, local_override)
-    elif override_path is not None:
-        config = load_config_with_override(str(config_path), str(override_path))
-    else:
-        config = load_config(str(config_path))
+    try:
+        if local_override is not None and override_path == local_override:
+            _ensure_local_override(local_override)
+            config = _load_local_override(config_path, local_override)
+        elif override_path is not None:
+            _ensure_local_config_path(override_path)
+            config = load_config_with_override(str(config_path), str(override_path))
+        else:
+            config = load_config(str(config_path))
+    except Exception as exc:
+        _handle_config_error(override_path or config_path, exc)
     if use_cli:
         run(config)
     else:

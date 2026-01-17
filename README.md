@@ -45,6 +45,7 @@ and sample data.
 python main.py
 
 The app runs in the system tray by default. Use the tray menu to open Status.
+Clique com o botão esquerdo no ícone para abrir o Status.
 
 CLI mode (no tray):
 
@@ -70,3 +71,4 @@ python main.py --cli
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Sensitive data is always stored under %USERPROFILE%\sentineltray.
+- Política de privacidade em PRIVACY.md.

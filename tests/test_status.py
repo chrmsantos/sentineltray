@@ -24,4 +24,4 @@ def test_status_store_snapshot() -> None:
     assert snapshot.error_count == 2
 
     text = format_status(snapshot)
-    assert "running: yes" in text
+    assert "executando: sim" in text

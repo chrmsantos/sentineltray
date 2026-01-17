@@ -75,15 +75,15 @@ class StatusStore:
 
 
 def format_status(snapshot: StatusSnapshot) -> str:
-    running = "yes" if snapshot.running else "no"
+    running = "sim" if snapshot.running else "nao"
     lines = [
-        f"running: {running}",
-        f"last_scan: {snapshot.last_scan}",
-        f"last_match: {snapshot.last_match}",
-        f"last_send: {snapshot.last_send}",
-        f"last_error: {snapshot.last_error}",
-        f"last_healthcheck: {snapshot.last_healthcheck}",
-        f"uptime_seconds: {snapshot.uptime_seconds}",
-        f"error_count: {snapshot.error_count}",
+        f"executando: {running}",
+        f"ultima_verificacao: {snapshot.last_scan}",
+        f"ultima_correspondencia: {snapshot.last_match}",
+        f"ultimo_envio: {snapshot.last_send}",
+        f"ultimo_erro: {snapshot.last_error}",
+        f"ultimo_healthcheck: {snapshot.last_healthcheck}",
+        f"tempo_ativo_segundos: {snapshot.uptime_seconds}",
+        f"erros_total: {snapshot.error_count}",
     ]
     return "\n".join(lines)

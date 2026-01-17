@@ -1,7 +1,7 @@
 # Template de configuração local (copie para %USERPROFILE%\sentineltray\config.local.yaml)
 # Edite os valores abaixo e reinicie o app.
 
-# Janela alvo (regex). Pode usar apenas o prefixo do titulo, desde que nao coincida com outra janela aberta. Use aspas simples para evitar escapes do YAML.
+# Janela alvo (regex). Pode usar apenas o prefixo do título, desde que não coincida com outra janela aberta. Use aspas simples para evitar escapes do YAML.
 window_title_regex: ''
 
 # Filtro de texto (regex). Vazio significa qualquer texto.
@@ -28,6 +28,14 @@ watchdog_timeout_seconds: 60
 watchdog_restart: true
 
 email:
+  # Exemplo Gmail (SMTP):
+  # smtp_host: "smtp.gmail.com"
+  # smtp_port: 587
+  # smtp_username: "seu.usuario@gmail.com"
+  # smtp_password: "sua_senha_de_app"
+  # from_address: "seu.usuario@gmail.com"
+  # to_addresses: ["destinatario@gmail.com"]
+  # use_tls: true
   smtp_host: "smtp.exemplo.local"
   smtp_port: 587
   smtp_username: "usuario"

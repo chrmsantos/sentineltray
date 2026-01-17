@@ -17,6 +17,10 @@
 - Add watchdog for long scan stalls.
 - Auto-create local override config on startup when missing.
 - Enforce sensitive data paths under user local sentineltray folder.
+- Add privacy policy and tests for LGPD compliance.
+- Add config error prompt with edit or exit option.
+- Open status on left-click and refresh tray UI in PT-BR.
+- Add Gmail SMTP example to local template.
 
 ## 2026-01-14
 

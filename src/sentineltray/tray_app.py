@@ -16,10 +16,12 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _build_image() -> Image.Image:
-    image = Image.new("RGB", (64, 64), color=(30, 30, 30))
+    image = Image.new("RGB", (64, 64), color=(28, 40, 56))
     draw = ImageDraw.Draw(image)
-    draw.rectangle((8, 8, 56, 56), outline=(0, 200, 0), width=4)
-    draw.rectangle((20, 20, 44, 44), fill=(0, 200, 0))
+    draw.rectangle((10, 18, 54, 46), outline=(255, 255, 255), width=3)
+    draw.line((10, 18, 32, 34, 54, 18), fill=(255, 255, 255), width=2)
+    draw.rectangle((12, 20, 52, 44), outline=(255, 255, 255), width=2)
+    draw.ellipse((42, 6, 58, 22), fill=(0, 166, 81))
     return image
 
 
@@ -67,9 +69,18 @@ def run_tray(config: AppConfig) -> None:
             return
 
         error_window = tk.Toplevel(root)
-        error_window.title("SentinelTray Error")
-        error_window.geometry("520x160")
+        error_window.title("SentinelTray - Erro")
+        error_window.geometry("540x180")
         error_window.resizable(False, False)
+
+        title = tk.Label(
+            error_window,
+            text="Alerta de erro",
+            anchor="w",
+            font=("Segoe UI", 11, "bold"),
+            fg="#cc0000",
+        )
+        title.pack(fill="x", padx=12, pady=(12, 4))
 
         error_label = tk.Label(
             error_window,
@@ -77,9 +88,10 @@ def run_tray(config: AppConfig) -> None:
             justify="left",
             anchor="nw",
             font=("Consolas", 10),
+            bg="#fff0f0",
             fg="#cc0000",
         )
-        error_label.pack(fill="both", expand=True, padx=10, pady=10)
+        error_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
     def show_status() -> None:
         nonlocal status_window, status_label
@@ -89,9 +101,17 @@ def run_tray(config: AppConfig) -> None:
             return
 
         status_window = tk.Toplevel(root)
-        status_window.title("SentinelTray Status")
-        status_window.geometry("520x180")
+        status_window.title("SentinelTray - Status")
+        status_window.geometry("540x220")
         status_window.resizable(False, False)
+
+        title = tk.Label(
+            status_window,
+            text="Status do monitoramento",
+            anchor="w",
+            font=("Segoe UI", 11, "bold"),
+        )
+        title.pack(fill="x", padx=12, pady=(12, 4))
 
         status_label = tk.Label(
             status_window,
@@ -99,8 +119,9 @@ def run_tray(config: AppConfig) -> None:
             justify="left",
             anchor="nw",
             font=("Consolas", 10),
+            bg="#f2f2f2",
         )
-        status_label.pack(fill="both", expand=True, padx=10, pady=10)
+        status_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
     def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:
         root.after(0, show_status)
@@ -114,8 +135,8 @@ def run_tray(config: AppConfig) -> None:
         _build_image(),
         "SentinelTray",
         menu=pystray.Menu(
-            pystray.MenuItem("Status", on_status),
-            pystray.MenuItem("Exit", on_exit),
+            pystray.MenuItem("Abrir status", on_status, default=True),
+            pystray.MenuItem("Sair", on_exit),
         ),
     )
 
