@@ -24,6 +24,7 @@
 - Add single-instance guard and installer script.
 - Add email subject, retries, regex validation, and status export.
 - Use eye icon and auto-open status window on startup.
+- Add status shortcuts for config and repo, and switch eye color to light blue.
 
 ## 2026-01-14
 

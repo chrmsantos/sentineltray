@@ -19,6 +19,7 @@
 - Local telemetry file captures last activity for quick diagnostics.
 - Status export JSON supports local integrations.
 - Tray abre automaticamente o status na inicializacao e usa icone em formato de olho.
+- Status inclui atalhos para abrir configuracoes e o repositorio.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.

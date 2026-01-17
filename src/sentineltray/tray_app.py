@@ -7,6 +7,7 @@ from typing import Optional
 from PIL import Image, ImageDraw
 import pystray
 import tkinter as tk
+import webbrowser
 
 from .app import Notifier
 from .config import AppConfig
@@ -20,7 +21,7 @@ def _build_image() -> Image.Image:
     draw = ImageDraw.Draw(image)
     draw.ellipse((8, 18, 56, 46), outline=(255, 255, 255), width=3)
     draw.ellipse((24, 24, 40, 40), outline=(255, 255, 255), width=2)
-    draw.ellipse((28, 28, 36, 36), fill=(0, 166, 81))
+    draw.ellipse((28, 28, 36, 36), fill=(90, 180, 255))
     return image
 
 
@@ -120,7 +121,27 @@ def run_tray(config: AppConfig) -> None:
             font=("Consolas", 10),
             bg="#f2f2f2",
         )
-        status_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        status_label.pack(fill="both", expand=True, padx=12, pady=(0, 8))
+
+        links = tk.Frame(status_window)
+        links.pack(fill="x", padx=12, pady=(0, 12))
+
+        config_path = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray", "config.local.yaml")
+
+        def open_config() -> None:
+            if config_path:
+                try:
+                    os.startfile(config_path)
+                except OSError:
+                    return
+
+        def open_repo() -> None:
+            webbrowser.open("https://github.com/chrmsantos/sentineltray")
+
+        btn_config = tk.Button(links, text="Abrir configuracoes", command=open_config)
+        btn_repo = tk.Button(links, text="Abrir repositorio", command=open_repo)
+        btn_config.pack(side="left")
+        btn_repo.pack(side="right")
 
     def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:
         root.after(0, show_status)
