@@ -19,6 +19,7 @@
 - Logs include a structured category field (scan/send/error/etc).
 - Local telemetry file captures last activity for quick diagnostics.
 - Status export JSON supports local integrations.
+- Status export CSV supports local integrations.
 - Tray abre automaticamente o status na inicializacao e usa icone em formato de olho.
 - Status inclui atalhos para abrir configuracoes e o repositorio.
 - Interface exibe o nome e a descricao resumida do projeto no topo.

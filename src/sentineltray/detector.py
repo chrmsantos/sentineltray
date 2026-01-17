@@ -10,8 +10,9 @@ LOGGER = logging.getLogger(__name__)
 
 
 class WindowTextDetector:
-    def __init__(self, window_title_regex: str) -> None:
+    def __init__(self, window_title_regex: str, allow_window_restore: bool = True) -> None:
         self._window_title_regex = re.compile(window_title_regex)
+        self._allow_window_restore = allow_window_restore
 
     def _get_window(self):
         desktop = Desktop(backend="uia")
@@ -19,10 +20,11 @@ class WindowTextDetector:
 
     def _prepare_window(self, window) -> None:
         try:
-            if hasattr(window, "is_minimized") and window.is_minimized():
-                window.restore()
-            if hasattr(window, "set_focus"):
-                window.set_focus()
+            if self._allow_window_restore:
+                if hasattr(window, "is_minimized") and window.is_minimized():
+                    window.restore()
+                if hasattr(window, "set_focus"):
+                    window.set_focus()
         except Exception as exc:
             raise RuntimeError("Target window could not be restored") from exc
 

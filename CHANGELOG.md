@@ -27,6 +27,7 @@
 - Add status shortcuts for config and repo, and switch eye color to light blue.
 - Restore minimized windows before scanning.
 - Add project title and description in the status UI.
+- Add CSV export, config checksum, log-only mode, and disk free checks.
 
 ## 2026-01-14
 

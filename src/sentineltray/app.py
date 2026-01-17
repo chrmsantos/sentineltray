@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import csv
+import hashlib
 import importlib.metadata
 import json
 import logging
+import shutil
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -87,7 +90,10 @@ class Notifier:
     status: StatusStore
 
     def __post_init__(self) -> None:
-        self._detector = WindowTextDetector(self.config.window_title_regex)
+        self._detector = WindowTextDetector(
+            self.config.window_title_regex,
+            allow_window_restore=self.config.allow_window_restore,
+        )
         self._sender = build_sender(self.config.email)
         self._state_path = Path(self.config.state_file)
         self._history = _load_state(self._state_path)
@@ -98,9 +104,13 @@ class Notifier:
         self._status_export = JsonWriter(Path(self.config.status_export_file))
         self._app_version = _get_version()
         self._commit_hash = _get_commit_hash()
+        self._update_config_checksum()
 
     def _reset_components(self) -> None:
-        self._detector = WindowTextDetector(self.config.window_title_regex)
+        self._detector = WindowTextDetector(
+            self.config.window_title_regex,
+            allow_window_restore=self.config.allow_window_restore,
+        )
         self._sender = build_sender(self.config.email)
 
     def _build_last_sent_map(self, history: list[dict[str, str]]) -> dict[str, datetime]:
@@ -161,7 +171,10 @@ class Notifier:
         safe_message = _to_ascii(message)
         self.status.set_last_error(safe_message)
         try:
-            self._sender.send(safe_message)
+            if self.config.log_only_mode:
+                LOGGER.info("Log-only mode active, skipping send", extra={"category": "send"})
+            else:
+                self._sender.send(safe_message)
             self.status.set_last_send(_now_iso())
             LOGGER.info("Sent error notification", extra={"category": "error"})
         except Exception as exc:
@@ -174,7 +187,10 @@ class Notifier:
     def _send_startup_test(self) -> None:
         message = "info: startup test message"
         try:
-            self._sender.send(message)
+            if self.config.log_only_mode:
+                LOGGER.info("Log-only mode active, skipping send", extra={"category": "send"})
+            else:
+                self._sender.send(message)
             self.status.set_last_send(_now_iso())
             LOGGER.info("Sent startup test message", extra={"category": "send"})
         except Exception as exc:
@@ -194,7 +210,10 @@ class Notifier:
         )
         safe_message = _to_ascii(message)
         try:
-            self._sender.send(safe_message)
+            if self.config.log_only_mode:
+                LOGGER.info("Log-only mode active, skipping send", extra={"category": "send"})
+            else:
+                self._sender.send(safe_message)
             self.status.set_last_send(_now_iso())
             self.status.set_last_healthcheck(_now_iso())
             LOGGER.info("Sent healthcheck message", extra={"category": "send"})
@@ -245,6 +264,44 @@ class Notifier:
         except Exception as exc:
             LOGGER.exception("Status export failed: %s", exc, extra={"category": "error"})
 
+        self._write_status_csv(status_payload)
+
+    def _write_status_csv(self, payload: dict[str, object]) -> None:
+        path = Path(self.config.status_export_csv)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with path.open("w", encoding="utf-8", newline="") as handle:
+                writer = csv.writer(handle)
+                for key, value in payload.items():
+                    writer.writerow([key, value])
+        except Exception as exc:
+            LOGGER.exception("Status CSV export failed: %s", exc, extra={"category": "error"})
+
+    def _update_config_checksum(self) -> None:
+        try:
+            user_root = os.environ.get("USERPROFILE")
+            if not user_root:
+                return
+            config_path = Path(user_root) / "sentineltray" / "config.local.yaml"
+            if not config_path.exists():
+                return
+            checksum = hashlib.sha256(config_path.read_bytes()).hexdigest()
+            path = Path(self.config.config_checksum_file)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(checksum, encoding="utf-8")
+        except Exception as exc:
+            LOGGER.exception("Config checksum update failed: %s", exc, extra={"category": "error"})
+
+    def _ensure_free_disk(self) -> None:
+        try:
+            base = Path(self.config.log_file).parent
+            usage = shutil.disk_usage(base)
+            free_mb = usage.free // (1024 * 1024)
+            if free_mb < self.config.min_free_disk_mb:
+                raise RuntimeError("Low disk space")
+        except Exception as exc:
+            raise RuntimeError(f"Low disk space: {exc}") from exc
+
     def _handle_watchdog(self, duration_seconds: float) -> None:
         if duration_seconds <= self.config.watchdog_timeout_seconds:
             return
@@ -266,6 +323,7 @@ class Notifier:
         while not stop_event.is_set():
             started_at = time.monotonic()
             try:
+                self._ensure_free_disk()
                 self.scan_once()
                 self.status.set_last_error("")
                 error_count = 0
