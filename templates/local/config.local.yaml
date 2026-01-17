@@ -7,6 +7,9 @@ window_title_regex: 'Sino\.Siscam\.Desktop'
 # Filtro de texto (regex). Vazio significa qualquer texto.
 phrase_regex: 'ALERTA TESTE'
 
+# Intervalo de healthcheck em segundos.
+healthcheck_interval_seconds: 3600
+
 whatsapp:
   # Nome exato do contato/grupo exibido no WhatsApp Web.
   chat_target: 'Operador Exemplo'

@@ -3,7 +3,7 @@ from sentineltray.config import AppConfig, WhatsappConfig
 from sentineltray.status import StatusStore
 
 
-def test_send_startup_test_message_sends_and_updates_status() -> None:
+def test_send_healthcheck_updates_status_and_sends() -> None:
     config = AppConfig(
         window_title_regex="APP",
         phrase_regex="ALERT",
@@ -30,9 +30,14 @@ def test_send_startup_test_message_sends_and_updates_status() -> None:
             sent.append(message)
 
     notifier._sender = FakeSender()
+    status.set_last_scan("t1")
+    status.set_last_send("s1")
+    status.set_last_error("")
 
-    notifier._send_startup_test()
+    notifier._send_healthcheck()
 
     snapshot = status.snapshot()
-    assert sent == ["info: startup test message"]
-    assert snapshot.last_send
+    assert sent
+    assert sent[0].startswith("info: healthcheck")
+    assert snapshot.last_healthcheck
+    assert snapshot.uptime_seconds >= 0

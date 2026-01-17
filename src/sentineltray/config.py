@@ -21,6 +21,7 @@ class AppConfig:
     window_title_regex: str
     phrase_regex: str
     poll_interval_seconds: int
+    healthcheck_interval_seconds: int
     max_history: int
     state_file: str
     log_file: str
@@ -66,6 +67,9 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         window_title_regex=str(_get_required(data, "window_title_regex")),
         phrase_regex=str(_get_required(data, "phrase_regex")),
         poll_interval_seconds=int(_get_required(data, "poll_interval_seconds")),
+        healthcheck_interval_seconds=int(
+            _get_required(data, "healthcheck_interval_seconds")
+        ),
         max_history=int(_get_required(data, "max_history")),
         state_file=str(_get_required(data, "state_file")),
         log_file=str(_get_required(data, "log_file")),

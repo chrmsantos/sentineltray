@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +41,10 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().replace(microsecond=0).isoformat()
 
 
+def _to_ascii(text: str) -> str:
+    return text.encode("ascii", "backslashreplace").decode("ascii")
+
+
 @dataclass
 class Notifier:
     config: AppConfig
@@ -50,6 +55,8 @@ class Notifier:
         self._sender = build_sender(self.config.whatsapp)
         self._state_path = Path(self.config.state_file)
         self._history = _load_state(self._state_path)
+        self._started_at = datetime.now(timezone.utc)
+        self._next_healthcheck = time.monotonic() + self.config.healthcheck_interval_seconds
 
     def scan_once(self) -> None:
         self.status.set_last_scan(_now_iso())
@@ -73,9 +80,10 @@ class Notifier:
             _save_state(self._state_path, self._history)
 
     def _handle_error(self, message: str) -> None:
-        self.status.set_last_error(message)
+        safe_message = _to_ascii(message)
+        self.status.set_last_error(safe_message)
         try:
-            self._sender.send(message)
+            self._sender.send(safe_message)
             self.status.set_last_send(_now_iso())
             LOGGER.info("Sent error notification")
         except Exception as exc:
@@ -91,10 +99,32 @@ class Notifier:
             error_message = f"error: startup test send failed: {exc}"
             self._handle_error(error_message)
 
+    def _send_healthcheck(self) -> None:
+        uptime_seconds = int((datetime.now(timezone.utc) - self._started_at).total_seconds())
+        self.status.set_uptime_seconds(uptime_seconds)
+        snapshot = self.status.snapshot()
+        message = (
+            "info: healthcheck "
+            f"uptime_seconds={uptime_seconds} "
+            f"last_scan={snapshot.last_scan} "
+            f"last_send={snapshot.last_send} "
+            f"last_error={snapshot.last_error}"
+        )
+        safe_message = _to_ascii(message)
+        try:
+            self._sender.send(safe_message)
+            self.status.set_last_send(_now_iso())
+            self.status.set_last_healthcheck(_now_iso())
+            LOGGER.info("Sent healthcheck message")
+        except Exception as exc:
+            error_message = f"error: healthcheck send failed: {exc}"
+            self._handle_error(error_message)
+
     def run_loop(self, stop_event: Event) -> None:
         setup_logging(self.config.log_file)
         LOGGER.info("SentinelTray started")
         self.status.set_running(True)
+        self.status.set_uptime_seconds(0)
         self._send_startup_test()
 
         while not stop_event.is_set():
@@ -105,6 +135,14 @@ class Notifier:
                 message = f"error: {exc}"
                 self._handle_error(message)
                 LOGGER.exception("Loop error: %s", exc)
+
+            self.status.set_uptime_seconds(
+                int((datetime.now(timezone.utc) - self._started_at).total_seconds())
+            )
+            now = time.monotonic()
+            if now >= self._next_healthcheck:
+                self._send_healthcheck()
+                self._next_healthcheck = now + self.config.healthcheck_interval_seconds
 
             stop_event.wait(self.config.poll_interval_seconds)
 

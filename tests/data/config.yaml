@@ -1,6 +1,7 @@
 window_title_regex: 'Sino\.Siscam\.Desktop'
 phrase_regex: "ALERT"
 poll_interval_seconds: 300
+healthcheck_interval_seconds: 3600
 max_history: 50
 state_file: "state.json"
 log_file: "logs/sentineltray.log"

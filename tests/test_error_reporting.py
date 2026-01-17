@@ -8,6 +8,7 @@ def test_handle_error_sets_status_and_sends() -> None:
         window_title_regex="APP",
         phrase_regex="ALERT",
         poll_interval_seconds=1,
+        healthcheck_interval_seconds=3600,
         max_history=10,
         state_file="state.json",
         log_file="logs/sentineltray.log",

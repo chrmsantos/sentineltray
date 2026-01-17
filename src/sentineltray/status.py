@@ -11,6 +11,8 @@ class StatusSnapshot:
     last_match: str
     last_send: str
     last_error: str
+    last_healthcheck: str
+    uptime_seconds: int
 
 
 class StatusStore:
@@ -21,6 +23,8 @@ class StatusStore:
         self._last_match = ""
         self._last_send = ""
         self._last_error = ""
+        self._last_healthcheck = ""
+        self._uptime_seconds = 0
 
     def set_running(self, value: bool) -> None:
         with self._lock:
@@ -42,6 +46,14 @@ class StatusStore:
         with self._lock:
             self._last_error = value
 
+    def set_last_healthcheck(self, value: str) -> None:
+        with self._lock:
+            self._last_healthcheck = value
+
+    def set_uptime_seconds(self, value: int) -> None:
+        with self._lock:
+            self._uptime_seconds = value
+
     def snapshot(self) -> StatusSnapshot:
         with self._lock:
             return StatusSnapshot(
@@ -50,6 +62,8 @@ class StatusStore:
                 last_match=self._last_match,
                 last_send=self._last_send,
                 last_error=self._last_error,
+                last_healthcheck=self._last_healthcheck,
+                uptime_seconds=self._uptime_seconds,
             )
 
 
@@ -61,5 +75,7 @@ def format_status(snapshot: StatusSnapshot) -> str:
         f"last_match: {snapshot.last_match}",
         f"last_send: {snapshot.last_send}",
         f"last_error: {snapshot.last_error}",
+        f"last_healthcheck: {snapshot.last_healthcheck}",
+        f"uptime_seconds: {snapshot.uptime_seconds}",
     ]
     return "\n".join(lines)

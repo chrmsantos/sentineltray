@@ -4,6 +4,7 @@
 
 - Report per-iteration monitoring errors on screen and via WhatsApp.
 - Send a startup WhatsApp test message on each run.
+- Add periodic healthcheck summaries via WhatsApp.
 
 ## 2026-01-14
 
