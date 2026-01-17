@@ -23,6 +23,9 @@ class WindowTextDetector:
             if self._allow_window_restore:
                 if hasattr(window, "is_minimized") and window.is_minimized():
                     window.restore()
+                if hasattr(window, "is_maximized") and not window.is_maximized():
+                    if hasattr(window, "maximize"):
+                        window.maximize()
                 if hasattr(window, "set_focus"):
                     window.set_focus()
         except Exception as exc:
@@ -37,6 +40,15 @@ class WindowTextDetector:
                 window.wait("visible", timeout=2)
             except Exception as exc:
                 raise RuntimeError("Target window not visible") from exc
+
+    def _minimize_window(self, window) -> None:
+        if not self._allow_window_restore:
+            return
+        try:
+            if hasattr(window, "minimize"):
+                window.minimize()
+        except Exception:
+            LOGGER.debug("Failed to minimize target window", exc_info=True)
 
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
@@ -62,6 +74,8 @@ class WindowTextDetector:
                     texts.append(text)
         except Exception as exc:
             raise RuntimeError("Failed to read window texts") from exc
+        finally:
+            self._minimize_window(window)
 
         return texts
 
