@@ -28,6 +28,7 @@ class AppConfig:
     max_history: int
     state_file: str
     log_file: str
+    telemetry_file: str
     whatsapp: WhatsappConfig
 
 
@@ -83,6 +84,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         max_history=int(_get_required(data, "max_history")),
         state_file=str(_get_required(data, "state_file")),
         log_file=str(_get_required(data, "log_file")),
+        telemetry_file=str(_get_required(data, "telemetry_file")),
         whatsapp=whatsapp,
     )
 

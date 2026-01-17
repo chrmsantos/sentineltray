@@ -68,3 +68,4 @@ python main.py --cli
 - License: GPL-3.0-only.
 - Tray status shows error count and last error reason.
 - Logs include a structured category field.
+- Local telemetry file captures last activity for quick diagnostics.

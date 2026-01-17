@@ -17,6 +17,9 @@ error_backoff_max_seconds: 300
 # Debounce de mensagens repetidas.
 debounce_seconds: 600
 
+# Arquivo de telemetria local.
+telemetry_file: "logs/telemetry.json"
+
 whatsapp:
   # Nome exato do contato/grupo exibido no WhatsApp Web.
   chat_target: 'Operador Exemplo'

@@ -15,6 +15,7 @@ def test_send_startup_test_message_sends_and_updates_status() -> None:
         max_history=10,
         state_file="state.json",
         log_file="logs/sentineltray.log",
+        telemetry_file="logs/telemetry.json",
         whatsapp=WhatsappConfig(
             mode="web",
             chat_target="Operator",

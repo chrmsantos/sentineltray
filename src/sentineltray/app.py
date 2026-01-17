@@ -12,6 +12,7 @@ from .config import AppConfig
 from .detector import WindowTextDetector
 from .logging_setup import setup_logging
 from .status import StatusStore
+from .telemetry import TelemetryWriter
 from .whatsapp_sender import build_sender
 
 LOGGER = logging.getLogger(__name__)
@@ -69,6 +70,7 @@ class Notifier:
         self._last_sent = self._build_last_sent_map(self._history)
         self._started_at = datetime.now(timezone.utc)
         self._next_healthcheck = time.monotonic() + self.config.healthcheck_interval_seconds
+        self._telemetry = TelemetryWriter(Path(self.config.telemetry_file))
 
     def _build_last_sent_map(self, history: list[dict[str, str]]) -> dict[str, datetime]:
         last_sent: dict[str, datetime] = {}
@@ -177,12 +179,31 @@ class Notifier:
         backoff = base * (2 ** (error_count - 1))
         return min(maximum, backoff)
 
+    def _update_telemetry(self) -> None:
+        snapshot = self.status.snapshot()
+        payload = {
+            "updated_at": _now_iso(),
+            "running": snapshot.running,
+            "uptime_seconds": snapshot.uptime_seconds,
+            "last_scan": _to_ascii(snapshot.last_scan),
+            "last_match": _to_ascii(snapshot.last_match),
+            "last_send": _to_ascii(snapshot.last_send),
+            "last_error": _to_ascii(snapshot.last_error),
+            "last_healthcheck": _to_ascii(snapshot.last_healthcheck),
+            "error_count": snapshot.error_count,
+        }
+        try:
+            self._telemetry.write(payload)
+        except Exception as exc:
+            LOGGER.exception("Telemetry write failed: %s", exc, extra={"category": "error"})
+
     def run_loop(self, stop_event: Event) -> None:
         setup_logging(self.config.log_file)
         LOGGER.info("SentinelTray started", extra={"category": "startup"})
         self.status.set_running(True)
         self.status.set_uptime_seconds(0)
         self._send_startup_test()
+        self._update_telemetry()
         error_count = 0
 
         while not stop_event.is_set():
@@ -204,6 +225,8 @@ class Notifier:
             if now >= self._next_healthcheck:
                 self._send_healthcheck()
                 self._next_healthcheck = now + self.config.healthcheck_interval_seconds
+
+            self._update_telemetry()
 
             backoff_seconds = self._compute_backoff_seconds(error_count)
             wait_seconds = max(self.config.poll_interval_seconds, backoff_seconds)

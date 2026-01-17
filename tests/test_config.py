@@ -15,6 +15,7 @@ def test_load_config() -> None:
     assert config.error_backoff_max_seconds == 300
     assert config.debounce_seconds == 600
     assert config.log_file == "logs/sentineltray.log"
+    assert config.telemetry_file == "logs/telemetry.json"
     assert config.whatsapp.mode == "web"
     assert config.whatsapp.chat_target == ""
     assert config.whatsapp.dry_run is False

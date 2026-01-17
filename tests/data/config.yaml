@@ -8,6 +8,7 @@ debounce_seconds: 600
 max_history: 50
 state_file: "state.json"
 log_file: "logs/sentineltray.log"
+telemetry_file: "logs/telemetry.json"
 whatsapp:
   mode: "web"
   chat_target: ""

@@ -9,6 +9,7 @@
 - Debounce repeated messages within a time window.
 - Track error count in tray status.
 - Add structured log categories.
+- Add local telemetry file for diagnostics.
 
 ## 2026-01-14
 

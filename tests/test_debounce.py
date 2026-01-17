@@ -17,6 +17,7 @@ def test_debounce_skips_recent_messages() -> None:
         max_history=10,
         state_file="state.json",
         log_file="logs/sentineltray.log",
+        telemetry_file="logs/telemetry.json",
         whatsapp=WhatsappConfig(
             mode="web",
             chat_target="Operator",
