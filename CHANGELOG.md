@@ -23,6 +23,7 @@
 - Add Gmail SMTP example to local template.
 - Add single-instance guard and installer script.
 - Add email subject, retries, regex validation, and status export.
+- Use eye icon and auto-open status window on startup.
 
 ## 2026-01-14
 

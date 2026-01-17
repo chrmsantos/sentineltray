@@ -18,10 +18,9 @@ LOGGER = logging.getLogger(__name__)
 def _build_image() -> Image.Image:
     image = Image.new("RGB", (64, 64), color=(28, 40, 56))
     draw = ImageDraw.Draw(image)
-    draw.rectangle((10, 18, 54, 46), outline=(255, 255, 255), width=3)
-    draw.line((10, 18, 32, 34, 54, 18), fill=(255, 255, 255), width=2)
-    draw.rectangle((12, 20, 52, 44), outline=(255, 255, 255), width=2)
-    draw.ellipse((42, 6, 58, 22), fill=(0, 166, 81))
+    draw.ellipse((8, 18, 56, 46), outline=(255, 255, 255), width=3)
+    draw.ellipse((24, 24, 40, 40), outline=(255, 255, 255), width=2)
+    draw.ellipse((28, 28, 36, 36), fill=(0, 166, 81))
     return image
 
 
@@ -141,6 +140,7 @@ def run_tray(config: AppConfig) -> None:
     )
 
     icon.run_detached()
+    root.after(0, show_status)
     root.after(1000, refresh_status)
     root.mainloop()
 
