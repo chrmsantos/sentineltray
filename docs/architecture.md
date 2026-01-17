@@ -3,6 +3,7 @@
 ## Overview
 
 - Window text detection uses UI Automation via pywinauto.
+- Minimized target windows are restored and focused before scanning.
 - Email delivery uses SMTP with optional TLS.
 - State is stored in state.json to prevent duplicate sends.
 - Logs are created per execution with detailed fields and kept with a max of 5 files.
