@@ -40,13 +40,42 @@ def run_tray(config: AppConfig) -> None:
 
     status_window: Optional[tk.Toplevel] = None
     status_label: Optional[tk.Label] = None
+    error_window: Optional[tk.Toplevel] = None
+    error_label: Optional[tk.Label] = None
+    last_error_shown = ""
 
     def refresh_status() -> None:
         nonlocal status_label
+        snapshot = status.snapshot()
         if status_label is not None and status_label.winfo_exists():
-            snapshot = status.snapshot()
             status_label.config(text=format_status(snapshot))
+        if snapshot.last_error and snapshot.last_error != last_error_shown:
+            show_error(snapshot.last_error)
         root.after(1000, refresh_status)
+
+    def show_error(message: str) -> None:
+        nonlocal error_window, error_label, last_error_shown
+        last_error_shown = message
+        if error_window is not None and error_window.winfo_exists():
+            error_label.config(text=message)
+            error_window.deiconify()
+            error_window.lift()
+            return
+
+        error_window = tk.Toplevel(root)
+        error_window.title("SentinelTray Error")
+        error_window.geometry("520x160")
+        error_window.resizable(False, False)
+
+        error_label = tk.Label(
+            error_window,
+            text=message,
+            justify="left",
+            anchor="nw",
+            font=("Consolas", 10),
+            fg="#cc0000",
+        )
+        error_label.pack(fill="both", expand=True, padx=10, pady=10)
 
     def show_status() -> None:
         nonlocal status_window, status_label

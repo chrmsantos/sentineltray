@@ -59,5 +59,6 @@ python main.py --cli
 - Logs are written per execution with detailed fields and kept with a max of 5 files in logs/.
 - Third-party debug logs are suppressed to keep logs actionable.
 - state.json stores the last sent messages to avoid duplicates.
+- Errors detected in each polling iteration are reported on screen and via WhatsApp.
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.

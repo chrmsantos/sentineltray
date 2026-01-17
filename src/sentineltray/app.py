@@ -72,6 +72,15 @@ class Notifier:
         elif new_items:
             _save_state(self._state_path, self._history)
 
+    def _handle_error(self, message: str) -> None:
+        self.status.set_last_error(message)
+        try:
+            self._sender.send(message)
+            self.status.set_last_send(_now_iso())
+            LOGGER.info("Sent error notification")
+        except Exception as exc:
+            LOGGER.exception("Failed to send error notification: %s", exc)
+
     def run_loop(self, stop_event: Event) -> None:
         setup_logging(self.config.log_file)
         LOGGER.info("SentinelTray started")
@@ -80,8 +89,10 @@ class Notifier:
         while not stop_event.is_set():
             try:
                 self.scan_once()
+                self.status.set_last_error("")
             except Exception as exc:
-                self.status.set_last_error(str(exc))
+                message = f"error: {exc}"
+                self._handle_error(message)
                 LOGGER.exception("Loop error: %s", exc)
 
             stop_event.wait(self.config.poll_interval_seconds)

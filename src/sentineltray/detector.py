@@ -20,13 +20,18 @@ class WindowTextDetector:
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
         if not window.exists(timeout=2):
-            LOGGER.info("Target window not found")
-            return []
+            raise RuntimeError("Target window not found")
 
         try:
             window.wait("visible", timeout=2)
-        except Exception:
-            LOGGER.info("Target window not visible")
+        except Exception as exc:
+            raise RuntimeError("Target window not visible") from exc
+
+        try:
+            if hasattr(window, "is_enabled") and not window.is_enabled():
+                raise RuntimeError("Target window not enabled")
+        except Exception as exc:
+            raise RuntimeError("Target window not enabled") from exc
 
         texts: list[str] = []
         try:
@@ -38,7 +43,7 @@ class WindowTextDetector:
                 if text:
                     texts.append(text)
         except Exception as exc:
-            LOGGER.exception("Failed to read window texts: %s", exc)
+            raise RuntimeError("Failed to read window texts") from exc
 
         return texts
 

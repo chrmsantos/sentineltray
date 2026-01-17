@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-01-16
+
+- Report per-iteration monitoring errors on screen and via WhatsApp.
+
 ## 2026-01-14
 
 - Initial notifier scaffold with window text detection and WhatsApp senders.
