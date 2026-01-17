@@ -26,6 +26,7 @@
 - Use eye icon and auto-open status window on startup.
 - Add status shortcuts for config and repo, and switch eye color to light blue.
 - Restore minimized windows before scanning.
+- Add project title and description in the status UI.
 
 ## 2026-01-14
 
