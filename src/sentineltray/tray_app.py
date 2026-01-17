@@ -107,11 +107,19 @@ def run_tray(config: AppConfig) -> None:
 
         title = tk.Label(
             status_window,
-            text="Status do monitoramento",
+            text="SentinelTray - Monitoramento de janelas",
             anchor="w",
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 12, "bold"),
         )
-        title.pack(fill="x", padx=12, pady=(12, 4))
+        title.pack(fill="x", padx=12, pady=(12, 2))
+
+        subtitle = tk.Label(
+            status_window,
+            text="Leitura de texto visivel e envio de alertas por e-mail",
+            anchor="w",
+            font=("Segoe UI", 10),
+        )
+        subtitle.pack(fill="x", padx=12, pady=(0, 6))
 
         status_label = tk.Label(
             status_window,
