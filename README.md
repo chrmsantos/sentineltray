@@ -68,6 +68,7 @@ python main.py --cli
 - Errors detected in each polling iteration are reported on screen and via email.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
+- Janelas minimizadas sao restauradas para leitura do texto.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
 - Runtime artifacts are ignored by git via .gitignore.

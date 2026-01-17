@@ -17,15 +17,31 @@ class WindowTextDetector:
         desktop = Desktop(backend="uia")
         return desktop.window(title_re=self._window_title_regex)
 
+    def _prepare_window(self, window) -> None:
+        try:
+            if hasattr(window, "is_minimized") and window.is_minimized():
+                window.restore()
+            if hasattr(window, "set_focus"):
+                window.set_focus()
+        except Exception as exc:
+            raise RuntimeError("Target window could not be restored") from exc
+
+        try:
+            window.wait("visible", timeout=2)
+        except Exception:
+            try:
+                if hasattr(window, "restore"):
+                    window.restore()
+                window.wait("visible", timeout=2)
+            except Exception as exc:
+                raise RuntimeError("Target window not visible") from exc
+
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
         if not window.exists(timeout=2):
             raise RuntimeError("Target window not found")
 
-        try:
-            window.wait("visible", timeout=2)
-        except Exception as exc:
-            raise RuntimeError("Target window not visible") from exc
+        self._prepare_window(window)
 
         try:
             if hasattr(window, "is_enabled") and not window.is_enabled():
