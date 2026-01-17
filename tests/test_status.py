@@ -10,6 +10,8 @@ def test_status_store_snapshot() -> None:
     store.set_last_error("e1")
     store.set_last_healthcheck("h1")
     store.set_uptime_seconds(42)
+    store.increment_error_count()
+    store.increment_error_count()
 
     snapshot = store.snapshot()
     assert snapshot.running is True
@@ -19,6 +21,7 @@ def test_status_store_snapshot() -> None:
     assert snapshot.last_error == "e1"
     assert snapshot.last_healthcheck == "h1"
     assert snapshot.uptime_seconds == 42
+    assert snapshot.error_count == 2
 
     text = format_status(snapshot)
     assert "running: yes" in text

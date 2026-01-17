@@ -14,6 +14,7 @@
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
 - Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
+- Tray status shows error count and last error reason.
 - Local override config can be loaded from %USERPROFILE%\sentineltray\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
 - Local file templates live under templates/local/.

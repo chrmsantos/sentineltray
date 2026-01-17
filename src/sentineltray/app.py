@@ -186,6 +186,7 @@ class Notifier:
                 self._handle_error(message)
                 LOGGER.exception("Loop error: %s", exc)
                 error_count += 1
+                self.status.increment_error_count()
 
             self.status.set_uptime_seconds(
                 int((datetime.now(timezone.utc) - self._started_at).total_seconds())

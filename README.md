@@ -66,3 +66,4 @@ python main.py --cli
 - Repeated messages are debounced by time window to avoid spam.
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.
+- Tray status shows error count and last error reason.
