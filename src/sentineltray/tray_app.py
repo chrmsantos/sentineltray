@@ -14,6 +14,7 @@ import webbrowser
 from .app import Notifier
 from .config import AppConfig
 from .status import StatusStore, format_status
+from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
 
@@ -128,7 +129,7 @@ def run_tray(config: AppConfig) -> None:
 
         title = tk.Label(
             status_window,
-            text="SentinelTray - Monitor de tela",
+            text=f"SentinelTray - Monitor de tela (beta {__version_label__})",
             anchor="w",
             font=("Segoe UI", 16, "bold"),
         )
@@ -136,7 +137,10 @@ def run_tray(config: AppConfig) -> None:
 
         subtitle = tk.Label(
             status_window,
-            text="Acompanha o texto da tela e avisa por e-mail quando encontra algo novo",
+            text=(
+                "Acompanha o texto da tela e avisa por e-mail quando encontra algo novo "
+                f"\u2022 {__release_date__}"
+            ),
             anchor="w",
             font=("Segoe UI", 12),
         )
