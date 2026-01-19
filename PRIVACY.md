@@ -12,7 +12,7 @@ Esta aplicação processa dados pessoais apenas para enviar alertas e manter o h
 
 ## Local de armazenamento
 
-Todos os dados pessoais necessarios ao funcionamento ficam exclusivamente em:
+Dados sensiveis necessarios ao funcionamento ficam exclusivamente em:
 
 %USERPROFILE%\.stray_local
 
@@ -20,14 +20,19 @@ Isto inclui:
 
 - config.local.yaml (credenciais e enderecos)
 - state.json (histórico local)
-- logs (somente diagnostico)
+
+Dados operacionais (diagnostico e status) ficam dentro do projeto, em logs/:
+
+- logs/*.log (diagnostico)
 - telemetry.json (estado operacional)
+- status.json e status.csv (exportacao de status)
+- config.checksum (integridade de configuracao)
 
 O repositório contém apenas templates comentados e exemplos fictícios.
 
 ## Execução inicial
 
-Ao iniciar, se %USERPROFILE%\.stray_local\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. O sistema não utiliza dados pessoais armazenados fora desse diretório.
+Ao iniciar, se %USERPROFILE%\.stray_local\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em logs/ no projeto.
 
 ## Segurança e minimização
 
