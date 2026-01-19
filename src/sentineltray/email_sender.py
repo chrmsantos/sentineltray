@@ -11,8 +11,37 @@ from .config import EmailConfig
 LOGGER = logging.getLogger(__name__)
 
 
-def _to_ascii(text: str) -> str:
-    return text.encode("ascii", "backslashreplace").decode("ascii")
+def _build_subject(subject: str, category: str) -> str:
+    base = (subject or "").strip() or category
+    if "sentineltray" not in base.lower():
+        return f"SentinelTray - {base}"
+    return base
+
+
+def _build_body(message: str) -> tuple[str, str]:
+    text = (message or "").strip()
+    category = "Alerta"
+    details = text
+    if text.lower().startswith("error:"):
+        category = "Erro"
+        details = text.split(":", 1)[1].strip() or "Ocorreu um erro."
+    elif text.lower().startswith("info:"):
+        category = "Informação"
+        details = text.split(":", 1)[1].strip() or "Atualização do sistema."
+
+    if not details:
+        details = "Sem detalhes adicionais."
+
+    if category == "Alerta" and details == text:
+        details = "Encontramos o seguinte texto na tela:\n" + details
+
+    body = (
+        "SentinelTray\n\n"
+        f"{category}:\n"
+        f"{details}\n\n"
+        "Esta é uma mensagem automática do SentinelTray."
+    )
+    return category, body
 
 
 class EmailSender:
@@ -43,13 +72,13 @@ class SmtpEmailSender(EmailSender):
         if not self.config.to_addresses:
             raise ValueError("to_addresses is required")
 
-        safe_message = _to_ascii(message)
+        category, body = _build_body(message)
 
         email = EmailMessage()
         email["From"] = self.config.from_address
         email["To"] = ", ".join(self.config.to_addresses)
-        email["Subject"] = self.config.subject
-        email.set_content(safe_message)
+        email["Subject"] = _build_subject(self.config.subject, category)
+        email.set_content(body)
 
         attempts = max(0, self.config.retry_attempts)
         backoff = max(0, self.config.retry_backoff_seconds)

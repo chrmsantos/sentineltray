@@ -93,6 +93,7 @@ python main.py --cli
 - Status window uses larger, user-friendly text, fits its content, and exposes pause/resume, exit, and quick actions in the Commands menu.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
+- Email subject always includes SentinelTray, and the body starts with a SentinelTray title in PT-BR.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.
