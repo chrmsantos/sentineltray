@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-01-19
+
+- Enforce log retention caps at 5 files, clamping higher configured values.
+
 ## 2026-01-16
 
 - Report per-iteration monitoring errors on screen and via email.

@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+MAX_LOG_FILES = 5
+
 
 @dataclass(frozen=True)
 class EmailConfig:
@@ -107,6 +109,23 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         dry_run=bool(_get_required(email_data, "dry_run")),
     )
 
+    log_backup_count = int(_get_required(data, "log_backup_count"))
+    log_run_files_keep = int(_get_required(data, "log_run_files_keep"))
+    if log_backup_count > MAX_LOG_FILES:
+        logging.getLogger(__name__).warning(
+            "log_backup_count capped at %s (requested %s)",
+            MAX_LOG_FILES,
+            log_backup_count,
+        )
+        log_backup_count = MAX_LOG_FILES
+    if log_run_files_keep > MAX_LOG_FILES:
+        logging.getLogger(__name__).warning(
+            "log_run_files_keep capped at %s (requested %s)",
+            MAX_LOG_FILES,
+            log_run_files_keep,
+        )
+        log_run_files_keep = MAX_LOG_FILES
+
     config = AppConfig(
         window_title_regex=str(_get_required(data, "window_title_regex")),
         phrase_regex=str(_get_required(data, "phrase_regex")),
@@ -128,8 +147,8 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         log_console_level=str(_get_required(data, "log_console_level")),
         log_console_enabled=bool(_get_required(data, "log_console_enabled")),
         log_max_bytes=int(_get_required(data, "log_max_bytes")),
-        log_backup_count=int(_get_required(data, "log_backup_count")),
-        log_run_files_keep=int(_get_required(data, "log_run_files_keep")),
+        log_backup_count=log_backup_count,
+        log_run_files_keep=log_run_files_keep,
         telemetry_file=str(_get_required(data, "telemetry_file")),
         status_export_file=str(_get_required(data, "status_export_file")),
         status_export_csv=str(_get_required(data, "status_export_csv")),

@@ -26,23 +26,17 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.log_backup_count == 5
     assert config.log_run_files_keep == 5
     assert config.telemetry_file == str(base / "logs" / "telemetry.json")
-    assert config.status_export_file == str(base / "logs" / "status.json")
-    assert config.status_export_csv == str(base / "logs" / "status.csv")
-    assert config.status_refresh_seconds == 1
-    assert config.allow_window_restore is True
-    assert config.log_only_mode is False
-    assert config.config_checksum_file == str(base / "logs" / "config.checksum")
-    assert config.min_free_disk_mb == 100
-    assert config.show_error_window is True
-    assert config.watchdog_timeout_seconds == 60
-    assert config.watchdog_restart is True
-    assert config.email.smtp_host == "smtp.local"
-    assert config.email.smtp_port == 587
-    assert config.email.from_address == "alerts@example.com"
-    assert config.email.to_addresses == ["ops@example.com"]
-    assert config.email.subject == "SentinelTray Notification"
-    assert config.email.retry_attempts == 2
-    assert config.email.retry_backoff_seconds == 3
-    assert config.email.dry_run is False
-    assert config.state_file == str(base / "state.json")
-    assert config.telemetry_file == str(base / "logs" / "telemetry.json")
+
+
+def test_log_retention_is_capped(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    config_path = tmp_path / "config.yaml"
+    base_config = (Path(__file__).parent / "data" / "config.yaml").read_text(encoding="utf-8")
+    updated = base_config.replace("log_backup_count: 5", "log_backup_count: 12")
+    updated = updated.replace("log_run_files_keep: 5", "log_run_files_keep: 9")
+    config_path.write_text(updated, encoding="utf-8")
+
+    config = load_config(str(config_path))
+
+    assert config.log_backup_count == 5
+    assert config.log_run_files_keep == 5

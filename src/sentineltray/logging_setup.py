@@ -4,6 +4,8 @@ from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+MAX_LOG_FILES = 5
+
 
 class CategoryFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
@@ -64,10 +66,13 @@ def setup_logging(
     resolved_level = _resolve_level(log_level, logging.INFO)
     resolved_console_level = _resolve_level(log_console_level, logging.WARNING)
 
+    effective_backup_count = min(MAX_LOG_FILES, max(0, log_backup_count))
+    effective_run_files_keep = min(MAX_LOG_FILES, max(1, log_run_files_keep))
+
     rotating_handler = RotatingFileHandler(
         base_path,
         maxBytes=log_max_bytes,
-        backupCount=log_backup_count,
+        backupCount=effective_backup_count,
         encoding="utf-8",
     )
     rotating_handler.setFormatter(formatter)
@@ -96,4 +101,22 @@ def setup_logging(
 
     logging.getLogger("PIL").setLevel(logging.WARNING)
     logging.getLogger("PIL.Image").setLevel(logging.WARNING)
-    _cleanup_old_logs(run_path.parent, base_path.stem, base_path.suffix, keep=log_run_files_keep)
+    if effective_backup_count != log_backup_count:
+        logging.getLogger(__name__).warning(
+            "log_backup_count capped at %s (requested %s)",
+            MAX_LOG_FILES,
+            log_backup_count,
+        )
+    if effective_run_files_keep != log_run_files_keep:
+        logging.getLogger(__name__).warning(
+            "log_run_files_keep capped at %s (requested %s)",
+            MAX_LOG_FILES,
+            log_run_files_keep,
+        )
+
+    _cleanup_old_logs(
+        run_path.parent,
+        base_path.stem,
+        base_path.suffix,
+        keep=effective_run_files_keep,
+    )
