@@ -12,6 +12,7 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
 - Errors in each polling iteration are reported on screen and via email.
+- When the target window is temporarily unavailable or disabled, scans are skipped without raising error alerts.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
 - Consecutive errors trigger exponential backoff before the next scan.
@@ -33,10 +34,10 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
-- Sensitive data paths are enforced under %USERPROFILE%\sentineltray.
+- Sensitive data paths are enforced under %USERPROFILE%\.stray_local.
 - Politica de privacidade detalhada em PRIVACY.md.
 - Instalacao automatica disponivel via scripts/install.cmd.
-- Local override config can be loaded from %USERPROFILE%\sentineltray\config.local.yaml.
+- Local override config can be loaded from %USERPROFILE%\.stray_local\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
 - Local file templates live under templates/local/.
 

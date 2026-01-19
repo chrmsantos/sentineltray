@@ -12,7 +12,7 @@ import tkinter.font as tkfont
 import webbrowser
 
 from .app import Notifier
-from .config import AppConfig
+from .config import AppConfig, get_user_data_dir
 from .status import StatusStore, format_status
 from . import __release_date__, __version_label__
 
@@ -164,9 +164,10 @@ def run_tray(config: AppConfig) -> None:
         )
         status_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
-        config_path = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray", "config.local.yaml")
-        data_dir = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray")
-        logs_dir = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray", "logs")
+        base_dir = get_user_data_dir()
+        config_path = str(base_dir / "config.local.yaml")
+        data_dir = str(base_dir)
+        logs_dir = str(base_dir / "logs")
 
         def open_config() -> None:
             if config_path:

@@ -14,7 +14,7 @@ Esta aplicação processa dados pessoais apenas para enviar alertas e manter o h
 
 Todos os dados pessoais necessarios ao funcionamento ficam exclusivamente em:
 
-%USERPROFILE%\sentineltray
+%USERPROFILE%\.stray_local
 
 Isto inclui:
 
@@ -27,7 +27,7 @@ O repositório contém apenas templates comentados e exemplos fictícios.
 
 ## Execução inicial
 
-Ao iniciar, se %USERPROFILE%\sentineltray\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. O sistema não utiliza dados pessoais armazenados fora desse diretório.
+Ao iniciar, se %USERPROFILE%\.stray_local\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. O sistema não utiliza dados pessoais armazenados fora desse diretório.
 
 ## Segurança e minimização
 
@@ -42,7 +42,7 @@ Ao iniciar, se %USERPROFILE%\sentineltray\config.local.yaml não existir, o apli
 
 ## Direitos do titular
 
-O usuário pode remover ou corrigir os dados a qualquer momento editando ou apagando os arquivos em %USERPROFILE%\sentineltray.
+O usuário pode remover ou corrigir os dados a qualquer momento editando ou apagando os arquivos em %USERPROFILE%\.stray_local.
 
 ## Contato
 

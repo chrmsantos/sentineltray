@@ -8,7 +8,7 @@ import main
 
 def test_single_instance_kills_previous(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    pid_path = tmp_path / "sentineltray" / "sentineltray.pid"
+    pid_path = tmp_path / ".stray_local" / "sentineltray.pid"
     pid_path.parent.mkdir(parents=True, exist_ok=True)
     pid_path.write_text("1234", encoding="utf-8")
 

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from sentineltray.app import run
-from sentineltray.config import load_config, load_config_with_override
+from sentineltray.config import get_user_data_dir, load_config, load_config_with_override
 from sentineltray.tray_app import run_tray
 
 LOCAL_TEMPLATE = """# SentinelTray sobrescritas locais
@@ -69,10 +69,8 @@ def _ask_reedit(path: Path, reason: str) -> bool:
 
 
 def _pid_file_path() -> Path:
-    user_root = os.environ.get("USERPROFILE")
-    if not user_root:
-        raise ValueError("USERPROFILE nao definido")
-    return Path(user_root) / "sentineltray" / "sentineltray.pid"
+    base = get_user_data_dir()
+    return base / "sentineltray.pid"
 
 
 def _terminate_previous(pid: int) -> None:
@@ -138,10 +136,7 @@ def _handle_config_error(path: Path, exc: Exception) -> None:
 
 
 def _ensure_local_config_path(path: Path) -> None:
-    user_root = os.environ.get("USERPROFILE")
-    if not user_root:
-        raise ValueError("USERPROFILE nao definido")
-    base = (Path(user_root) / "sentineltray").resolve()
+    base = get_user_data_dir().resolve()
     try:
         if path.resolve().is_relative_to(base):
             return
@@ -177,9 +172,11 @@ def main() -> int:
         override_path = Path(env_path)
 
     if override_path is None:
-        user_root = os.environ.get("USERPROFILE")
-        if user_root:
-            candidate = Path(user_root) / "sentineltray" / "config.local.yaml"
+        try:
+            candidate = get_user_data_dir() / "config.local.yaml"
+        except ValueError:
+            candidate = None
+        if candidate is not None:
             local_override = candidate
             override_path = candidate
 

@@ -7,3 +7,5 @@ logs/*.log
 logs/telemetry.json
 config.local.yaml
 *.local.yaml
+tmp/.stray_local/logs/
+tmp/.stray_local/*.pid

@@ -12,6 +12,10 @@ from pywinauto.findwindows import ElementAmbiguousError
 LOGGER = logging.getLogger(__name__)
 
 
+class WindowUnavailableError(RuntimeError):
+    """Raised when the target window is temporarily unavailable or disabled."""
+
+
 class WindowTextDetector:
     def __init__(self, window_title_regex: str, allow_window_restore: bool = True) -> None:
         self._window_title_regex = re.compile(window_title_regex)
@@ -63,7 +67,7 @@ class WindowTextDetector:
                 if hasattr(window, "set_focus"):
                     window.set_focus()
         except Exception as exc:
-            raise RuntimeError("Target window could not be restored") from exc
+            raise WindowUnavailableError("Target window could not be restored") from exc
 
         last_exc: Exception | None = None
         timeouts = (2, 3, 4)
@@ -92,7 +96,7 @@ class WindowTextDetector:
                     window = self._get_window()
                 except Exception:
                     continue
-        raise RuntimeError("Target window not visible") from last_exc
+        raise WindowUnavailableError("Target window not visible") from last_exc
 
     def _minimize_window(self, window) -> None:
         if not self._allow_window_restore:
@@ -110,15 +114,15 @@ class WindowTextDetector:
             time.sleep(1)
             window = self._get_window()
             if not window.exists(timeout=2):
-                raise RuntimeError("Target window not found")
+                raise WindowUnavailableError("Target window not found")
 
         self._prepare_window(window)
 
         try:
             if hasattr(window, "is_enabled") and not window.is_enabled():
-                raise RuntimeError("Target window not enabled")
+                raise WindowUnavailableError("Target window not enabled")
         except Exception as exc:
-            raise RuntimeError("Target window not enabled") from exc
+            raise WindowUnavailableError("Target window not enabled") from exc
 
         texts: list[str] = []
         try:
