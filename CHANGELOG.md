@@ -3,6 +3,7 @@
 ## 2026-01-19
 
 - Enforce log retention caps at 5 files, clamping higher configured values.
+- Add pause/resume and exit controls in the status UI with a Commands menu and larger layout.
 
 ## 2026-01-16
 

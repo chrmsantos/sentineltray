@@ -237,6 +237,7 @@ class Notifier:
             "app_version": self._app_version,
             "commit_hash": self._commit_hash,
             "running": snapshot.running,
+            "paused": snapshot.paused,
             "uptime_seconds": snapshot.uptime_seconds,
             "last_scan": _to_ascii(snapshot.last_scan),
             "last_match": _to_ascii(snapshot.last_match),
@@ -252,6 +253,7 @@ class Notifier:
 
         status_payload = {
             "running": snapshot.running,
+            "paused": snapshot.paused,
             "last_scan": snapshot.last_scan,
             "last_match": snapshot.last_match,
             "last_send": snapshot.last_send,
@@ -312,7 +314,7 @@ class Notifier:
             self._reset_components()
             LOGGER.info("Watchdog restart completed", extra={"category": "error"})
 
-    def run_loop(self, stop_event: Event) -> None:
+    def run_loop(self, stop_event: Event, pause_event: Event | None = None) -> None:
         setup_logging(
             self.config.log_file,
             log_level=self.config.log_level,
@@ -329,7 +331,20 @@ class Notifier:
         self._update_telemetry()
         error_count = 0
 
+        was_paused = False
         while not stop_event.is_set():
+            if pause_event is not None and pause_event.is_set():
+                if not was_paused:
+                    LOGGER.info("Execution paused", extra={"category": "control"})
+                was_paused = True
+                self.status.set_paused(True)
+                self._update_telemetry()
+                stop_event.wait(0.5)
+                continue
+            if was_paused:
+                LOGGER.info("Execution resumed", extra={"category": "control"})
+            was_paused = False
+            self.status.set_paused(False)
             started_at = time.monotonic()
             try:
                 self._ensure_free_disk()
@@ -367,6 +382,7 @@ class Notifier:
             stop_event.wait(wait_seconds)
 
         self.status.set_running(False)
+        self.status.set_paused(False)
 
 
 def run(config: AppConfig) -> None:
