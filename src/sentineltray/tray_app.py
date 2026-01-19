@@ -49,18 +49,15 @@ def run_tray(config: AppConfig) -> None:
 
     status_window: Optional[tk.Toplevel] = None
     status_label: Optional[tk.Label] = None
-    pause_button: Optional[tk.Button] = None
     error_window: Optional[tk.Toplevel] = None
     error_label: Optional[tk.Label] = None
     last_error_shown = ""
 
     def refresh_status() -> None:
-        nonlocal status_label, pause_button
+        nonlocal status_label
         snapshot = status.snapshot()
         if status_label is not None and status_label.winfo_exists():
             status_label.config(text=format_status(snapshot))
-        if pause_button is not None and pause_button.winfo_exists():
-            pause_button.config(text="Continuar" if snapshot.paused else "Pausar")
         if (
             config.show_error_window
             and snapshot.last_error
@@ -114,7 +111,7 @@ def run_tray(config: AppConfig) -> None:
             pause_event.set()
 
     def show_status() -> None:
-        nonlocal status_window, status_label, pause_button
+        nonlocal status_window, status_label
         if status_window is not None and status_window.winfo_exists():
             status_window.deiconify()
             status_window.lift()
@@ -124,14 +121,6 @@ def run_tray(config: AppConfig) -> None:
         status_window.title("SentinelTray - Status")
         status_window.geometry("760x420")
         status_window.resizable(False, False)
-
-        menu = tk.Menu(status_window)
-        commands_menu = tk.Menu(menu, tearoff=0)
-        commands_menu.add_command(label="Pausar/Continuar", command=toggle_pause)
-        commands_menu.add_separator()
-        commands_menu.add_command(label="Encerrar", command=request_exit)
-        menu.add_cascade(label="Comandos", menu=commands_menu)
-        status_window.config(menu=menu)
 
         title = tk.Label(
             status_window,
@@ -157,18 +146,7 @@ def run_tray(config: AppConfig) -> None:
             font=("Consolas", 10),
             bg="#f2f2f2",
         )
-        status_label.pack(fill="both", expand=True, padx=12, pady=(0, 10))
-
-        controls = tk.Frame(status_window)
-        controls.pack(fill="x", padx=12, pady=(0, 10))
-
-        pause_button = tk.Button(controls, text="Pausar", command=toggle_pause)
-        exit_button = tk.Button(controls, text="Encerrar", command=request_exit)
-        pause_button.pack(side="left")
-        exit_button.pack(side="left", padx=(8, 0))
-
-        links = tk.Frame(status_window)
-        links.pack(fill="x", padx=12, pady=(0, 12))
+        status_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
         config_path = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray", "config.local.yaml")
         data_dir = os.path.join(os.environ.get("USERPROFILE", ""), "sentineltray")
@@ -211,18 +189,20 @@ def run_tray(config: AppConfig) -> None:
             if status_label is not None and status_label.winfo_exists():
                 status_label.config(text=format_status(snapshot))
 
-        btn_config = tk.Button(links, text="Abrir configuracoes", command=open_config)
-        btn_dir = tk.Button(links, text="Abrir pasta de dados", command=open_data_dir)
-        btn_logs = tk.Button(links, text="Abrir logs", command=open_logs_dir)
-        btn_copy = tk.Button(links, text="Copiar status", command=copy_status)
-        btn_refresh = tk.Button(links, text="Atualizar agora", command=refresh_now)
-        btn_repo = tk.Button(links, text="Abrir repositorio", command=open_repo)
-        btn_config.pack(side="left")
-        btn_dir.pack(side="left", padx=(8, 0))
-        btn_logs.pack(side="left", padx=(8, 0))
-        btn_copy.pack(side="left", padx=(8, 0))
-        btn_refresh.pack(side="left", padx=(8, 0))
-        btn_repo.pack(side="right")
+        menu = tk.Menu(status_window)
+        commands_menu = tk.Menu(menu, tearoff=0)
+        commands_menu.add_command(label="Pausar/Continuar", command=toggle_pause)
+        commands_menu.add_command(label="Atualizar agora", command=refresh_now)
+        commands_menu.add_command(label="Copiar status", command=copy_status)
+        commands_menu.add_separator()
+        commands_menu.add_command(label="Abrir configuracoes", command=open_config)
+        commands_menu.add_command(label="Abrir pasta de dados", command=open_data_dir)
+        commands_menu.add_command(label="Abrir logs", command=open_logs_dir)
+        commands_menu.add_command(label="Abrir repositorio", command=open_repo)
+        commands_menu.add_separator()
+        commands_menu.add_command(label="Encerrar", command=request_exit)
+        menu.add_cascade(label="Comandos", menu=commands_menu)
+        status_window.config(menu=menu)
 
     def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:
         root.after(0, show_status)
