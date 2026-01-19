@@ -90,7 +90,7 @@ python main.py --cli
 - Status export CSV available at status_export_csv.
 - UI refresh interval is configurable via status_refresh_seconds.
 - Data folder shortcut available in the Status window.
-- Status window exposes pause/resume, exit, and quick actions in the Commands menu.
+- Status window uses larger, user-friendly text and exposes pause/resume, exit, and quick actions in the Commands menu.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.

@@ -5,6 +5,7 @@
 - Enforce log retention caps at 5 files, clamping higher configured values.
 - Add pause/resume and exit controls in the status UI with a Commands menu and larger layout.
 - Unify all status commands in the Commands menu and remove redundant buttons.
+- Increase UI text size and rewrite labels in user-friendly language.
 
 ## 2026-01-16
 
