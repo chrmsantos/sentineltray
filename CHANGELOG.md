@@ -8,6 +8,7 @@
 - Increase UI text size and rewrite labels in user-friendly language.
 - Fit UI windows to content and standardize timestamp display format in the status panel.
 - Gate scans to run only after 2+ minutes of user inactivity.
+- Ensure email subjects always include SentinelTray and bodies use friendly PT-BR text.
 
 ## 2026-01-16
 

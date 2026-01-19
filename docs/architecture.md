@@ -25,6 +25,7 @@
 - Interface exibe o nome e a descricao resumida do projeto no topo.
 - Status inclui menu de comandos com pausar/continuar, encerrar e atalhos operacionais, com texto ampliado e amigavel, e janela ajustada ao conteudo.
 - Escaneamento ocorre apenas após 2+ minutos sem interação do usuário.
+- Assunto do e-mail sempre inclui SentinelTray, e o corpo começa com título SentinelTray em PT-BR.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.
