@@ -244,7 +244,8 @@ def run_tray(config: AppConfig) -> None:
     )
 
     icon.run_detached()
-    root.after(0, show_status)
+    if not config.start_minimized:
+        root.after(0, show_status)
     root.after(1000, refresh_status)
     root.mainloop()
 

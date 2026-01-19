@@ -50,6 +50,7 @@ class AppConfig:
     status_export_csv: str
     status_refresh_seconds: int
     allow_window_restore: bool
+    start_minimized: bool
     log_only_mode: bool
     config_checksum_file: str
     min_free_disk_mb: int
@@ -154,6 +155,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         status_export_csv=str(_get_required(data, "status_export_csv")),
         status_refresh_seconds=int(_get_required(data, "status_refresh_seconds")),
         allow_window_restore=bool(_get_required(data, "allow_window_restore")),
+        start_minimized=bool(_get_required(data, "start_minimized")),
         log_only_mode=bool(_get_required(data, "log_only_mode")),
         config_checksum_file=str(_get_required(data, "config_checksum_file")),
         min_free_disk_mb=int(_get_required(data, "min_free_disk_mb")),

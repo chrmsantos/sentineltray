@@ -26,6 +26,7 @@ def test_log_only_mode_skips_send() -> None:
         status_export_csv="logs/status.csv",
         status_refresh_seconds=1,
         allow_window_restore=True,
+        start_minimized=True,
         log_only_mode=True,
         config_checksum_file="logs/config.checksum",
         min_free_disk_mb=100,

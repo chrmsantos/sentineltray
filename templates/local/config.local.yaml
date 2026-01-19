@@ -32,6 +32,9 @@ status_refresh_seconds: 1
 # Permite restaurar janela minimizada para leitura.
 allow_window_restore: true
 
+# Inicia minimizado na bandeja do Windows.
+start_minimized: true
+
 # Modo somente log (nao envia email).
 log_only_mode: false
 
