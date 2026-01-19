@@ -26,9 +26,14 @@ def _build_image() -> Image.Image:
     return image
 
 
-def _start_notifier(config: AppConfig, status: StatusStore, stop_event: Event) -> Thread:
+def _start_notifier(
+    config: AppConfig,
+    status: StatusStore,
+    stop_event: Event,
+    pause_event: Event,
+) -> Thread:
     notifier = Notifier(config=config, status=status)
-    thread = Thread(target=notifier.run_loop, args=(stop_event,), daemon=True)
+    thread = Thread(target=notifier.run_loop, args=(stop_event, pause_event), daemon=True)
     thread.start()
     return thread
 
@@ -36,22 +41,26 @@ def _start_notifier(config: AppConfig, status: StatusStore, stop_event: Event) -
 def run_tray(config: AppConfig) -> None:
     status = StatusStore()
     stop_event = Event()
-    notifier_thread = _start_notifier(config, status, stop_event)
+    pause_event = Event()
+    notifier_thread = _start_notifier(config, status, stop_event, pause_event)
 
     root = tk.Tk()
     root.withdraw()
 
     status_window: Optional[tk.Toplevel] = None
     status_label: Optional[tk.Label] = None
+    pause_button: Optional[tk.Button] = None
     error_window: Optional[tk.Toplevel] = None
     error_label: Optional[tk.Label] = None
     last_error_shown = ""
 
     def refresh_status() -> None:
-        nonlocal status_label
+        nonlocal status_label, pause_button
         snapshot = status.snapshot()
         if status_label is not None and status_label.winfo_exists():
             status_label.config(text=format_status(snapshot))
+        if pause_button is not None and pause_button.winfo_exists():
+            pause_button.config(text="Continuar" if snapshot.paused else "Pausar")
         if (
             config.show_error_window
             and snapshot.last_error
@@ -94,8 +103,18 @@ def run_tray(config: AppConfig) -> None:
         )
         error_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
+    def request_exit() -> None:
+        stop_event.set()
+        root.after(0, root.quit)
+
+    def toggle_pause() -> None:
+        if pause_event.is_set():
+            pause_event.clear()
+        else:
+            pause_event.set()
+
     def show_status() -> None:
-        nonlocal status_window, status_label
+        nonlocal status_window, status_label, pause_button
         if status_window is not None and status_window.winfo_exists():
             status_window.deiconify()
             status_window.lift()
@@ -103,8 +122,16 @@ def run_tray(config: AppConfig) -> None:
 
         status_window = tk.Toplevel(root)
         status_window.title("SentinelTray - Status")
-        status_window.geometry("560x260")
+        status_window.geometry("760x420")
         status_window.resizable(False, False)
+
+        menu = tk.Menu(status_window)
+        commands_menu = tk.Menu(menu, tearoff=0)
+        commands_menu.add_command(label="Pausar/Continuar", command=toggle_pause)
+        commands_menu.add_separator()
+        commands_menu.add_command(label="Encerrar", command=request_exit)
+        menu.add_cascade(label="Comandos", menu=commands_menu)
+        status_window.config(menu=menu)
 
         title = tk.Label(
             status_window,
@@ -130,7 +157,15 @@ def run_tray(config: AppConfig) -> None:
             font=("Consolas", 10),
             bg="#f2f2f2",
         )
-        status_label.pack(fill="both", expand=True, padx=12, pady=(0, 8))
+        status_label.pack(fill="both", expand=True, padx=12, pady=(0, 10))
+
+        controls = tk.Frame(status_window)
+        controls.pack(fill="x", padx=12, pady=(0, 10))
+
+        pause_button = tk.Button(controls, text="Pausar", command=toggle_pause)
+        exit_button = tk.Button(controls, text="Encerrar", command=request_exit)
+        pause_button.pack(side="left")
+        exit_button.pack(side="left", padx=(8, 0))
 
         links = tk.Frame(status_window)
         links.pack(fill="x", padx=12, pady=(0, 12))
@@ -193,8 +228,7 @@ def run_tray(config: AppConfig) -> None:
         root.after(0, show_status)
 
     def on_exit(_: pystray.Icon, __: pystray.MenuItem) -> None:
-        stop_event.set()
-        root.after(0, root.quit)
+        request_exit()
 
     icon = pystray.Icon(
         "sentineltray",

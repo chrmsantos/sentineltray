@@ -7,6 +7,7 @@ from threading import Lock
 @dataclass(frozen=True)
 class StatusSnapshot:
     running: bool
+    paused: bool
     last_scan: str
     last_match: str
     last_send: str
@@ -20,6 +21,7 @@ class StatusStore:
     def __init__(self) -> None:
         self._lock = Lock()
         self._running = False
+        self._paused = False
         self._last_scan = ""
         self._last_match = ""
         self._last_send = ""
@@ -31,6 +33,10 @@ class StatusStore:
     def set_running(self, value: bool) -> None:
         with self._lock:
             self._running = value
+
+    def set_paused(self, value: bool) -> None:
+        with self._lock:
+            self._paused = value
 
     def set_last_scan(self, value: str) -> None:
         with self._lock:
@@ -64,6 +70,7 @@ class StatusStore:
         with self._lock:
             return StatusSnapshot(
                 running=self._running,
+                paused=self._paused,
                 last_scan=self._last_scan,
                 last_match=self._last_match,
                 last_send=self._last_send,
@@ -76,8 +83,10 @@ class StatusStore:
 
 def format_status(snapshot: StatusSnapshot) -> str:
     running = "sim" if snapshot.running else "nao"
+    paused = "sim" if snapshot.paused else "nao"
     lines = [
         f"executando: {running}",
+        f"pausado: {paused}",
         f"ultima_verificacao: {snapshot.last_scan}",
         f"ultima_correspondencia: {snapshot.last_match}",
         f"ultimo_envio: {snapshot.last_send}",

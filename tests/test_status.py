@@ -4,6 +4,7 @@ from sentineltray.status import StatusStore, format_status
 def test_status_store_snapshot() -> None:
     store = StatusStore()
     store.set_running(True)
+    store.set_paused(True)
     store.set_last_scan("t1")
     store.set_last_match("m1")
     store.set_last_send("s1")
@@ -15,6 +16,7 @@ def test_status_store_snapshot() -> None:
 
     snapshot = store.snapshot()
     assert snapshot.running is True
+    assert snapshot.paused is True
     assert snapshot.last_scan == "t1"
     assert snapshot.last_match == "m1"
     assert snapshot.last_send == "s1"
@@ -25,3 +27,4 @@ def test_status_store_snapshot() -> None:
 
     text = format_status(snapshot)
     assert "executando: sim" in text
+    assert "pausado: sim" in text
