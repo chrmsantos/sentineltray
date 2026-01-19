@@ -76,15 +76,15 @@ def run_tray(config: AppConfig) -> None:
             return
 
         error_window = tk.Toplevel(root)
-        error_window.title("SentinelTray - Erro")
+        error_window.title("SentinelTray - Atenção")
         error_window.geometry("540x180")
         error_window.resizable(False, False)
 
         title = tk.Label(
             error_window,
-            text="Alerta de erro",
+            text="Atenção: ocorreu um problema",
             anchor="w",
-            font=("Segoe UI", 11, "bold"),
+            font=("Segoe UI", 14, "bold"),
             fg="#cc0000",
         )
         title.pack(fill="x", padx=12, pady=(12, 4))
@@ -94,7 +94,7 @@ def run_tray(config: AppConfig) -> None:
             text=message,
             justify="left",
             anchor="nw",
-            font=("Consolas", 10),
+            font=("Segoe UI", 12),
             bg="#fff0f0",
             fg="#cc0000",
         )
@@ -118,23 +118,23 @@ def run_tray(config: AppConfig) -> None:
             return
 
         status_window = tk.Toplevel(root)
-        status_window.title("SentinelTray - Status")
+        status_window.title("SentinelTray - Painel")
         status_window.geometry("760x420")
         status_window.resizable(False, False)
 
         title = tk.Label(
             status_window,
-            text="SentinelTray - Monitoramento de janelas",
+            text="SentinelTray - Monitor de tela",
             anchor="w",
-            font=("Segoe UI", 12, "bold"),
+            font=("Segoe UI", 16, "bold"),
         )
         title.pack(fill="x", padx=12, pady=(12, 2))
 
         subtitle = tk.Label(
             status_window,
-            text="Leitura de texto visivel e envio de alertas por e-mail",
+            text="Acompanha o texto da tela e avisa por e-mail quando encontra algo novo",
             anchor="w",
-            font=("Segoe UI", 10),
+            font=("Segoe UI", 12),
         )
         subtitle.pack(fill="x", padx=12, pady=(0, 6))
 
@@ -143,7 +143,7 @@ def run_tray(config: AppConfig) -> None:
             text=format_status(status.snapshot()),
             justify="left",
             anchor="nw",
-            font=("Consolas", 10),
+            font=("Segoe UI", 12),
             bg="#f2f2f2",
         )
         status_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
@@ -191,16 +191,16 @@ def run_tray(config: AppConfig) -> None:
 
         menu = tk.Menu(status_window)
         commands_menu = tk.Menu(menu, tearoff=0)
-        commands_menu.add_command(label="Pausar/Continuar", command=toggle_pause)
-        commands_menu.add_command(label="Atualizar agora", command=refresh_now)
-        commands_menu.add_command(label="Copiar status", command=copy_status)
+        commands_menu.add_command(label="Pausar ou continuar", command=toggle_pause)
+        commands_menu.add_command(label="Atualizar informações", command=refresh_now)
+        commands_menu.add_command(label="Copiar informações", command=copy_status)
         commands_menu.add_separator()
-        commands_menu.add_command(label="Abrir configuracoes", command=open_config)
+        commands_menu.add_command(label="Abrir configurações", command=open_config)
         commands_menu.add_command(label="Abrir pasta de dados", command=open_data_dir)
-        commands_menu.add_command(label="Abrir logs", command=open_logs_dir)
-        commands_menu.add_command(label="Abrir repositorio", command=open_repo)
+        commands_menu.add_command(label="Abrir registros", command=open_logs_dir)
+        commands_menu.add_command(label="Abrir site do projeto", command=open_repo)
         commands_menu.add_separator()
-        commands_menu.add_command(label="Encerrar", command=request_exit)
+        commands_menu.add_command(label="Encerrar o programa", command=request_exit)
         menu.add_cascade(label="Comandos", menu=commands_menu)
         status_window.config(menu=menu)
 

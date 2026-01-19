@@ -85,14 +85,14 @@ def format_status(snapshot: StatusSnapshot) -> str:
     running = "sim" if snapshot.running else "nao"
     paused = "sim" if snapshot.paused else "nao"
     lines = [
-        f"executando: {running}",
-        f"pausado: {paused}",
-        f"ultima_verificacao: {snapshot.last_scan}",
-        f"ultima_correspondencia: {snapshot.last_match}",
-        f"ultimo_envio: {snapshot.last_send}",
-        f"ultimo_erro: {snapshot.last_error}",
-        f"ultimo_healthcheck: {snapshot.last_healthcheck}",
-        f"tempo_ativo_segundos: {snapshot.uptime_seconds}",
-        f"erros_total: {snapshot.error_count}",
+        f"Em execução: {running}",
+        f"Pausado: {paused}",
+        f"Última verificação: {snapshot.last_scan}",
+        f"Última mensagem encontrada: {snapshot.last_match}",
+        f"Último envio de alerta: {snapshot.last_send}",
+        f"Último erro registrado: {snapshot.last_error}",
+        f"Último resumo de saúde: {snapshot.last_healthcheck}",
+        f"Tempo ativo (segundos): {snapshot.uptime_seconds}",
+        f"Total de erros: {snapshot.error_count}",
     ]
     return "\n".join(lines)
