@@ -149,7 +149,7 @@ class WindowTextDetector:
             return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
         normalized_regex = normalize(phrase_regex)
-        pattern = re.compile(normalized_regex)
+        pattern = re.compile(normalized_regex, re.IGNORECASE)
         matches: list[str] = []
         for text in texts:
             if pattern.search(normalize(text)):

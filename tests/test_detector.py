@@ -67,3 +67,14 @@ def test_find_matches_partial_text(monkeypatch) -> None:
     )
 
     assert detector.find_matches("Erro") == ["Erro no sistema principal"]
+
+
+def test_find_matches_case_insensitive(monkeypatch) -> None:
+    detector = WindowTextDetector("APP", allow_window_restore=True)
+    monkeypatch.setattr(
+        detector,
+        "_iter_texts",
+        lambda: ["Processo concluído", "Alerta crítico"],
+    )
+
+    assert detector.find_matches("alerta") == ["Alerta crítico"]

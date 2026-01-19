@@ -11,6 +11,7 @@
 - Ensure email subjects always include SentinelTray and bodies use friendly PT-BR text.
 - Make phrase matching accent-insensitive with partial text detection.
 - Display version/date discreetly in the status UI.
+- Make phrase matching case-insensitive.
 
 ## 2026-01-16
 
