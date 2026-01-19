@@ -40,7 +40,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 Sensitive settings (like window_title_regex and email credentials) can be stored in a local file:
 
-- %USERPROFILE%\sentineltray\config.local.yaml
+- %USERPROFILE%\.stray_local\config.local.yaml
 
 This local file overrides config.yaml. You can also set SENTINELTRAY_CONFIG to
 point to a local config file.
@@ -78,6 +78,7 @@ python main.py --cli
 - Third-party debug logs are suppressed to keep logs actionable.
 - state.json stores the last sent messages to avoid duplicates.
 - Errors detected in each polling iteration are reported on screen and via email.
+- When the target window is unavailable or disabled, the scan is skipped without triggering error alerts.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
 - Janelas minimizadas sao restauradas para leitura do texto.
@@ -100,5 +101,5 @@ python main.py --cli
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.
-- Sensitive data is always stored under %USERPROFILE%\sentineltray.
+- Sensitive data is always stored under %USERPROFILE%\.stray_local.
 - Política de privacidade em PRIVACY.md.

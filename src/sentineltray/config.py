@@ -11,6 +11,13 @@ import yaml
 MAX_LOG_FILES = 5
 
 
+def get_user_data_dir() -> Path:
+    user_root = os.environ.get("USERPROFILE")
+    if not user_root:
+        raise ValueError("USERPROFILE is required for sensitive data storage")
+    return Path(user_root) / ".stray_local"
+
+
 @dataclass(frozen=True)
 class EmailConfig:
     smtp_host: str
@@ -184,10 +191,7 @@ def _resolve_sensitive_path(base: Path, value: str) -> str:
 
 
 def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
-    user_root = os.environ.get("USERPROFILE")
-    if not user_root:
-        raise ValueError("USERPROFILE is required for sensitive data storage")
-    base = Path(user_root) / "sentineltray"
+    base = get_user_data_dir()
 
     return replace(
         config,

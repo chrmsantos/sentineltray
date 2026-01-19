@@ -6,7 +6,6 @@ import hashlib
 import importlib.metadata
 import json
 import logging
-import os
 import shutil
 import time
 from dataclasses import dataclass
@@ -14,8 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event
 
-from .config import AppConfig
-from .detector import WindowTextDetector
+from .config import AppConfig, get_user_data_dir
+from .detector import WindowTextDetector, WindowUnavailableError
 from .logging_setup import setup_logging
 from .status import StatusStore
 from .email_sender import build_sender
@@ -309,10 +308,8 @@ class Notifier:
 
     def _update_config_checksum(self) -> None:
         try:
-            user_root = os.environ.get("USERPROFILE")
-            if not user_root:
-                return
-            config_path = Path(user_root) / "sentineltray" / "config.local.yaml"
+            base = get_user_data_dir()
+            config_path = base / "config.local.yaml"
             if not config_path.exists():
                 return
             checksum = hashlib.sha256(config_path.read_bytes()).hexdigest()
@@ -389,6 +386,12 @@ class Notifier:
                         "Skipping scan; user active",
                         extra={"category": "scan"},
                     )
+            except WindowUnavailableError as exc:
+                LOGGER.info(
+                    "Skipping scan; %s",
+                    exc,
+                    extra={"category": "scan"},
+                )
             except Exception as exc:
                 message = f"error: {exc}"
                 self._handle_error(message)

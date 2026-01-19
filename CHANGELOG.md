@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-01-19 (0.2.0-beta.2)
+
+- Move local user data directory to %USERPROFILE%\.stray_local for configs, logs, and telemetry.
+- Skip scans without error alerts when the target window is unavailable or disabled.
+
 ## 2026-01-19 (0.2.0-beta.1)
 
 - Enforce log retention caps at 5 files, clamping higher configured values.

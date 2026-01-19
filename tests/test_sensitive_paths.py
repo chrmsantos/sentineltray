@@ -37,8 +37,8 @@ def test_sensitive_paths_forced_to_user_root(
                 f"status_export_file: '{other_root / 'status.json'}'",
                 f"status_export_csv: '{other_root / 'status.csv'}'",
                 "status_refresh_seconds: 1",
-                "allow_window_restore: true",
-                   "start_minimized: true",
+                     "allow_window_restore: true",
+                     "start_minimized: true",
                 "log_only_mode: false",
                 "config_checksum_file: 'logs/config.checksum'",
                 "min_free_disk_mb: 100",
@@ -65,7 +65,7 @@ def test_sensitive_paths_forced_to_user_root(
 
     config = load_config(str(config_path))
 
-    base = tmp_path / "sentineltray"
+    base = tmp_path / ".stray_local"
     assert config.state_file == str(base / "state.json")
     assert config.log_file == str(base / "sentineltray.log")
     assert config.telemetry_file == str(base / "telemetry.json")

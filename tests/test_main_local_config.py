@@ -96,7 +96,7 @@ def test_main_creates_local_override_when_missing(
     monkeypatch.delenv("SENTINELTRAY_CONFIG", raising=False)
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
 
-    local_path = tmp_path / "sentineltray" / "config.local.yaml"
+    local_path = tmp_path / ".stray_local" / "config.local.yaml"
     assert not local_path.exists()
 
     with pytest.raises(SystemExit):

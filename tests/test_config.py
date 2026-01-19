@@ -17,7 +17,7 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.error_backoff_base_seconds == 5
     assert config.error_backoff_max_seconds == 300
     assert config.debounce_seconds == 600
-    base = tmp_path / "sentineltray"
+    base = tmp_path / ".stray_local"
     assert config.log_file == str(base / "logs" / "sentineltray.log")
     assert config.log_level == "INFO"
     assert config.log_console_level == "WARNING"
