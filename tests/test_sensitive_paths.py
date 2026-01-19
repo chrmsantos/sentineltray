@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sentineltray.config import load_config
+from sentineltray.config import get_project_root, load_config
 
 
 def test_sensitive_paths_forced_to_user_root(
@@ -66,8 +66,12 @@ def test_sensitive_paths_forced_to_user_root(
     config = load_config(str(config_path))
 
     base = tmp_path / ".stray_local"
+    project_root = get_project_root()
     assert config.state_file == str(base / "state.json")
-    assert config.log_file == str(base / "sentineltray.log")
-    assert config.telemetry_file == str(base / "telemetry.json")
-    assert config.status_export_file == str(base / "status.json")
-    assert config.status_export_csv == str(base / "status.csv")
+    assert config.log_file == str(project_root / "logs" / "sentineltray.log")
+    assert config.telemetry_file == str(project_root / "logs" / "telemetry.json")
+    assert config.status_export_file == str(project_root / "logs" / "status.json")
+    assert config.status_export_csv == str(project_root / "logs" / "status.csv")
+    assert config.config_checksum_file == str(
+        project_root / "logs" / "config.checksum"
+    )

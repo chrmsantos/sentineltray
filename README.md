@@ -74,7 +74,7 @@ python main.py --cli
 
 ## Notes
 
-- Logs are written per execution with detailed fields and kept with a max of 5 files in logs/ (values above 5 are capped).
+- Logs are written per execution with detailed fields and kept with a max of 5 files in logs/ under the project root (values above 5 are capped).
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - Third-party debug logs are suppressed to keep logs actionable.
 - state.json stores the last sent messages to avoid duplicates.
@@ -90,9 +90,9 @@ python main.py --cli
 - License: GPL-3.0-only.
 - Tray status shows error count and last error reason.
 - Logs include a structured category field.
-- Local telemetry file captures last activity for quick diagnostics.
-- Status export JSON available at status_export_file.
-- Status export CSV available at status_export_csv.
+- Local telemetry file captures last activity for quick diagnostics and lives in logs/ under the project root.
+- Status export JSON available at status_export_file (logs/ under the project root by default).
+- Status export CSV available at status_export_csv (logs/ under the project root by default).
 - UI refresh interval is configurable via status_refresh_seconds.
 - Data folder shortcut available in the Status window.
 - Status window uses larger, user-friendly text, fits its content, and shows version/date discreetly.
@@ -103,5 +103,5 @@ python main.py --cli
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.
-- Sensitive data is always stored under %USERPROFILE%\.stray_local.
+- Sensitive data is always stored under %USERPROFILE%\.stray_local; operational logs stay in logs/ inside the project.
 - Política de privacidade em PRIVACY.md.

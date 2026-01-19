@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from threading import Event, Thread
 from typing import Optional
 
@@ -167,7 +168,7 @@ def run_tray(config: AppConfig) -> None:
         base_dir = get_user_data_dir()
         config_path = str(base_dir / "config.local.yaml")
         data_dir = str(base_dir)
-        logs_dir = str(base_dir / "logs")
+        logs_dir = str(Path(config.log_file).parent)
 
         def open_config() -> None:
             if config_path:
