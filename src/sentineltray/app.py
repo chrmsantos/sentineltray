@@ -198,9 +198,11 @@ class Notifier:
         self.status.set_last_error(safe_message)
         try:
             if self.config.log_only_mode:
-                LOGGER.info("Log-only mode active, skipping send", extra={"category": "send"})
-            else:
-                self._sender.send(safe_message)
+                LOGGER.info(
+                    "Log-only mode active; sending error notification anyway",
+                    extra={"category": "error"},
+                )
+            self._sender.send(safe_message)
             self.status.set_last_send(_now_iso())
             LOGGER.info("Sent error notification", extra={"category": "error"})
         except Exception as exc:

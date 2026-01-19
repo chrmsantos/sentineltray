@@ -5,6 +5,9 @@ __pycache__/
 state.json
 logs/*.log
 logs/telemetry.json
+logs/status.json
+logs/status.csv
+logs/config.checksum
 config.local.yaml
 *.local.yaml
 tmp/.stray_local/logs/

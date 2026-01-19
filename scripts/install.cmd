@@ -9,46 +9,66 @@ set "REPO_URL=https://github.com/chrmsantos/sentineltray/archive/refs/heads/mast
 set "INSTALL_DIR=%USERPROFILE%\sentineltray-app"
 set "TEMP_ZIP=%TEMP%\sentineltray.zip"
 set "EXTRACT_DIR=%TEMP%\sentineltray-extract"
+set "LOG_DIR=%TEMP%\sentineltray-install"
 
-echo Instalando SentinelTray em "%INSTALL_DIR%"...
+for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "LOG_TS=%%I"
+set "LOG_FILE=%LOG_DIR%\install_%LOG_TS%.log"
 
-if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%"
+if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
+powershell -NoProfile -Command "Get-ChildItem -Path '%LOG_DIR%\install_*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -Skip 5 | Remove-Item -Force -ErrorAction SilentlyContinue" >nul 2>nul
 
-echo Baixando codigo do GitHub...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri '%REPO_URL%' -OutFile '%TEMP_ZIP%'" || goto :error
+call :log "Iniciando instalacao do SentinelTray"
+call :log "Destino: %INSTALL_DIR%"
 
-echo Extraindo arquivos...
+if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" || call :fail "Nao foi possivel criar diretorio de instalacao"
+
+call :log "Baixando codigo do GitHub"
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%REPO_URL%' -OutFile '%TEMP_ZIP%'" || call :fail "Falha ao baixar o pacote do GitHub"
+if not exist "%TEMP_ZIP%" call :fail "Arquivo baixado nao encontrado"
+
+call :log "Extraindo arquivos"
 if exist "%EXTRACT_DIR%" rmdir /s /q "%EXTRACT_DIR%"
-mkdir "%EXTRACT_DIR%"
-powershell -NoProfile -Command "Expand-Archive -Path '%TEMP_ZIP%' -DestinationPath '%EXTRACT_DIR%' -Force" || goto :error
+mkdir "%EXTRACT_DIR%" || call :fail "Falha ao preparar diretorio temporario"
+powershell -NoProfile -Command "Expand-Archive -Path '%TEMP_ZIP%' -DestinationPath '%EXTRACT_DIR%' -Force" || call :fail "Falha ao extrair o pacote"
 
+set "SRC_DIR="
 for /d %%D in ("%EXTRACT_DIR%\sentineltray-*") do set "SRC_DIR=%%D"
-if not defined SRC_DIR goto :error
+if not defined SRC_DIR call :fail "Diretorio de origem nao encontrado"
 
-echo Copiando arquivos do projeto...
-powershell -NoProfile -Command "Copy-Item -Path '%SRC_DIR%\*' -Destination '%INSTALL_DIR%' -Recurse -Force" || goto :error
+call :log "Copiando arquivos do projeto"
+powershell -NoProfile -Command "Copy-Item -Path '%SRC_DIR%\*' -Destination '%INSTALL_DIR%' -Recurse -Force" || call :fail "Falha ao copiar arquivos"
 
-echo Verificando Python...
+call :log "Verificando Python"
 where python >nul 2>nul
 if errorlevel 1 (
-  echo Python nao encontrado. Instalando via winget...
-  winget install -e --id Python.Python.3.11 --accept-package-agreements --accept-source-agreements || goto :error
+  call :log "Python nao encontrado. Tentando instalar via winget"
+  winget install -e --id Python.Python.3.11 --accept-package-agreements --accept-source-agreements || call :fail "Falha ao instalar Python via winget"
 )
 
-cd /d "%INSTALL_DIR%"
+cd /d "%INSTALL_DIR%" || call :fail "Falha ao acessar diretorio de instalacao"
 
-echo Criando ambiente virtual...
-python -m venv .venv || goto :error
+call :log "Criando ambiente virtual"
+python -m venv .venv || call :fail "Falha ao criar ambiente virtual"
 
-echo Instalando dependencias...
-call .venv\Scripts\activate || goto :error
-python -m pip install --upgrade pip || goto :error
-pip install -r requirements.txt || goto :error
+call :log "Instalando dependencias"
+call .venv\Scripts\activate || call :fail "Falha ao ativar ambiente virtual"
+python -m pip install --upgrade pip || call :fail "Falha ao atualizar pip"
+python -m pip install -r requirements.txt || call :fail "Falha ao instalar dependencias"
 
+call :log "Limpando arquivos temporarios"
+if exist "%TEMP_ZIP%" del /f /q "%TEMP_ZIP%" >nul 2>nul
+
+call :log "Instalacao concluida"
 echo Instalacao concluida.
 echo Execute: %INSTALL_DIR%\ .venv\Scripts\python.exe main.py
 exit /b 0
 
-:error
-echo Falha na instalacao.
+:log
+echo [%DATE% %TIME%] %*
+>>"%LOG_FILE%" echo [%DATE% %TIME%] %*
+exit /b 0
+
+:fail
+call :log "ERRO: %*"
+echo Falha na instalacao. Consulte o log: %LOG_FILE%
 exit /b 1

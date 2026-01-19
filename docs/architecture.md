@@ -11,7 +11,7 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Logs are created per execution with detailed fields and kept with a max of 5 files (values above 5 are capped).
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
-- Errors in each polling iteration are reported on screen and via email.
+- Errors in each polling iteration are reported on screen and via email immediately, even when log-only mode is enabled.
 - When the target window is temporarily unavailable or disabled, scans are skipped without raising error alerts.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.

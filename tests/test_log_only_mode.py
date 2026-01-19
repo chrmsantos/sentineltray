@@ -60,4 +60,4 @@ def test_log_only_mode_skips_send() -> None:
     notifier._sender = FakeSender()
     notifier._handle_error("error: test")
 
-    assert calls["count"] == 0
+    assert calls["count"] == 1
