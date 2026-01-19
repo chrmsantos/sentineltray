@@ -3,6 +3,7 @@
 ## 2026-01-19 (0.2.0-beta.6)
 
 - Store operational logs, telemetry, and status exports under the project logs/ folder; sensitive data remains in %USERPROFILE%\.stray_local.
+- Allow running main.py directly by bootstrapping src/ onto the import path.
 
 ## 2026-01-19 (0.2.0-beta.5)
 
