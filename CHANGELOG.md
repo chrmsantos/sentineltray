@@ -9,6 +9,7 @@
 - Fit UI windows to content and standardize timestamp display format in the status panel.
 - Gate scans to run only after 2+ minutes of user inactivity.
 - Ensure email subjects always include SentinelTray and bodies use friendly PT-BR text.
+- Make phrase matching accent-insensitive with partial text detection.
 
 ## 2026-01-16
 
