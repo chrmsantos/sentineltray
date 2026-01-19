@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import ctypes
 import hashlib
 import importlib.metadata
 import json
@@ -21,6 +22,25 @@ from .email_sender import build_sender
 from .telemetry import JsonWriter
 
 LOGGER = logging.getLogger(__name__)
+
+
+class _LASTINPUTINFO(ctypes.Structure):
+    _fields_ = [("cbSize", ctypes.c_uint), ("dwTime", ctypes.c_uint)]
+
+
+def _get_idle_seconds() -> float:
+    info = _LASTINPUTINFO()
+    info.cbSize = ctypes.sizeof(_LASTINPUTINFO)
+    if ctypes.windll.user32.GetLastInputInfo(ctypes.byref(info)) == 0:
+        raise RuntimeError("GetLastInputInfo failed")
+    tick = ctypes.windll.kernel32.GetTickCount()
+    elapsed_ms = tick - info.dwTime
+    return max(0.0, float(elapsed_ms) / 1000.0)
+
+
+def _is_user_idle(min_seconds: int) -> bool:
+    idle_seconds = _get_idle_seconds()
+    return idle_seconds >= min_seconds
 
 
 def _load_state(path: Path) -> list[dict[str, str]]:
@@ -348,9 +368,15 @@ class Notifier:
             started_at = time.monotonic()
             try:
                 self._ensure_free_disk()
-                self.scan_once()
-                self.status.set_last_error("")
-                error_count = 0
+                if _is_user_idle(120):
+                    self.scan_once()
+                    self.status.set_last_error("")
+                    error_count = 0
+                else:
+                    LOGGER.info(
+                        "Skipping scan; user active",
+                        extra={"category": "scan"},
+                    )
             except Exception as exc:
                 message = f"error: {exc}"
                 self._handle_error(message)

@@ -7,6 +7,7 @@
 - Unify all status commands in the Commands menu and remove redundant buttons.
 - Increase UI text size and rewrite labels in user-friendly language.
 - Fit UI windows to content and standardize timestamp display format in the status panel.
+- Gate scans to run only after 2+ minutes of user inactivity.
 
 ## 2026-01-16
 
