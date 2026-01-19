@@ -69,6 +69,14 @@ def test_run_loop_skips_window_unavailable(
     notifier.scan_once = fake_scan_once  # type: ignore[assignment]
     monkeypatch.setattr("sentineltray.app._is_user_idle", lambda _: True)
 
+    sends = {"count": 0}
+
+    class FakeSender:
+        def send(self, _message: str) -> None:
+            sends["count"] += 1
+
+    notifier._sender = FakeSender()  # type: ignore[assignment]
+
     calls = {"count": 0}
 
     def fake_update_telemetry() -> None:
@@ -82,4 +90,5 @@ def test_run_loop_skips_window_unavailable(
 
     snapshot = notifier.status.snapshot()
     assert snapshot.error_count == 0
-    assert snapshot.last_error == ""
+    assert snapshot.last_error
+    assert sends["count"] == 2

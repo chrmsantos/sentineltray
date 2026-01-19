@@ -79,7 +79,7 @@ python main.py --cli
 - Third-party debug logs are suppressed to keep logs actionable.
 - state.json stores the last sent messages to avoid duplicates.
 - Errors detected in each polling iteration are reported on screen and via email immediately.
-- When the target window is unavailable or disabled, the scan is skipped without triggering error alerts.
+- When the target window is unavailable or disabled, an alert is sent and the scan is skipped.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
 - Janelas minimizadas sao restauradas para leitura do texto.
