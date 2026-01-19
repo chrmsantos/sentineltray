@@ -207,7 +207,7 @@ def run_tray(config: AppConfig) -> None:
         commands_menu.add_command(label="Abrir site do projeto", command=open_repo)
         commands_menu.add_separator()
         commands_menu.add_command(label="Encerrar o programa", command=request_exit)
-        menu.add_cascade(label="Comandos", menu=commands_menu)
+        menu.add_cascade(label="Menu", menu=commands_menu)
         status_window.config(menu=menu)
 
         status_window.update_idletasks()
