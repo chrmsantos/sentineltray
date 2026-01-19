@@ -12,7 +12,7 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
 - Errors in each polling iteration are reported on screen and via email immediately, even when log-only mode is enabled.
-- When the target window is temporarily unavailable or disabled, scans are skipped without raising error alerts.
+- When the target window is temporarily unavailable or disabled, an alert is sent and the scan is skipped.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
 - Consecutive errors trigger exponential backoff before the next scan.

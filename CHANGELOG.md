@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-01-19 (0.2.0-beta.4)
+
+- Send user alerts when the target window is unavailable and skip that scan.
+
 ## 2026-01-19 (0.2.0-beta.3)
 
 - Harden Windows installer with structured logging, retention, and stricter error handling.

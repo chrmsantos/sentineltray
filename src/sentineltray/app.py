@@ -389,6 +389,7 @@ class Notifier:
                         extra={"category": "scan"},
                     )
             except WindowUnavailableError as exc:
+                self._handle_error(f"error: janela indisponível: {exc}")
                 LOGGER.info(
                     "Skipping scan; %s",
                     exc,
