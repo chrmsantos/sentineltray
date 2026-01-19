@@ -6,7 +6,7 @@
 - Minimized target windows are restored and focused before scanning.
 - Email delivery uses SMTP with optional TLS.
 - State is stored in state.json to prevent duplicate sends.
-- Logs are created per execution with detailed fields and kept with a max of 5 files.
+- Logs are created per execution with detailed fields and kept with a max of 5 files (values above 5 are capped).
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
 - Errors in each polling iteration are reported on screen and via email.

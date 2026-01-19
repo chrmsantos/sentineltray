@@ -71,7 +71,7 @@ python main.py --cli
 
 ## Notes
 
-- Logs are written per execution with detailed fields and kept with a max of 5 files in logs/.
+- Logs are written per execution with detailed fields and kept with a max of 5 files in logs/ (values above 5 are capped).
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - Third-party debug logs are suppressed to keep logs actionable.
 - state.json stores the last sent messages to avoid duplicates.

@@ -32,3 +32,31 @@ def test_setup_logging_creates_run_log_and_prunes(tmp_path: Path) -> None:
 
     for handler in logging.getLogger().handlers:
         handler.close()
+
+
+def test_setup_logging_caps_retention(tmp_path: Path) -> None:
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    base_log = log_dir / "sentineltray.log"
+
+    for idx in range(8):
+        path = log_dir / f"sentineltray_20260101_00001{idx}_123.log"
+        path.write_text("old", encoding="utf-8")
+        os.utime(path, (1, 1))
+
+    setup_logging(
+        str(base_log),
+        log_backup_count=12,
+        log_run_files_keep=10,
+    )
+
+    logs = sorted(log_dir.glob("sentineltray_*.log"))
+    assert len(logs) == 5
+
+    handlers = logging.getLogger().handlers
+    rotating_handlers = [handler for handler in handlers if isinstance(handler, RotatingFileHandler)]
+    assert rotating_handlers
+    assert rotating_handlers[0].backupCount == 5
+
+    for handler in logging.getLogger().handlers:
+        handler.close()
