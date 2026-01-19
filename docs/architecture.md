@@ -1,5 +1,7 @@
 # Architecture
 
+Versao beta: 0.2.0-beta.1 (19-01-2026)
+
 ## Overview
 
 - Window text detection uses UI Automation via pywinauto.

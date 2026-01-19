@@ -20,6 +20,7 @@ from .logging_setup import setup_logging
 from .status import StatusStore
 from .email_sender import build_sender
 from .telemetry import JsonWriter
+from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
 
@@ -86,7 +87,11 @@ def _get_version() -> str:
     try:
         return importlib.metadata.version("sentineltray")
     except importlib.metadata.PackageNotFoundError:
-        return "0.0.0"
+        return __version_label__
+
+
+def _get_release_date() -> str:
+    return __release_date__
 
 
 def _get_commit_hash() -> str:
@@ -124,6 +129,7 @@ class Notifier:
         self._telemetry = JsonWriter(Path(self.config.telemetry_file))
         self._status_export = JsonWriter(Path(self.config.status_export_file))
         self._app_version = _get_version()
+        self._release_date = _get_release_date()
         self._commit_hash = _get_commit_hash()
         self._update_config_checksum()
 
@@ -255,6 +261,7 @@ class Notifier:
         payload = {
             "updated_at": _now_iso(),
             "app_version": self._app_version,
+            "release_date": self._release_date,
             "commit_hash": self._commit_hash,
             "running": snapshot.running,
             "paused": snapshot.paused,
@@ -344,7 +351,12 @@ class Notifier:
             log_backup_count=self.config.log_backup_count,
             log_run_files_keep=self.config.log_run_files_keep,
         )
-        LOGGER.info("SentinelTray started", extra={"category": "startup"})
+        LOGGER.info(
+            "SentinelTray started (beta %s, %s)",
+            self._app_version,
+            self._release_date,
+            extra={"category": "startup"},
+        )
         self.status.set_running(True)
         self.status.set_uptime_seconds(0)
         self._send_startup_test()
