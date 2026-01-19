@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from threading import Lock
 
 
@@ -81,17 +82,27 @@ class StatusStore:
             )
 
 
+def _format_timestamp(value: str) -> str:
+    if not value:
+        return ""
+    try:
+        timestamp = datetime.fromisoformat(value)
+        return timestamp.strftime("%d-%m-%Y - %H:%M")
+    except ValueError:
+        return value
+
+
 def format_status(snapshot: StatusSnapshot) -> str:
     running = "sim" if snapshot.running else "nao"
     paused = "sim" if snapshot.paused else "nao"
     lines = [
         f"Em execução: {running}",
         f"Pausado: {paused}",
-        f"Última verificação: {snapshot.last_scan}",
-        f"Última mensagem encontrada: {snapshot.last_match}",
-        f"Último envio de alerta: {snapshot.last_send}",
-        f"Último erro registrado: {snapshot.last_error}",
-        f"Último resumo de saúde: {snapshot.last_healthcheck}",
+        f"Última verificação: {_format_timestamp(snapshot.last_scan)}",
+        f"Última mensagem encontrada: {_format_timestamp(snapshot.last_match)}",
+        f"Último envio de alerta: {_format_timestamp(snapshot.last_send)}",
+        f"Último erro registrado: {_format_timestamp(snapshot.last_error)}",
+        f"Último resumo de saúde: {_format_timestamp(snapshot.last_healthcheck)}",
         f"Tempo ativo (segundos): {snapshot.uptime_seconds}",
         f"Total de erros: {snapshot.error_count}",
     ]

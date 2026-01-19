@@ -8,6 +8,7 @@ from typing import Optional
 from PIL import Image, ImageDraw
 import pystray
 import tkinter as tk
+import tkinter.font as tkfont
 import webbrowser
 
 from .app import Notifier
@@ -77,7 +78,6 @@ def run_tray(config: AppConfig) -> None:
 
         error_window = tk.Toplevel(root)
         error_window.title("SentinelTray - Atenção")
-        error_window.geometry("540x180")
         error_window.resizable(False, False)
 
         title = tk.Label(
@@ -100,6 +100,11 @@ def run_tray(config: AppConfig) -> None:
         )
         error_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
 
+        error_window.update_idletasks()
+        error_window.geometry(
+            f"{error_window.winfo_reqwidth()}x{error_window.winfo_reqheight()}"
+        )
+
     def request_exit() -> None:
         stop_event.set()
         root.after(0, root.quit)
@@ -119,7 +124,6 @@ def run_tray(config: AppConfig) -> None:
 
         status_window = tk.Toplevel(root)
         status_window.title("SentinelTray - Painel")
-        status_window.geometry("760x420")
         status_window.resizable(False, False)
 
         title = tk.Label(
@@ -189,8 +193,10 @@ def run_tray(config: AppConfig) -> None:
             if status_label is not None and status_label.winfo_exists():
                 status_label.config(text=format_status(snapshot))
 
-        menu = tk.Menu(status_window)
-        commands_menu = tk.Menu(menu, tearoff=0)
+        menu_font = tkfont.Font(family="Segoe UI", size=11, weight="bold")
+        item_font = tkfont.Font(family="Segoe UI", size=11, weight="normal")
+        menu = tk.Menu(status_window, font=menu_font)
+        commands_menu = tk.Menu(menu, tearoff=0, font=item_font)
         commands_menu.add_command(label="Pausar ou continuar", command=toggle_pause)
         commands_menu.add_command(label="Atualizar informações", command=refresh_now)
         commands_menu.add_command(label="Copiar informações", command=copy_status)
@@ -203,6 +209,11 @@ def run_tray(config: AppConfig) -> None:
         commands_menu.add_command(label="Encerrar o programa", command=request_exit)
         menu.add_cascade(label="Comandos", menu=commands_menu)
         status_window.config(menu=menu)
+
+        status_window.update_idletasks()
+        status_window.geometry(
+            f"{status_window.winfo_reqwidth()}x{status_window.winfo_reqheight()}"
+        )
 
     def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:
         root.after(0, show_status)
