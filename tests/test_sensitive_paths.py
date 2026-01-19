@@ -38,6 +38,7 @@ def test_sensitive_paths_forced_to_user_root(
                 f"status_export_csv: '{other_root / 'status.csv'}'",
                 "status_refresh_seconds: 1",
                 "allow_window_restore: true",
+                   "start_minimized: true",
                 "log_only_mode: false",
                 "config_checksum_file: 'logs/config.checksum'",
                 "min_free_disk_mb: 100",

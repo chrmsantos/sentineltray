@@ -33,7 +33,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - email.retry_attempts
 - email.retry_backoff_seconds
 - email.dry_run = false when ready to send
-- status_export_csv, status_refresh_seconds, allow_window_restore
+- status_export_csv, status_refresh_seconds, allow_window_restore, start_minimized
 - log_only_mode, config_checksum_file, min_free_disk_mb
 - log_level, log_console_level, log_console_enabled
 - log_max_bytes, log_backup_count, log_run_files_keep
@@ -61,7 +61,7 @@ Python, dependencias e o ambiente virtual.
 python main.py
 
 The app runs in the system tray by default. Use the tray menu to open Status.
-Clique com o botão esquerdo no ícone para abrir o Status. A janela abre automaticamente ao iniciar.
+Clique com o botão esquerdo no ícone para abrir o Status. A janela abre automaticamente ao iniciar, a menos que start_minimized esteja ativo.
 No Status, use os botões para abrir o arquivo de configurações, a pasta de dados, os logs e o repositório, além de copiar e atualizar o status.
 O título da interface mostra o nome e a descrição do projeto.
 
