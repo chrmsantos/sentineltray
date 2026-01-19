@@ -61,6 +61,8 @@ O instalador gera logs em %TEMP%\sentineltray-install e mantém apenas os 5 mais
 
 python main.py
 
+If you run main.py directly, it automatically adds src/ to the import path.
+
 The app runs in the system tray by default. Use the tray menu to open Status.
 Clique com o botão esquerdo no ícone para abrir o Status. A janela abre automaticamente ao iniciar, a menos que start_minimized esteja ativo.
 No Status, use os botões para abrir o arquivo de configurações, a pasta de dados, os logs e o repositório, além de copiar e atualizar o status.

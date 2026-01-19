@@ -7,6 +7,17 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+
+def _ensure_src_on_path() -> None:
+    root = Path(__file__).resolve().parent
+    src_path = root / "src"
+    src_value = str(src_path)
+    if src_value not in sys.path:
+        sys.path.insert(0, src_value)
+
+
+_ensure_src_on_path()
+
 from sentineltray.app import run
 from sentineltray.config import get_user_data_dir, load_config, load_config_with_override
 from sentineltray.tray_app import run_tray
