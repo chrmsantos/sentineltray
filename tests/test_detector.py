@@ -44,3 +44,26 @@ def test_prepare_window_restores_minimized(monkeypatch) -> None:
     assert "focus" in calls
     assert "maximize" in calls
     assert "minimize" in calls
+
+
+def test_find_matches_accent_insensitive(monkeypatch) -> None:
+    detector = WindowTextDetector("APP", allow_window_restore=True)
+    monkeypatch.setattr(
+        detector,
+        "_iter_texts",
+        lambda: ["Sessão encerrada", "Ação confirmada", "Sem alerta"],
+    )
+
+    assert detector.find_matches("Sessao") == ["Sessão encerrada"]
+    assert detector.find_matches("Acao") == ["Ação confirmada"]
+
+
+def test_find_matches_partial_text(monkeypatch) -> None:
+    detector = WindowTextDetector("APP", allow_window_restore=True)
+    monkeypatch.setattr(
+        detector,
+        "_iter_texts",
+        lambda: ["Erro no sistema principal", "Tudo certo"],
+    )
+
+    assert detector.find_matches("Erro") == ["Erro no sistema principal"]

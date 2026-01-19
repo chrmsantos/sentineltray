@@ -79,6 +79,7 @@ python main.py --cli
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
 - Janelas minimizadas sao restauradas para leitura do texto.
+- Phrase matching ignores accents and matches partial text occurrences.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
 - Runtime artifacts are ignored by git via .gitignore.

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+import unicodedata
 from typing import Iterable
 
 from pywinauto import Desktop
@@ -143,5 +144,14 @@ class WindowTextDetector:
         if not phrase_regex:
             return texts
 
-        pattern = re.compile(phrase_regex)
-        return [text for text in texts if pattern.search(text)]
+        def normalize(value: str) -> str:
+            decomposed = unicodedata.normalize("NFKD", value)
+            return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+        normalized_regex = normalize(phrase_regex)
+        pattern = re.compile(normalized_regex)
+        matches: list[str] = []
+        for text in texts:
+            if pattern.search(normalize(text)):
+                matches.append(text)
+        return matches
