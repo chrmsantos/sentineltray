@@ -1,3 +1,5 @@
+from pywinauto.findwindows import ElementAmbiguousError
+
 from sentineltray.detector import WindowTextDetector
 
 
@@ -78,3 +80,45 @@ def test_find_matches_case_insensitive(monkeypatch) -> None:
     )
 
     assert detector.find_matches("alerta") == ["Alerta crítico"]
+
+
+def test_get_window_resolves_ambiguous(monkeypatch) -> None:
+    class FakeWindow:
+        def __init__(self, focus: bool, visible: bool, enabled: bool) -> None:
+            self._focus = focus
+            self._visible = visible
+            self._enabled = enabled
+
+        def has_focus(self) -> bool:
+            return self._focus
+
+        def is_visible(self) -> bool:
+            return self._visible
+
+        def is_enabled(self) -> bool:
+            return self._enabled
+
+    class FakeSpec:
+        def wrapper_object(self):
+            raise ElementAmbiguousError("ambiguous")
+
+    class FakeDesktop:
+        def __init__(self, *args, **kwargs) -> None:
+            return None
+
+        def window(self, *_args, **_kwargs):
+            return FakeSpec()
+
+        def windows(self, *_args, **_kwargs):
+            return [
+                FakeWindow(False, True, True),
+                FakeWindow(True, True, True),
+            ]
+
+    detector = WindowTextDetector("APP", allow_window_restore=True)
+    monkeypatch.setattr("sentineltray.detector.Desktop", FakeDesktop)
+
+    window = detector._get_window()
+
+    assert isinstance(window, FakeWindow)
+    assert window.has_focus()

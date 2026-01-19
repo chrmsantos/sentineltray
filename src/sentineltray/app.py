@@ -17,7 +17,7 @@ from .config import AppConfig, get_user_data_dir
 from .detector import WindowTextDetector, WindowUnavailableError
 from .logging_setup import setup_logging
 from .status import StatusStore
-from .email_sender import build_sender
+from .email_sender import EmailAuthError, build_sender
 from .telemetry import JsonWriter
 from . import __release_date__, __version_label__
 
@@ -130,6 +130,7 @@ class Notifier:
         self._app_version = _get_version()
         self._release_date = _get_release_date()
         self._commit_hash = _get_commit_hash()
+        self._email_disabled = False
         self._update_config_checksum()
 
     def _reset_components(self) -> None:
@@ -152,6 +153,31 @@ class Notifier:
                 continue
             last_sent[text] = timestamp
         return last_sent
+
+    def _send_message(self, message: str, *, category: str, force_send: bool = False) -> bool:
+        if self._email_disabled:
+            LOGGER.warning(
+                "Email disabled after authentication failure; skipping send",
+                extra={"category": category},
+            )
+            return False
+        if self.config.log_only_mode and not force_send:
+            LOGGER.info(
+                "Log-only mode active, skipping send",
+                extra={"category": category},
+            )
+            return False
+        try:
+            self._sender.send(message)
+            return True
+        except EmailAuthError as exc:
+            self._email_disabled = True
+            self.status.set_last_error(_to_ascii(f"error: smtp auth failed: {exc}"))
+            LOGGER.error(
+                "SMTP authentication failed; disabling email notifications",
+                extra={"category": category},
+            )
+            return False
 
     def scan_once(self) -> None:
         self.status.set_last_scan(_now_iso())
@@ -179,12 +205,12 @@ class Notifier:
             self.status.set_last_match(normalized[0])
 
         for text in send_items:
-            self._sender.send(text)
-            self.status.set_last_send(_now_iso())
-            LOGGER.info("Sent message", extra={"category": "send"})
-            sent_at = _now_iso()
-            self._history.append({"text": text, "sent_at": sent_at})
-            self._last_sent[text] = datetime.fromisoformat(sent_at)
+            if self._send_message(text, category="send", force_send=True):
+                self.status.set_last_send(_now_iso())
+                LOGGER.info("Sent message", extra={"category": "send"})
+                sent_at = _now_iso()
+                self._history.append({"text": text, "sent_at": sent_at})
+                self._last_sent[text] = datetime.fromisoformat(sent_at)
 
         if len(self._history) > self.config.max_history:
             self._history = self._history[-self.config.max_history :]
@@ -202,9 +228,9 @@ class Notifier:
                     "Log-only mode active; sending error notification anyway",
                     extra={"category": "error"},
                 )
-            self._sender.send(safe_message)
-            self.status.set_last_send(_now_iso())
-            LOGGER.info("Sent error notification", extra={"category": "error"})
+            if self._send_message(safe_message, category="error", force_send=True):
+                self.status.set_last_send(_now_iso())
+                LOGGER.info("Sent error notification", extra={"category": "error"})
         except Exception as exc:
             LOGGER.exception(
                 "Failed to send error notification: %s",
@@ -215,12 +241,10 @@ class Notifier:
     def _send_startup_test(self) -> None:
         message = "info: startup test message"
         try:
-            if self.config.log_only_mode:
-                LOGGER.info("Log-only mode active, skipping send", extra={"category": "send"})
-            else:
-                self._sender.send(message)
-            self.status.set_last_send(_now_iso())
-            LOGGER.info("Sent startup test message", extra={"category": "send"})
+            sent = self._send_message(message, category="send")
+            if sent or self.config.log_only_mode:
+                self.status.set_last_send(_now_iso())
+                LOGGER.info("Sent startup test message", extra={"category": "send"})
         except Exception as exc:
             error_message = f"error: startup test send failed: {exc}"
             self._handle_error(error_message)
@@ -238,13 +262,11 @@ class Notifier:
         )
         safe_message = _to_ascii(message)
         try:
-            if self.config.log_only_mode:
-                LOGGER.info("Log-only mode active, skipping send", extra={"category": "send"})
-            else:
-                self._sender.send(safe_message)
-            self.status.set_last_send(_now_iso())
-            self.status.set_last_healthcheck(_now_iso())
-            LOGGER.info("Sent healthcheck message", extra={"category": "send"})
+            sent = self._send_message(safe_message, category="send")
+            if sent or self.config.log_only_mode:
+                self.status.set_last_send(_now_iso())
+                self.status.set_last_healthcheck(_now_iso())
+                LOGGER.info("Sent healthcheck message", extra={"category": "send"})
         except Exception as exc:
             error_message = f"error: healthcheck send failed: {exc}"
             self._handle_error(error_message)

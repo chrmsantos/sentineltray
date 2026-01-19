@@ -1,7 +1,7 @@
 import smtplib
 
 from sentineltray.config import EmailConfig
-from sentineltray.email_sender import SmtpEmailSender, build_sender
+from sentineltray.email_sender import EmailAuthError, SmtpEmailSender, build_sender
 
 
 def test_build_sender_returns_smtp_sender() -> None:
@@ -113,7 +113,7 @@ def test_email_sender_auth_failure_no_retry(monkeypatch) -> None:
     sender = SmtpEmailSender(config=config)
     try:
         sender.send("msg")
-    except smtplib.SMTPAuthenticationError:
+    except EmailAuthError:
         pass
 
     assert attempts["count"] == 1

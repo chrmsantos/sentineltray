@@ -11,6 +11,10 @@ from .config import EmailConfig
 LOGGER = logging.getLogger(__name__)
 
 
+class EmailAuthError(RuntimeError):
+    """Raised when SMTP authentication fails and sending should be disabled."""
+
+
 def _build_subject(subject: str, category: str) -> str:
     base = (subject or "").strip() or category
     if "sentineltray" not in base.lower():
@@ -102,7 +106,7 @@ class SmtpEmailSender(EmailSender):
                         "SMTP authentication failed (check app password)",
                         extra={"category": "send"},
                     )
-                    raise
+                    raise EmailAuthError("SMTP authentication failed") from exc
                 if attempt >= attempts:
                     raise
                 LOGGER.warning(

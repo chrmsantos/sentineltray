@@ -21,40 +21,51 @@ class WindowTextDetector:
         self._window_title_regex = re.compile(window_title_regex)
         self._allow_window_restore = allow_window_restore
 
+    def _select_best_window(self, desktop: Desktop):
+        candidates = desktop.windows(title_re=self._window_title_regex)
+        if not candidates:
+            raise ElementAmbiguousError("No window candidates available")
+
+        def score(window) -> int:
+            value = 0
+            try:
+                if hasattr(window, "has_focus") and window.has_focus():
+                    value += 3
+            except Exception:
+                pass
+            try:
+                if hasattr(window, "is_visible") and window.is_visible():
+                    value += 2
+            except Exception:
+                pass
+            try:
+                if hasattr(window, "is_enabled") and window.is_enabled():
+                    value += 1
+            except Exception:
+                pass
+            return value
+
+        selected = sorted(candidates, key=score, reverse=True)[0]
+        LOGGER.info(
+            "Multiple windows matched; selecting best candidate (%s found)",
+            len(candidates),
+            extra={"category": "scan"},
+        )
+        return selected
+
     def _get_window(self):
         desktop = Desktop(backend="uia")
         try:
-            return desktop.window(title_re=self._window_title_regex)
+            window_spec = desktop.window(title_re=self._window_title_regex)
         except ElementAmbiguousError:
-            candidates = desktop.windows(title_re=self._window_title_regex)
-            if not candidates:
-                raise
+            return self._select_best_window(desktop)
 
-            def score(window) -> int:
-                value = 0
-                try:
-                    if hasattr(window, "has_focus") and window.has_focus():
-                        value += 3
-                except Exception:
-                    pass
-                try:
-                    if hasattr(window, "is_visible") and window.is_visible():
-                        value += 2
-                except Exception:
-                    pass
-                try:
-                    if hasattr(window, "is_enabled") and window.is_enabled():
-                        value += 1
-                except Exception:
-                    pass
-                return value
-
-            selected = sorted(candidates, key=score, reverse=True)[0]
-            LOGGER.info(
-                "Multiple windows matched; selecting best candidate",
-                extra={"category": "scan"},
-            )
-            return selected
+        try:
+            return window_spec.wrapper_object()
+        except ElementAmbiguousError:
+            return self._select_best_window(desktop)
+        except Exception:
+            return window_spec
 
     def _prepare_window(self, window) -> None:
         try:
