@@ -129,7 +129,7 @@ def run_tray(config: AppConfig) -> None:
 
         title = tk.Label(
             status_window,
-            text=f"SentinelTray - Monitor de tela (beta {__version_label__})",
+            text="SentinelTray - Monitor de tela",
             anchor="w",
             font=("Segoe UI", 16, "bold"),
         )
@@ -138,13 +138,21 @@ def run_tray(config: AppConfig) -> None:
         subtitle = tk.Label(
             status_window,
             text=(
-                "Acompanha o texto da tela e avisa por e-mail quando encontra algo novo "
-                f"\u2022 {__release_date__}"
+                "Acompanha o texto da tela e avisa por e-mail quando encontra algo novo"
             ),
             anchor="w",
             font=("Segoe UI", 12),
         )
         subtitle.pack(fill="x", padx=12, pady=(0, 6))
+
+        version_label = tk.Label(
+            status_window,
+            text=f"Beta {__version_label__} \u2022 {__release_date__}",
+            anchor="w",
+            font=("Segoe UI", 9),
+            fg="#666666",
+        )
+        version_label.pack(fill="x", padx=12, pady=(0, 6))
 
         status_label = tk.Label(
             status_window,

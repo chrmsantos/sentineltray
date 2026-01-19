@@ -10,6 +10,7 @@
 - Gate scans to run only after 2+ minutes of user inactivity.
 - Ensure email subjects always include SentinelTray and bodies use friendly PT-BR text.
 - Make phrase matching accent-insensitive with partial text detection.
+- Display version/date discreetly in the status UI.
 
 ## 2026-01-16
 

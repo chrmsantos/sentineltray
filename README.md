@@ -93,7 +93,7 @@ python main.py --cli
 - Status export CSV available at status_export_csv.
 - UI refresh interval is configurable via status_refresh_seconds.
 - Data folder shortcut available in the Status window.
-- Status window uses larger, user-friendly text, fits its content, and exposes pause/resume, exit, and quick actions in the Commands menu.
+- Status window uses larger, user-friendly text, fits its content, and shows version/date discreetly.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
 - Email subject always includes SentinelTray, and the body starts with a SentinelTray title in PT-BR.
