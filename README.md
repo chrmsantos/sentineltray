@@ -95,5 +95,6 @@ python main.py --cli
 - Email delivery failures are detected and reported as specific errors.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
+- Scans run only after 2+ minutes of user inactivity.
 - Sensitive data is always stored under %USERPROFILE%\sentineltray.
 - Política de privacidade em PRIVACY.md.
