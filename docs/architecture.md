@@ -32,6 +32,8 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Correspondencia de frases ignora acentos, nao diferencia maiusculas/minusculas e aceita texto parcial dentro de textos maiores.
 - Silent mode can suppress the error popup while keeping tray status updated.
 - Email delivery failures are detected and reported as specific errors.
+- SMTP authentication failures disable email sending for the session to avoid retries.
+- Ambiguous window matches are resolved by selecting the most visible/focused candidate.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Sensitive data paths are enforced under %USERPROFILE%\.stray_local.

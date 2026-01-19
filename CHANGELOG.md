@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-01-19 (0.2.0-beta.5)
+
+- Disable email sending for the session after SMTP authentication failure to prevent repeated retries.
+- Resolve ambiguous window matches by selecting the most visible/focused candidate.
+
 ## 2026-01-19 (0.2.0-beta.4)
 
 - Send user alerts when the target window is unavailable and skip that scan.
