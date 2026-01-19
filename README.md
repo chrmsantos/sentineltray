@@ -55,6 +55,7 @@ and sample data.
 
 Use o script em scripts/install.cmd para baixar o projeto do GitHub e instalar
 Python, dependencias e o ambiente virtual.
+O instalador gera logs em %TEMP%\sentineltray-install e mantém apenas os 5 mais recentes.
 
 ## Run
 
@@ -77,7 +78,7 @@ python main.py --cli
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - Third-party debug logs are suppressed to keep logs actionable.
 - state.json stores the last sent messages to avoid duplicates.
-- Errors detected in each polling iteration are reported on screen and via email.
+- Errors detected in each polling iteration are reported on screen and via email immediately.
 - When the target window is unavailable or disabled, the scan is skipped without triggering error alerts.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
@@ -96,6 +97,7 @@ python main.py --cli
 - Data folder shortcut available in the Status window.
 - Status window uses larger, user-friendly text, fits its content, and shows version/date discreetly.
 - Silent mode can suppress the error popup while keeping tray status updated.
+- Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
 - Email subject always includes SentinelTray, and the body starts with a SentinelTray title in PT-BR.
 - Config validation rejects invalid intervals and paths at startup.

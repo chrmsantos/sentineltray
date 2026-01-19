@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-01-19 (0.2.0-beta.3)
+
+- Harden Windows installer with structured logging, retention, and stricter error handling.
+- Ensure error notifications always attempt immediate email delivery.
+
 ## 2026-01-19 (0.2.0-beta.2)
 
 - Move local user data directory to %USERPROFILE%\.stray_local for configs, logs, and telemetry.
