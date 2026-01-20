@@ -30,6 +30,7 @@ LOCAL_TEMPLATE = """# SentinelTray sobrescritas locais
 
 window_title_regex: ""
 phrase_regex: ""
+poll_interval_seconds: 180
 email:
     smtp_host: ""
     smtp_port: 587
@@ -44,10 +45,19 @@ email:
     retry_backoff_seconds: 5
     dry_run: true
 status_export_csv: "logs/status.csv"
+status_export_file: "logs/status.json"
+telemetry_file: "logs/telemetry.json"
 status_refresh_seconds: 1
 allow_window_restore: true
 start_minimized: false
 log_only_mode: false
+log_file: "logs/sentineltray.log"
+log_level: "INFO"
+log_console_level: "WARNING"
+log_console_enabled: true
+log_max_bytes: 5000000
+log_backup_count: 5
+log_run_files_keep: 5
 config_checksum_file: "logs/config.checksum"
 min_free_disk_mb: 100
 """

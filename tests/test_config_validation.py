@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sentineltray.config import load_config
-from sentineltray.config import get_project_root
+from sentineltray.config import get_user_log_dir, load_config
 
 
 def test_invalid_poll_interval_rejected(
@@ -64,12 +63,12 @@ def test_invalid_poll_interval_rejected(
         load_config(str(config_path))
 
 
-def test_log_paths_must_be_under_project_logs(
+def test_log_paths_must_be_under_user_logs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    project_root = get_project_root()
-    outside_log = project_root / "other" / "sentineltray.log"
+    log_root = get_user_log_dir()
+    outside_log = log_root.parent / "other" / "sentineltray.log"
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         "\n".join(

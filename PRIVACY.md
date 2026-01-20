@@ -23,7 +23,7 @@ Isto inclui:
 
 Dados operacionais (diagnostico e status) ficam em:
 
-%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs
+%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs
 
 - *.log (diagnostico)
 - telemetry.json (estado operacional)
@@ -34,7 +34,7 @@ O repositório contém apenas templates comentados e exemplos fictícios.
 
 ## Execução inicial
 
-Ao iniciar, se %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs.
+Ao iniciar, se %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
 
 ## Segurança e minimização
 

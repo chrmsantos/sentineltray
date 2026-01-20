@@ -72,7 +72,7 @@ scripts\run.cmd --cli
 
 ## Notes
 
-- Logs are written per execution with detailed fields and kept with a max of 5 files in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs (values above 5 are capped).
+- Logs are written per execution with detailed fields and kept with a max of 5 files in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs (values above 5 are capped).
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - Third-party debug logs are suppressed to keep logs actionable.
 - Logs, telemetry, and status exports redact sensitive strings (emails and local paths) and store match summaries as hashes.
@@ -90,9 +90,9 @@ scripts\run.cmd --cli
 - License: GPL-3.0-only.
 - Tray status shows error count and last error reason.
 - Logs include a structured category field.
-- Local telemetry file captures last activity for quick diagnostics and lives in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs.
-- Status export JSON available at status_export_file (SystemData\sentineltray\logs by default).
-- Status export CSV available at status_export_csv (SystemData\sentineltray\logs by default).
+- Local telemetry file captures last activity for quick diagnostics and lives in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
+- Status export JSON available at status_export_file (UserData\logs by default).
+- Status export CSV available at status_export_csv (UserData\logs by default).
 - UI refresh interval is configurable via status_refresh_seconds.
 - Data folder shortcut available in the Status window.
 - Status window uses larger, user-friendly text, fits its content, and shows version/date discreetly.
@@ -103,5 +103,5 @@ scripts\run.cmd --cli
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.
-- Sensitive data is always stored under %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData; operational logs stay in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs.
+- Sensitive data is always stored under %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData; operational logs stay in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
 - Política de privacidade em PRIVACY.md.
