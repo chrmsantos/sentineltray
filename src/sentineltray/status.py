@@ -108,8 +108,7 @@ def format_status(
         f"Última verificação: {_format_timestamp(snapshot.last_scan)}",
         (
             "Última incidência de "
-            f"{phrase_label} encontrada em {window_label}: "
-            f"{_format_timestamp(snapshot.last_match)}"
+            f"{phrase_label} encontrada em {window_label}"
         ),
         f"Último envio de alerta: {_format_timestamp(snapshot.last_send)}",
         f"Último erro registrado: {_format_timestamp(snapshot.last_error)}",
