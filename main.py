@@ -22,7 +22,7 @@ def _ensure_src_on_path() -> None:
 _ensure_src_on_path()
 
 from sentineltray.app import run
-from sentineltray.config import get_user_data_dir, load_config, load_config_with_override
+from sentineltray.config import get_user_data_dir, load_config
 from sentineltray.tray_app import run_tray
 
 LOCAL_TEMPLATE = """# SentinelTray sobrescritas locais
@@ -162,62 +162,22 @@ def _handle_config_error(path: Path, exc: Exception) -> None:
     raise SystemExit("Execucao encerrada pelo usuario.") from exc
 
 
-def _ensure_local_config_path(path: Path) -> None:
-    base = get_user_data_dir().resolve()
-    try:
-        if path.resolve().is_relative_to(base):
-            return
-    except OSError:
-        pass
-    raise ValueError(
-        f"Configuracoes pessoais devem ficar em {base}."
-    )
-
-
-def _load_local_override(config_path: Path, override_path: Path):
-    try:
-        return load_config_with_override(str(config_path), str(override_path))
-    except Exception as exc:
-        _handle_config_error(override_path, exc)
-
-
 def main() -> int:
     _ensure_single_instance()
-    config_path = Path("config.yaml")
     use_cli = False
-    override_path: Path | None = None
-    local_override: Path | None = None
     args = [arg for arg in sys.argv[1:] if arg]
     for arg in args:
         if arg == "--cli":
             use_cli = True
         else:
-            override_path = Path(arg)
-
-    env_path = os.environ.get("SENTINELTRAY_CONFIG")
-    if env_path:
-        override_path = Path(env_path)
-
-    if override_path is None:
-        try:
-            candidate = get_user_data_dir() / "config.local.yaml"
-        except ValueError:
-            candidate = None
-        if candidate is not None:
-            local_override = candidate
-            override_path = candidate
+            raise SystemExit("Somente --cli e permitido. Use config.local.yaml.")
 
     try:
-        if local_override is not None and override_path == local_override:
-            _ensure_local_override(local_override)
-            config = _load_local_override(config_path, local_override)
-        elif override_path is not None:
-            _ensure_local_config_path(override_path)
-            config = load_config_with_override(str(config_path), str(override_path))
-        else:
-            config = load_config(str(config_path))
+        local_path = get_user_data_dir() / "config.local.yaml"
+        _ensure_local_override(local_path)
+        config = load_config(str(local_path))
     except Exception as exc:
-        _handle_config_error(override_path or config_path, exc)
+        _handle_config_error(local_path, exc)
     if use_cli:
         run(config)
     else:

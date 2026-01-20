@@ -41,7 +41,7 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Sensitive data paths are enforced under %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData; operational logs remain in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs.
 - Politica de privacidade detalhada em PRIVACY.md.
 - Instalacao automatica disponivel via scripts/install.cmd.
-- Local override config can be loaded from %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml.
+- Config is loaded exclusively from %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
 - Local file templates live under templates/local/.
 
