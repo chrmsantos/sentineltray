@@ -246,6 +246,17 @@ def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
 
 
 def _validate_config(config: AppConfig) -> None:
+    project_root = get_project_root()
+    log_root = (project_root / "logs").resolve()
+
+    def _must_be_under_logs(path_value: str, label: str) -> None:
+        try:
+            resolved = Path(path_value).resolve()
+            if not resolved.is_relative_to(log_root):
+                raise ValueError(f"{label} must be under {log_root}")
+        except OSError as exc:
+            raise ValueError(f"{label} must be under {log_root}") from exc
+
     if config.poll_interval_seconds < 1:
         raise ValueError("poll_interval_seconds must be >= 1")
     if config.healthcheck_interval_seconds < 1:
@@ -278,6 +289,11 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("status_export_file is required")
     if not config.status_export_csv:
         raise ValueError("status_export_csv is required")
+    _must_be_under_logs(config.log_file, "log_file")
+    _must_be_under_logs(config.telemetry_file, "telemetry_file")
+    _must_be_under_logs(config.status_export_file, "status_export_file")
+    _must_be_under_logs(config.status_export_csv, "status_export_csv")
+    _must_be_under_logs(config.config_checksum_file, "config_checksum_file")
     if config.status_refresh_seconds < 1:
         raise ValueError("status_refresh_seconds must be >= 1")
     if config.min_free_disk_mb < 1:
