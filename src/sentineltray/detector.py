@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import logging
 import re
 import time
@@ -94,14 +95,14 @@ class WindowTextDetector:
 
     def _prepare_window(self, window) -> None:
         try:
-            if self._allow_window_restore:
-                if hasattr(window, "is_minimized") and window.is_minimized():
-                    window.restore()
-                if hasattr(window, "is_maximized") and not window.is_maximized():
-                    if hasattr(window, "maximize"):
-                        window.maximize()
-                if hasattr(window, "set_focus"):
-                    window.set_focus()
+            if hasattr(window, "is_minimized") and window.is_minimized():
+                window.restore()
+            if hasattr(window, "is_maximized") and not window.is_maximized():
+                if hasattr(window, "maximize"):
+                    window.maximize()
+            if hasattr(window, "set_focus"):
+                window.set_focus()
+            self._force_foreground(window)
         except Exception as exc:
             raise WindowUnavailableError("Target window could not be restored") from exc
 
@@ -125,6 +126,7 @@ class WindowTextDetector:
                     if hasattr(window, "is_maximized") and not window.is_maximized():
                         if hasattr(window, "maximize"):
                             window.maximize()
+                    self._force_foreground(window)
                 except Exception:
                     LOGGER.debug("Window restore retry failed", exc_info=True)
                 time.sleep(0.5)
@@ -143,8 +145,23 @@ class WindowTextDetector:
         except Exception:
             LOGGER.debug("Failed to minimize target window", exc_info=True)
 
+    def _force_foreground(self, window) -> None:
+        try:
+            if not hasattr(window, "handle"):
+                return
+            handle = window.handle
+            if not handle:
+                return
+            user32 = ctypes.windll.user32
+            user32.ShowWindow(handle, 3)
+            user32.BringWindowToTop(handle)
+            user32.SetForegroundWindow(handle)
+        except Exception:
+            LOGGER.debug("Failed to force window foreground", exc_info=True)
+
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
+        self._minimize_all_windows()
         retry_delays = (1.0, 2.0, 4.0)
         if not self._window_exists(window, timeout=2):
             for delay in retry_delays:
@@ -179,6 +196,18 @@ class WindowTextDetector:
             self._minimize_window(window)
 
         return texts
+
+    def _minimize_all_windows(self) -> None:
+        try:
+            desktop = Desktop(backend="uia")
+            for item in desktop.windows():
+                try:
+                    if hasattr(item, "minimize"):
+                        item.minimize()
+                except Exception:
+                    LOGGER.debug("Failed to minimize window", exc_info=True)
+        except Exception:
+            LOGGER.debug("Failed to enumerate windows for minimize", exc_info=True)
 
     def find_matches(self, phrase_regex: str) -> list[str]:
         texts = self._iter_texts()

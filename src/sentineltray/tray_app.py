@@ -67,51 +67,13 @@ def run_tray(config: AppConfig) -> None:
                     phrase_regex=config.phrase_regex,
                 )
             )
-        if (
-            config.show_error_window
-            and snapshot.last_error
-            and snapshot.last_error != last_error_shown
-        ):
-            show_error(snapshot.last_error)
+        # Erros ficam apenas registrados no painel principal.
         root.after(int(config.status_refresh_seconds * 1000), refresh_status)
 
-    def show_error(message: str) -> None:
-        nonlocal error_window, error_label, last_error_shown
-        last_error_shown = message
-        if error_window is not None and error_window.winfo_exists():
-            error_label.config(text=message)
-            error_window.deiconify()
-            error_window.lift()
-            return
-
-        error_window = tk.Toplevel(root)
-        error_window.title("SentinelTray - Atenção")
-        error_window.resizable(False, False)
-
-        title = tk.Label(
-            error_window,
-            text="Atenção: ocorreu um problema",
-            anchor="w",
-            font=("Segoe UI", 14, "bold"),
-            fg="#cc0000",
-        )
-        title.pack(fill="x", padx=12, pady=(12, 4))
-
-        error_label = tk.Label(
-            error_window,
-            text=message,
-            justify="left",
-            anchor="nw",
-            font=("Segoe UI", 12),
-            bg="#fff0f0",
-            fg="#cc0000",
-        )
-        error_label.pack(fill="both", expand=True, padx=12, pady=(0, 12))
-
-        error_window.update_idletasks()
-        error_window.geometry(
-            f"{error_window.winfo_reqwidth()}x{error_window.winfo_reqheight()}"
-        )
+    def show_error(_message: str) -> None:
+        # Mantido apenas para compatibilidade interna; janela removida.
+        nonlocal last_error_shown
+        last_error_shown = _message
 
     def request_exit() -> None:
         stop_event.set()
