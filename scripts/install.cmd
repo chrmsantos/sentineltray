@@ -38,29 +38,17 @@ if not defined SRC_DIR call :fail "Diretorio de origem nao encontrado"
 call :log "Copiando arquivos do projeto"
 powershell -NoProfile -Command "Copy-Item -Path '%SRC_DIR%\*' -Destination '%INSTALL_DIR%' -Recurse -Force" || call :fail "Falha ao copiar arquivos"
 
-call :log "Verificando Python"
-where python >nul 2>nul
-if errorlevel 1 (
-  call :log "Python nao encontrado. Tentando instalar via winget"
-  winget install -e --id Python.Python.3.11 --accept-package-agreements --accept-source-agreements || call :fail "Falha ao instalar Python via winget"
-)
-
 cd /d "%INSTALL_DIR%" || call :fail "Falha ao acessar diretorio de instalacao"
 
-call :log "Criando ambiente virtual"
-python -m venv .venv || call :fail "Falha ao criar ambiente virtual"
-
-call :log "Instalando dependencias"
-call .venv\Scripts\activate || call :fail "Falha ao ativar ambiente virtual"
-python -m pip install --upgrade pip || call :fail "Falha ao atualizar pip"
-python -m pip install -r requirements.txt || call :fail "Falha ao instalar dependencias"
+call :log "Preparando runtime auto-contido"
+call "%INSTALL_DIR%\scripts\bootstrap_self_contained.cmd" || call :fail "Falha ao preparar runtime"
 
 call :log "Limpando arquivos temporarios"
 if exist "%TEMP_ZIP%" del /f /q "%TEMP_ZIP%" >nul 2>nul
 
 call :log "Instalacao concluida"
 echo Instalacao concluida.
-echo Execute: %INSTALL_DIR%\ .venv\Scripts\python.exe main.py
+echo Execute: %INSTALL_DIR%\scripts\run.cmd
 exit /b 0
 
 :log
