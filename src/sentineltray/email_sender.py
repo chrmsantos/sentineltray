@@ -15,11 +15,8 @@ class EmailAuthError(RuntimeError):
     """Raised when SMTP authentication fails and sending should be disabled."""
 
 
-def _build_subject(subject: str, category: str) -> str:
-    base = (subject or "").strip() or category
-    if "sentineltray" not in base.lower():
-        return f"SentinelTray - {base}"
-    return base
+def _build_subject(_subject: str, category: str) -> str:
+    return f"SentinelTray {category}"
 
 
 def _build_body(message: str) -> tuple[str, str]:

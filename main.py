@@ -42,7 +42,7 @@ email:
     to_addresses: []
     use_tls: true
     timeout_seconds: 45
-    subject: "SentinelTray Notification"
+    subject: "SentinelTray Alerta"
     retry_attempts: 3
     retry_backoff_seconds: 5
     dry_run: true
@@ -111,6 +111,25 @@ def _startup_cmd_path() -> Path:
     return _startup_dir() / "SentinelTray.cmd"
 
 
+def _set_run_key(command: str | None) -> None:
+    try:
+        import winreg
+    except Exception:
+        return
+    key_path = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE) as key:
+            if command is None:
+                try:
+                    winreg.DeleteValue(key, "SentinelTray")
+                except FileNotFoundError:
+                    return
+            else:
+                winreg.SetValueEx(key, "SentinelTray", 0, winreg.REG_SZ, command)
+    except Exception:
+        return
+
+
 def _ensure_autostart(enabled: bool) -> None:
     try:
         startup_dir = _startup_dir()
@@ -125,6 +144,7 @@ def _ensure_autostart(enabled: bool) -> None:
                 cmd_path.unlink()
         except Exception:
             return
+        _set_run_key(None)
         return
 
     root = Path(__file__).resolve().parent
@@ -132,6 +152,7 @@ def _ensure_autostart(enabled: bool) -> None:
     content = "\r\n".join(
         [
             "@echo off",
+            f'cd /d "{root}"',
             f'start "" /min "{run_cmd}"',
         ]
     ) + "\r\n"
@@ -139,10 +160,12 @@ def _ensure_autostart(enabled: bool) -> None:
         if cmd_path.exists():
             current = cmd_path.read_text(encoding="utf-8", errors="ignore")
             if current == content:
+                _set_run_key(f'"{cmd_path}"')
                 return
         cmd_path.write_text(content, encoding="utf-8")
     except Exception:
         return
+    _set_run_key(f'"{cmd_path}"')
 
 
 def _ensure_single_instance_mutex() -> bool:
