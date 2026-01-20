@@ -7,6 +7,9 @@ window_title_regex: ''
 # Filtro de texto (regex). Vazio significa qualquer texto.
 phrase_regex: 'ALERTA TESTE'
 
+# Intervalo de polling em segundos.
+poll_interval_seconds: 5
+
 # Intervalo de healthcheck em segundos.
 healthcheck_interval_seconds: 3600
 
