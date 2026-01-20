@@ -29,6 +29,10 @@ def get_user_data_dir() -> Path:
     )
 
 
+def get_user_log_dir() -> Path:
+    return get_user_data_dir() / "logs"
+
+
 def get_project_root() -> Path:
     return (
         _get_user_root()
@@ -213,41 +217,35 @@ def _resolve_sensitive_path(base: Path, value: str) -> str:
     return str(base / candidate.name)
 
 
-def _resolve_project_log_path(project_root: Path, value: str) -> str:
+def _resolve_log_path(base: Path, log_root: Path, value: str) -> str:
     candidate = Path(value)
     if not candidate.is_absolute():
-        return str(project_root / candidate)
+        return str(base / candidate)
     try:
-        if candidate.resolve().is_relative_to(project_root.resolve()):
+        if candidate.resolve().is_relative_to(log_root.resolve()):
             return str(candidate)
     except OSError:
         pass
-    log_root = project_root / "logs"
     return str(log_root / candidate.name)
 
 
 def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
     base = get_user_data_dir()
-    project_root = get_project_root()
+    log_root = get_user_log_dir()
 
     return replace(
         config,
         state_file=_resolve_sensitive_path(base, config.state_file),
-        log_file=_resolve_project_log_path(project_root, config.log_file),
-        telemetry_file=_resolve_project_log_path(project_root, config.telemetry_file),
-        status_export_file=_resolve_project_log_path(
-            project_root, config.status_export_file
-        ),
-        status_export_csv=_resolve_project_log_path(project_root, config.status_export_csv),
-        config_checksum_file=_resolve_project_log_path(
-            project_root, config.config_checksum_file
-        ),
+        log_file=_resolve_log_path(base, log_root, config.log_file),
+        telemetry_file=_resolve_log_path(base, log_root, config.telemetry_file),
+        status_export_file=_resolve_log_path(base, log_root, config.status_export_file),
+        status_export_csv=_resolve_log_path(base, log_root, config.status_export_csv),
+        config_checksum_file=_resolve_log_path(base, log_root, config.config_checksum_file),
     )
 
 
 def _validate_config(config: AppConfig) -> None:
-    project_root = get_project_root()
-    log_root = (project_root / "logs").resolve()
+    log_root = get_user_log_dir().resolve()
 
     def _must_be_under_logs(path_value: str, label: str) -> None:
         try:

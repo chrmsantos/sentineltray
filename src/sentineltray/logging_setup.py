@@ -1,6 +1,9 @@
 import logging
 import os
 import re
+import sys
+import threading
+import warnings
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path, PureWindowsPath
@@ -54,6 +57,29 @@ class SanitizingFormatter(logging.Formatter):
         return sanitize_text(super().formatException(ei))
 
 
+def _install_exception_hooks() -> None:
+    logger = logging.getLogger(__name__)
+
+    def handle_exception(exc_type, exc, tb) -> None:
+        logger.critical(
+            "Unhandled exception",
+            exc_info=(exc_type, exc, tb),
+            extra={"category": "fatal"},
+        )
+
+    sys.excepthook = handle_exception
+
+    if hasattr(threading, "excepthook"):
+        def _thread_excepthook(args: threading.ExceptHookArgs) -> None:
+            logger.critical(
+                "Unhandled thread exception",
+                exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+                extra={"category": "fatal"},
+            )
+
+        threading.excepthook = _thread_excepthook
+
+
 def _build_run_log_path(log_file: str) -> Path:
     base_path = Path(log_file)
     if not base_path.suffix:
@@ -100,7 +126,7 @@ def setup_logging(
 
     formatter = SanitizingFormatter(
         "%(asctime)s %(levelname)s %(category)s %(name)s %(filename)s:%(lineno)d "
-        "%(funcName)s %(process)d %(threadName)s %(message)s"
+        "%(funcName)s %(process)d %(processName)s %(thread)d %(threadName)s %(message)s"
     )
 
     resolved_level = _resolve_level(log_level, logging.INFO)
@@ -109,24 +135,39 @@ def setup_logging(
     effective_backup_count = min(MAX_LOG_FILES, max(0, log_backup_count))
     effective_run_files_keep = min(MAX_LOG_FILES, max(1, log_run_files_keep))
 
-    rotating_handler = RotatingFileHandler(
-        base_path,
-        maxBytes=log_max_bytes,
-        backupCount=effective_backup_count,
-        encoding="utf-8",
-    )
-    rotating_handler.setFormatter(formatter)
-    rotating_handler.setLevel(resolved_level)
-    rotating_handler.addFilter(CategoryFilter())
-    rotating_handler.addFilter(RedactionFilter())
+    handlers: list[logging.Handler] = []
 
-    run_handler = logging.FileHandler(run_path, encoding="utf-8")
-    run_handler.setFormatter(formatter)
-    run_handler.setLevel(resolved_level)
-    run_handler.addFilter(CategoryFilter())
-    run_handler.addFilter(RedactionFilter())
+    try:
+        rotating_handler = RotatingFileHandler(
+            base_path,
+            maxBytes=log_max_bytes,
+            backupCount=effective_backup_count,
+            encoding="utf-8",
+        )
+        rotating_handler.setFormatter(formatter)
+        rotating_handler.setLevel(resolved_level)
+        rotating_handler.addFilter(CategoryFilter())
+        rotating_handler.addFilter(RedactionFilter())
+        handlers.append(rotating_handler)
 
-    handlers = [rotating_handler, run_handler]
+        run_handler = logging.FileHandler(run_path, encoding="utf-8")
+        run_handler.setFormatter(formatter)
+        run_handler.setLevel(resolved_level)
+        run_handler.addFilter(CategoryFilter())
+        run_handler.addFilter(RedactionFilter())
+        handlers.append(run_handler)
+    except OSError as exc:
+        fallback = logging.StreamHandler()
+        fallback.setFormatter(formatter)
+        fallback.setLevel(resolved_level)
+        fallback.addFilter(CategoryFilter())
+        fallback.addFilter(RedactionFilter())
+        handlers.append(fallback)
+        logging.getLogger(__name__).warning(
+            "Failed to initialize file logging: %s",
+            exc,
+            extra={"category": "startup"},
+        )
 
     if log_console_enabled:
         console_handler = logging.StreamHandler()
@@ -141,6 +182,10 @@ def setup_logging(
     root.handlers.clear()
     for handler in handlers:
         root.addHandler(handler)
+
+    warnings.simplefilter("default")
+    logging.captureWarnings(True)
+    _install_exception_hooks()
 
     logging.getLogger("PIL").setLevel(logging.WARNING)
     logging.getLogger("PIL.Image").setLevel(logging.WARNING)

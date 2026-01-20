@@ -2,16 +2,16 @@
 # Edite os valores abaixo e reinicie o app.
 
 # Janela alvo (regex). Pode usar apenas o prefixo do título, desde que não coincida com outra janela aberta. Use aspas simples para evitar escapes do YAML.
-window_title_regex: ''
+window_title_regex: 'Nome da janela a ser monitorada'
 
 # Filtro de texto (regex). Vazio significa qualquer texto.
-phrase_regex: 'ALERTA TESTE'
+phrase_regex: 'String a ser monitorada'
 
 # Intervalo de polling em segundos.
-poll_interval_seconds: 5
+poll_interval_seconds: 180
 
 # Intervalo de healthcheck em segundos.
-healthcheck_interval_seconds: 3600
+healthcheck_interval_seconds: 3650
 
 # Backoff em erros consecutivos.
 error_backoff_base_seconds: 5
@@ -26,7 +26,7 @@ max_history: 50
 # Arquivo de estado local (UserData).
 state_file: "state.json"
 
-# Arquivo de telemetria local. Logs e status ficam em SystemData\sentineltray\logs.
+# Arquivo de telemetria local. Logs e status ficam em UserData\logs.
 telemetry_file: "logs/telemetry.json"
 
 # Exportacao de status em JSON (para integracoes locais).

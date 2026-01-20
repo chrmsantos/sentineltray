@@ -12,4 +12,4 @@ config.local.yaml
 *.local.yaml
 runtime/
 tmp/AppData/Local/AxonZ/SentinelTray/UserData/
-tmp/AppData/Local/AxonZ/SentinelTray/SystemData/sentineltray/logs/
+tmp/AppData/Local/AxonZ/SentinelTray/UserData/logs/

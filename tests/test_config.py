@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sentineltray.config import get_project_root, load_config
+from sentineltray.config import get_user_log_dir, load_config
 
 
 def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -17,15 +17,15 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.error_backoff_base_seconds == 5
     assert config.error_backoff_max_seconds == 300
     assert config.debounce_seconds == 600
-    project_root = get_project_root()
-    assert config.log_file == str(project_root / "logs" / "sentineltray.log")
+    log_root = get_user_log_dir()
+    assert config.log_file == str(log_root / "sentineltray.log")
     assert config.log_level == "INFO"
     assert config.log_console_level == "WARNING"
     assert config.log_console_enabled is True
     assert config.log_max_bytes == 5000000
     assert config.log_backup_count == 5
     assert config.log_run_files_keep == 5
-    assert config.telemetry_file == str(project_root / "logs" / "telemetry.json")
+    assert config.telemetry_file == str(log_root / "telemetry.json")
 
 
 def test_log_retention_is_capped(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

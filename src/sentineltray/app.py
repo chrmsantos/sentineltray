@@ -152,6 +152,7 @@ class Notifier:
         self._release_date = _get_release_date()
         self._commit_hash = _get_commit_hash()
         self._email_disabled = False
+        self._scan_count = 0
         self._update_config_checksum()
 
     def _reset_components(self) -> None:
@@ -387,6 +388,30 @@ class Notifier:
             self._reset_components()
             LOGGER.info("Watchdog restart completed", extra={"category": "error"})
 
+    def _send_status_report(self) -> None:
+        snapshot = self.status.snapshot()
+        uptime_seconds = snapshot.uptime_seconds
+        message = (
+            "info: status report "
+            f"uptime_seconds={uptime_seconds} "
+            f"running={snapshot.running} "
+            f"paused={snapshot.paused} "
+            f"last_scan={snapshot.last_scan} "
+            f"last_match={snapshot.last_match} "
+            f"last_send={snapshot.last_send} "
+            f"last_error={snapshot.last_error} "
+            f"last_healthcheck={snapshot.last_healthcheck} "
+            f"error_count={snapshot.error_count}"
+        )
+        safe_message = _safe_status_text(message)
+        try:
+            sent = self._send_message(safe_message, category="report", force_send=True)
+            if sent or self.config.log_only_mode:
+                self.status.set_last_send(_now_iso())
+                LOGGER.info("Sent status report", extra={"category": "report"})
+        except Exception as exc:
+            LOGGER.exception("Status report failed: %s", exc, extra={"category": "error"})
+
     def run_loop(self, stop_event: Event, pause_event: Event | None = None) -> None:
         setup_logging(
             self.config.log_file,
@@ -451,6 +476,7 @@ class Notifier:
             finally:
                 duration = time.monotonic() - started_at
                 self._handle_watchdog(duration)
+                self._scan_count += 1
 
             self.status.set_uptime_seconds(
                 int((datetime.now(timezone.utc) - self._started_at).total_seconds())
@@ -461,6 +487,8 @@ class Notifier:
                 self._next_healthcheck = now + self.config.healthcheck_interval_seconds
 
             self._update_telemetry()
+            if self._scan_count % 7 == 0:
+                self._send_status_report()
 
             backoff_seconds = self._compute_backoff_seconds(error_count)
             wait_seconds = max(self.config.poll_interval_seconds, backoff_seconds)
