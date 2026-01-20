@@ -4,6 +4,7 @@
 
 - Move sensitive user data to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData and operational logs/status to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray.
 - Redact sensitive data from logs, status exports, and telemetry while preserving diagnostic utility.
+- Add self-contained runtime bootstrap with locked dependencies and offline wheelhouse.
 
 ## 2026-01-19 (0.2.0-beta.6)
 

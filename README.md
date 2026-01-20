@@ -7,19 +7,17 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 ## Requirements
 
 - Windows user session (no admin required).
-- Python 3.11+.
 - SMTP server access for email delivery.
-- Python 3.14 uses PyYAML 6.0.3.
 
-## Setup
+## Setup (self-contained)
 
-1. Create a virtual environment and install dependencies:
+1. Bootstrap the bundled runtime:
 
    ```powershell
-   python -m venv .venv
-   .venv\Scripts\activate
-   pip install -r requirements.txt
+   scripts\bootstrap_self_contained.cmd
    ```
+
+   This downloads embedded CPython, pip, and all wheels into runtime/ using requirements.lock.
 
 2. Edit config.yaml and set:
 
@@ -54,12 +52,12 @@ and sample data.
 ## Instalacao automatica (Windows CMD)
 
 Use o script em scripts/install.cmd para baixar o projeto do GitHub e instalar
-Python, dependencias e o ambiente virtual.
+o runtime auto-contido (CPython embutido + dependencias).
 O instalador gera logs em %TEMP%\sentineltray-install e mantém apenas os 5 mais recentes.
 
 ## Run
 
-python main.py
+scripts\run.cmd
 
 If you run main.py directly, it automatically adds src/ to the import path.
 
@@ -71,7 +69,7 @@ O título da interface mostra o nome e a descrição do projeto.
 CLI mode (no tray):
 
 ```powershell
-python main.py --cli
+scripts\run.cmd --cli
 ```
 
 ## Notes
