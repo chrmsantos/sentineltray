@@ -245,9 +245,11 @@ def run_tray(config: AppConfig) -> None:
         status_window.config(menu=menu)
 
         status_window.update_idletasks()
-        status_window.geometry(
-            f"{status_window.winfo_reqwidth()}x{status_window.winfo_reqheight()}"
-        )
+        req_width = status_window.winfo_reqwidth()
+        req_height = status_window.winfo_reqheight()
+        width = max(req_width, 640)
+        status_window.minsize(width, req_height)
+        status_window.geometry(f"{width}x{req_height}")
 
     def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:
         root.after(0, show_status)
