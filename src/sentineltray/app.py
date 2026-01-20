@@ -90,6 +90,13 @@ def _summarize_text(text: str) -> str:
     return f"texto(len={len(cleaned)}, sha={digest})"
 
 
+def _hash_value(value: str) -> str:
+    cleaned = _normalize(value or "")
+    if not cleaned:
+        return ""
+    return hashlib.sha256(cleaned.encode("utf-8")).hexdigest()
+
+
 def _safe_status_text(text: str) -> str:
     if not text:
         return ""
@@ -303,6 +310,7 @@ class Notifier:
             "app_version": self._app_version,
             "release_date": self._release_date,
             "commit_hash": self._commit_hash,
+            "window_title_hash": _hash_value(self.config.window_title_regex),
             "running": snapshot.running,
             "paused": snapshot.paused,
             "uptime_seconds": snapshot.uptime_seconds,
