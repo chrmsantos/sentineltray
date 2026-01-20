@@ -91,6 +91,7 @@ class AppConfig:
     show_error_window: bool
     watchdog_timeout_seconds: int
     watchdog_restart: bool
+    send_repeated_matches: bool
     email: EmailConfig
     auto_start: bool = True
 
@@ -199,6 +200,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
             _get_required(data, "watchdog_timeout_seconds")
         ),
         watchdog_restart=bool(_get_required(data, "watchdog_restart")),
+        send_repeated_matches=bool(data.get("send_repeated_matches", True)),
         email=email,
         auto_start=bool(data.get("auto_start", True)),
     )
