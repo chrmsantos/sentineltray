@@ -10,5 +10,6 @@ logs/status.csv
 logs/config.checksum
 config.local.yaml
 *.local.yaml
+runtime/
 tmp/AppData/Local/AxonZ/SentinelTray/UserData/
 tmp/AppData/Local/AxonZ/SentinelTray/SystemData/sentineltray/logs/
