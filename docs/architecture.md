@@ -8,7 +8,7 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Minimized target windows are restored and focused before scanning.
 - Email delivery uses SMTP with optional TLS.
 - State is stored in state.json to prevent duplicate sends.
-- Runtime is self-contained (embedded CPython + offline wheelhouse) managed by scripts/bootstrap_self_contained.cmd.
+- Runtime is self-contained (embedded CPython + offline wheelhouse) managed by scripts/bootstrap_self_contained.cmd and validated by runtime/checksums.txt.
 - Logs are created per execution with detailed fields and kept with a max of 5 files in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs (values above 5 are capped).
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.

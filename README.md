@@ -18,6 +18,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
    ```
 
    This downloads embedded CPython, pip, and all wheels into runtime/ using requirements.lock.
+   Checksums are stored in runtime/checksums.txt and validated on startup.
 
 2. Edit config.yaml and set:
 
@@ -78,6 +79,7 @@ scripts\run.cmd --cli
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - Third-party debug logs are suppressed to keep logs actionable.
 - Logs, telemetry, and status exports redact sensitive strings (emails and local paths) and store match summaries as hashes.
+- Runtime artifacts are integrity-checked via runtime/checksums.txt.
 - state.json stores the last sent messages to avoid duplicates.
 - Errors detected in each polling iteration are reported on screen and via email immediately.
 - When the target window is unavailable or disabled, an alert is sent and the scan is skipped.
