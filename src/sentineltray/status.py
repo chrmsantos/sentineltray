@@ -12,6 +12,7 @@ class StatusSnapshot:
     last_scan: str
     last_match: str
     last_send: str
+    last_report_send: str
     last_error: str
     last_healthcheck: str
     uptime_seconds: int
@@ -26,6 +27,7 @@ class StatusStore:
         self._last_scan = ""
         self._last_match = ""
         self._last_send = ""
+        self._last_report_send = ""
         self._last_error = ""
         self._last_healthcheck = ""
         self._uptime_seconds = 0
@@ -51,6 +53,10 @@ class StatusStore:
         with self._lock:
             self._last_send = value
 
+    def set_last_report_send(self, value: str) -> None:
+        with self._lock:
+            self._last_report_send = value
+
     def set_last_error(self, value: str) -> None:
         with self._lock:
             self._last_error = value
@@ -75,6 +81,7 @@ class StatusStore:
                 last_scan=self._last_scan,
                 last_match=self._last_match,
                 last_send=self._last_send,
+                last_report_send=self._last_report_send,
                 last_error=self._last_error,
                 last_healthcheck=self._last_healthcheck,
                 uptime_seconds=self._uptime_seconds,
@@ -112,6 +119,7 @@ def format_status(
             f"{_format_timestamp(snapshot.last_match)}"
         ),
         f"Último envio de alerta: {_format_timestamp(snapshot.last_send)}",
+        f"Último envio de relatório: {_format_timestamp(snapshot.last_report_send)}",
         f"Último erro registrado: {_format_timestamp(snapshot.last_error)}",
         f"Último resumo de saúde: {_format_timestamp(snapshot.last_healthcheck)}",
         f"Tempo ativo (segundos): {snapshot.uptime_seconds}",

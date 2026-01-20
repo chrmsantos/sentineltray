@@ -8,6 +8,7 @@ def test_status_store_snapshot() -> None:
     store.set_last_scan("2026-01-19T23:00:00-03:00")
     store.set_last_match("2026-01-19T23:00:00-03:00")
     store.set_last_send("2026-01-19T23:00:00-03:00")
+    store.set_last_report_send("2026-01-19T23:00:00-03:00")
     store.set_last_error("2026-01-19T23:00:00-03:00")
     store.set_last_healthcheck("2026-01-19T23:00:00-03:00")
     store.set_uptime_seconds(42)
@@ -20,6 +21,7 @@ def test_status_store_snapshot() -> None:
     assert snapshot.last_scan == "2026-01-19T23:00:00-03:00"
     assert snapshot.last_match == "2026-01-19T23:00:00-03:00"
     assert snapshot.last_send == "2026-01-19T23:00:00-03:00"
+    assert snapshot.last_report_send == "2026-01-19T23:00:00-03:00"
     assert snapshot.last_error == "2026-01-19T23:00:00-03:00"
     assert snapshot.last_healthcheck == "2026-01-19T23:00:00-03:00"
     assert snapshot.uptime_seconds == 42

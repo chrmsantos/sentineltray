@@ -63,7 +63,7 @@ def test_invalid_poll_interval_rejected(
         load_config(str(config_path))
 
 
-def test_log_paths_must_be_under_user_logs(
+def test_log_paths_are_rehomed_to_user_logs(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
@@ -119,5 +119,6 @@ def test_log_paths_must_be_under_user_logs(
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="log_file must be under"):
-        load_config(str(config_path))
+    config = load_config(str(config_path))
+
+    assert config.log_file == str(log_root / "sentineltray.log")

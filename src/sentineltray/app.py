@@ -318,6 +318,7 @@ class Notifier:
             "last_scan": _safe_status_text(snapshot.last_scan),
             "last_match": _safe_status_text(snapshot.last_match),
             "last_send": _safe_status_text(snapshot.last_send),
+            "last_report_send": _safe_status_text(snapshot.last_report_send),
             "last_error": _safe_status_text(snapshot.last_error),
             "last_healthcheck": _safe_status_text(snapshot.last_healthcheck),
             "error_count": snapshot.error_count,
@@ -333,6 +334,7 @@ class Notifier:
             "last_scan": _safe_status_text(snapshot.last_scan),
             "last_match": _safe_status_text(snapshot.last_match),
             "last_send": _safe_status_text(snapshot.last_send),
+            "last_report_send": _safe_status_text(snapshot.last_report_send),
             "last_error": _safe_status_text(snapshot.last_error),
             "last_healthcheck": _safe_status_text(snapshot.last_healthcheck),
             "uptime_seconds": snapshot.uptime_seconds,
@@ -408,6 +410,7 @@ class Notifier:
             sent = self._send_message(safe_message, category="report", force_send=True)
             if sent or self.config.log_only_mode:
                 self.status.set_last_send(_now_iso())
+                self.status.set_last_report_send(_now_iso())
                 LOGGER.info("Sent status report", extra={"category": "report"})
         except Exception as exc:
             LOGGER.exception("Status report failed: %s", exc, extra={"category": "error"})

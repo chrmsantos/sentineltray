@@ -4,6 +4,8 @@
 
 - Move sensitive user data and operational logs/status to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData.
 - Redact sensitive data from logs, status exports, and telemetry while preserving diagnostic utility.
+- Add status report emails every 7 scan iterations and surface last_report_send in exports/UI.
+- Set default scan interval to 3 minutes in templates.
 - Add self-contained runtime bootstrap with locked dependencies and offline wheelhouse.
 - Show the UI by default on first initialization (start_minimized disabled in templates).
 - Add runtime checksum validation, stricter log path validation, and Windows mutex for single-instance stability.
