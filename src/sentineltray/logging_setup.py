@@ -9,6 +9,10 @@ MAX_LOG_FILES = 5
 
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 WINDOWS_PATH_RE = re.compile(r"[A-Za-z]:\\[^\s]+")
+PHONE_RE = re.compile(r"\b(?:\+?\d[\d\s\-()]{7,}\d)\b")
+TOKEN_RE = re.compile(
+    r"(?i)\b(bearer|token|apikey|api_key|secret|password)\s*[:=]\s*[^\s,;]+"
+)
 
 
 class CategoryFilter(logging.Filter):
@@ -32,6 +36,8 @@ def sanitize_text(value: str) -> str:
         return value
     sanitized = EMAIL_RE.sub("<email>", value)
     sanitized = WINDOWS_PATH_RE.sub(_redact_windows_path, sanitized)
+    sanitized = PHONE_RE.sub("<phone>", sanitized)
+    sanitized = TOKEN_RE.sub(r"\1=<redacted>", sanitized)
     return sanitized
 
 

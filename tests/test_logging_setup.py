@@ -3,7 +3,7 @@ import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from sentineltray.logging_setup import setup_logging
+from sentineltray.logging_setup import sanitize_text, setup_logging
 
 
 def test_setup_logging_creates_run_log_and_prunes(tmp_path: Path) -> None:
@@ -60,3 +60,18 @@ def test_setup_logging_caps_retention(tmp_path: Path) -> None:
 
     for handler in logging.getLogger().handlers:
         handler.close()
+
+
+def test_sanitize_text_redacts_sensitive_values() -> None:
+    message = (
+        "User test@example.com saved to C:\\Users\\bob\\secret.txt "
+        "token=abcd1234 phone +55 (11) 98765-4321"
+    )
+    sanitized = sanitize_text(message)
+    assert "test@example.com" not in sanitized
+    assert "C:\\Users\\bob\\secret.txt" not in sanitized
+    assert "98765" not in sanitized
+    assert "token=abcd1234" not in sanitized
+    assert "<email>" in sanitized
+    assert "<phone>" in sanitized
+    assert "token=<redacted>" in sanitized
