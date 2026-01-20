@@ -22,6 +22,16 @@ class WindowTextDetector:
         self._allow_window_restore = allow_window_restore
         self._last_window = None
 
+    def _window_exists(self, window, timeout: float = 0.0) -> bool:
+        try:
+            if hasattr(window, "exists"):
+                return window.exists(timeout=timeout)
+            if hasattr(window, "is_visible"):
+                return window.is_visible()
+            return True
+        except Exception:
+            return False
+
     def _select_best_window(self, desktop: Desktop):
         candidates = desktop.windows(title_re=self._window_title_regex)
         if not candidates:
@@ -136,12 +146,12 @@ class WindowTextDetector:
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
         retry_delays = (1.0, 2.0, 4.0)
-        if not window.exists(timeout=2):
+        if not self._window_exists(window, timeout=2):
             for delay in retry_delays:
                 LOGGER.info("Target window not found, retrying", extra={"category": "scan"})
                 time.sleep(delay)
                 window = self._get_window()
-                if window.exists(timeout=2):
+                if self._window_exists(window, timeout=2):
                     break
             else:
                 raise WindowUnavailableError("Target window not found")
