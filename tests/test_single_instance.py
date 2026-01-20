@@ -33,3 +33,35 @@ def test_single_instance_kills_previous(monkeypatch: pytest.MonkeyPatch, tmp_pat
 
     assert called["args"][0] == "taskkill"
     assert pid_path.read_text(encoding="utf-8") == "4321"
+
+
+def test_mutex_returns_false_when_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeKernel32:
+        def CreateMutexW(self, *_args):
+            return 123
+
+        def GetLastError(self) -> int:
+            return 183
+
+    class FakeWindll:
+        kernel32 = FakeKernel32()
+
+    monkeypatch.setattr(main, "_MUTEX_HANDLE", None)
+    monkeypatch.setattr(main.ctypes, "windll", FakeWindll())
+    assert main._ensure_single_instance_mutex() is False
+
+
+def test_mutex_returns_true_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeKernel32:
+        def CreateMutexW(self, *_args):
+            return 123
+
+        def GetLastError(self) -> int:
+            return 0
+
+    class FakeWindll:
+        kernel32 = FakeKernel32()
+
+    monkeypatch.setattr(main, "_MUTEX_HANDLE", None)
+    monkeypatch.setattr(main.ctypes, "windll", FakeWindll())
+    assert main._ensure_single_instance_mutex() is True

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import atexit
+import ctypes
 import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Optional
+
+_MUTEX_HANDLE = None
 
 
 def _ensure_src_on_path() -> None:
@@ -84,6 +87,18 @@ def _pid_file_path() -> Path:
     return base / "sentineltray.pid"
 
 
+def _ensure_single_instance_mutex() -> bool:
+    global _MUTEX_HANDLE
+    try:
+        mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\SentinelTrayMutex")
+        _MUTEX_HANDLE = mutex
+        if ctypes.windll.kernel32.GetLastError() == 183:
+            return False
+    except Exception:
+        return True
+    return True
+
+
 def _terminate_previous(pid: int) -> None:
     try:
         subprocess.run(
@@ -97,6 +112,7 @@ def _terminate_previous(pid: int) -> None:
 
 
 def _ensure_single_instance() -> None:
+    _ensure_single_instance_mutex()
     pid_path = _pid_file_path()
     pid_path.parent.mkdir(parents=True, exist_ok=True)
 

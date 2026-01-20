@@ -20,6 +20,7 @@ class WindowTextDetector:
     def __init__(self, window_title_regex: str, allow_window_restore: bool = True) -> None:
         self._window_title_regex = re.compile(window_title_regex)
         self._allow_window_restore = allow_window_restore
+        self._last_window = None
 
     def _select_best_window(self, desktop: Desktop):
         candidates = desktop.windows(title_re=self._window_title_regex)
@@ -54,6 +55,15 @@ class WindowTextDetector:
         return selected
 
     def _get_window(self):
+        if self._last_window is not None:
+            try:
+                if hasattr(self._last_window, "exists"):
+                    if self._last_window.exists(timeout=0.5):
+                        return self._last_window
+                else:
+                    return self._last_window
+            except Exception:
+                self._last_window = None
         desktop = Desktop(backend="uia")
         try:
             window_spec = desktop.window(title_re=self._window_title_regex)
@@ -61,10 +71,15 @@ class WindowTextDetector:
             return self._select_best_window(desktop)
 
         try:
-            return window_spec.wrapper_object()
+            window = window_spec.wrapper_object()
+            self._last_window = window
+            return window
         except ElementAmbiguousError:
-            return self._select_best_window(desktop)
+            window = self._select_best_window(desktop)
+            self._last_window = window
+            return window
         except Exception:
+            self._last_window = window_spec
             return window_spec
 
     def _prepare_window(self, window) -> None:
@@ -120,11 +135,15 @@ class WindowTextDetector:
 
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
+        retry_delays = (1.0, 2.0, 4.0)
         if not window.exists(timeout=2):
-            LOGGER.info("Target window not found, retrying", extra={"category": "scan"})
-            time.sleep(1)
-            window = self._get_window()
-            if not window.exists(timeout=2):
+            for delay in retry_delays:
+                LOGGER.info("Target window not found, retrying", extra={"category": "scan"})
+                time.sleep(delay)
+                window = self._get_window()
+                if window.exists(timeout=2):
+                    break
+            else:
                 raise WindowUnavailableError("Target window not found")
 
         self._prepare_window(window)
