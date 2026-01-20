@@ -20,7 +20,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
    This downloads embedded CPython, pip, and all wheels into runtime/ using requirements.lock.
    Checksums are stored in runtime/checksums.txt and validated on startup.
 
-2. Edit config.yaml and set:
+2. Edit config.local.yaml and set:
 
 - window_title_regex (prefixo unico do titulo e suficiente)
 - phrase_regex (empty means any visible text)
@@ -37,12 +37,9 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - log_level, log_console_level, log_console_enabled
 - log_max_bytes, log_backup_count, log_run_files_keep
 
-Sensitive settings (like window_title_regex and email credentials) can be stored in a local file:
+The application always reads the local config file:
 
 - %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml
-
-This local file overrides config.yaml. You can also set SENTINELTRAY_CONFIG to
-point to a local config file.
 
 If config.local.yaml is missing, empty, or invalid, the app creates it,
 opens it for editing, and exits so you can fill it.

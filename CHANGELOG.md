@@ -8,6 +8,7 @@
 - Show the UI by default on first initialization (start_minimized disabled in templates).
 - Add runtime checksum validation, stricter log path validation, and Windows mutex for single-instance stability.
 - Improve window detection retries and expand log redaction for tokens/phones.
+- Load configuration exclusively from config.local.yaml and reject overrides.
 
 ## 2026-01-19 (0.2.0-beta.6)
 
