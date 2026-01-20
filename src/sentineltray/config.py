@@ -92,6 +92,7 @@ class AppConfig:
     watchdog_timeout_seconds: int
     watchdog_restart: bool
     email: EmailConfig
+    auto_start: bool = True
 
 
 def _get_required(data: dict[str, Any], key: str) -> Any:
@@ -199,6 +200,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         ),
         watchdog_restart=bool(_get_required(data, "watchdog_restart")),
         email=email,
+        auto_start=bool(data.get("auto_start", True)),
     )
     config = _apply_sensitive_path_policy(config)
     _validate_config(config)
