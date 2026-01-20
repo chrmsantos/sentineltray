@@ -8,7 +8,7 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Minimized target windows are restored and focused before scanning.
 - Email delivery uses SMTP with optional TLS.
 - State is stored in state.json to prevent duplicate sends.
-- Logs are created per execution with detailed fields and kept with a max of 5 files in the project logs/ folder (values above 5 are capped).
+- Logs are created per execution with detailed fields and kept with a max of 5 files in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs (values above 5 are capped).
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
 - Errors in each polling iteration are reported on screen and via email immediately, even when log-only mode is enabled.
@@ -20,7 +20,8 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
 - Tray status shows error count and last error reason.
 - Logs include a structured category field (scan/send/error/etc).
-- Local telemetry file captures last activity for quick diagnostics and lives in logs/ under the project root.
+- Logs, telemetry, and status exports redact sensitive strings and store match summaries as hashes.
+- Local telemetry file captures last activity for quick diagnostics and lives in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs.
 - Status export JSON supports local integrations.
 - Status export CSV supports local integrations.
 - Tray abre automaticamente o status na inicializacao e usa icone em formato de olho.
@@ -36,10 +37,10 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Ambiguous window matches are resolved by selecting the most visible/focused candidate.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
-- Sensitive data paths are enforced under %USERPROFILE%\.stray_local; operational logs remain in logs/ under the project root.
+- Sensitive data paths are enforced under %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData; operational logs remain in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs.
 - Politica de privacidade detalhada em PRIVACY.md.
 - Instalacao automatica disponivel via scripts/install.cmd.
-- Local override config can be loaded from %USERPROFILE%\.stray_local\config.local.yaml.
+- Local override config can be loaded from %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
 - Local file templates live under templates/local/.
 

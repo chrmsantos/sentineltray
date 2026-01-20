@@ -1,10 +1,14 @@
 import logging
 import os
+import re
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 MAX_LOG_FILES = 5
+
+EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
+WINDOWS_PATH_RE = re.compile(r"[A-Za-z]:\\[^\s]+")
 
 
 class CategoryFilter(logging.Filter):
@@ -12,6 +16,36 @@ class CategoryFilter(logging.Filter):
         if not hasattr(record, "category"):
             record.category = "general"
         return True
+
+
+def _redact_windows_path(match: re.Match[str]) -> str:
+    raw = match.group(0)
+    tail = PureWindowsPath(raw).name
+    drive = raw[:2]
+    if tail:
+        return f"{drive}\\...\\{tail}"
+    return f"{drive}\\..."
+
+
+def sanitize_text(value: str) -> str:
+    if not value:
+        return value
+    sanitized = EMAIL_RE.sub("<email>", value)
+    sanitized = WINDOWS_PATH_RE.sub(_redact_windows_path, sanitized)
+    return sanitized
+
+
+class RedactionFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = sanitize_text(record.getMessage())
+        record.msg = message
+        record.args = ()
+        return True
+
+
+class SanitizingFormatter(logging.Formatter):
+    def formatException(self, ei) -> str:
+        return sanitize_text(super().formatException(ei))
 
 
 def _build_run_log_path(log_file: str) -> Path:
@@ -58,7 +92,7 @@ def setup_logging(
     base_path.parent.mkdir(parents=True, exist_ok=True)
     run_path = _build_run_log_path(str(base_path))
 
-    formatter = logging.Formatter(
+    formatter = SanitizingFormatter(
         "%(asctime)s %(levelname)s %(category)s %(name)s %(filename)s:%(lineno)d "
         "%(funcName)s %(process)d %(threadName)s %(message)s"
     )
@@ -78,11 +112,13 @@ def setup_logging(
     rotating_handler.setFormatter(formatter)
     rotating_handler.setLevel(resolved_level)
     rotating_handler.addFilter(CategoryFilter())
+    rotating_handler.addFilter(RedactionFilter())
 
     run_handler = logging.FileHandler(run_path, encoding="utf-8")
     run_handler.setFormatter(formatter)
     run_handler.setLevel(resolved_level)
     run_handler.addFilter(CategoryFilter())
+    run_handler.addFilter(RedactionFilter())
 
     handlers = [rotating_handler, run_handler]
 
@@ -91,6 +127,7 @@ def setup_logging(
         console_handler.setFormatter(formatter)
         console_handler.setLevel(resolved_console_level)
         console_handler.addFilter(CategoryFilter())
+        console_handler.addFilter(RedactionFilter())
         handlers.append(console_handler)
 
     root = logging.getLogger()
