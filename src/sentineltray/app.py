@@ -268,7 +268,7 @@ class Notifier:
     def _send_startup_test(self) -> None:
         message = "info: startup test message"
         try:
-            sent = self._send_message(message, category="send")
+            sent = self._send_message(message, category="send", force_send=True)
             if sent or self.config.log_only_mode:
                 self.status.set_last_send(_now_iso())
                 LOGGER.info("Sent startup test message", extra={"category": "send"})
