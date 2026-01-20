@@ -64,7 +64,6 @@ def _install_exception_hooks() -> None:
         if exc_type in (KeyboardInterrupt, SystemExit):
             logger.info(
                 "Shutdown requested",
-                exc_info=(exc_type, exc, tb),
                 extra={"category": "shutdown"},
             )
             return
@@ -81,7 +80,6 @@ def _install_exception_hooks() -> None:
             if args.exc_type in (KeyboardInterrupt, SystemExit):
                 logger.info(
                     "Thread shutdown requested",
-                    exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
                     extra={"category": "shutdown"},
                 )
                 return
