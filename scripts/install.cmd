@@ -22,6 +22,13 @@ call :log "Destino: %INSTALL_DIR%"
 
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" || call :fail "Nao foi possivel criar diretorio de instalacao"
 
+call :log "Verificando permissao de escrita"
+type nul > "%INSTALL_DIR%\.write_test" || call :fail "Sem permissao de escrita no diretorio de instalacao"
+del /f /q "%INSTALL_DIR%\.write_test" >nul 2>nul
+
+call :log "Verificando espaco livre"
+powershell -NoProfile -Command "$drive=(Get-Item -LiteralPath '%INSTALL_DIR%').PSDrive.Name; $free=[math]::Floor((Get-PSDrive -Name $drive).Free/1MB); if ($free -lt 512) { exit 1 }" || call :fail "Espaco insuficiente (minimo 512 MB)"
+
 call :log "Baixando codigo do GitHub"
 powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%REPO_URL%' -OutFile '%TEMP_ZIP%'" || call :fail "Falha ao baixar o pacote do GitHub"
 if not exist "%TEMP_ZIP%" call :fail "Arquivo baixado nao encontrado"

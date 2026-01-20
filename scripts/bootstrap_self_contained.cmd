@@ -12,8 +12,22 @@ set "PY_DIR=%RUNTIME_DIR%\python"
 set "PIP_SCRIPT=%RUNTIME_DIR%\get-pip.py"
 set "WHEEL_DIR=%RUNTIME_DIR%\wheels"
 set "LOCK_FILE=%ROOT%\requirements.lock"
+set "CHECKSUM_FILE=%RUNTIME_DIR%\checksums.txt"
 
 if not exist "%RUNTIME_DIR%" mkdir "%RUNTIME_DIR%" || exit /b 1
+
+if exist "%CHECKSUM_FILE%" (
+	call :log "Validando checksums do runtime"
+	powershell -NoProfile -Command "$root='%RUNTIME_DIR%'; $ok=$true; Get-Content '%CHECKSUM_FILE%' | ForEach-Object { if ($_ -match '^(.*)\|(.*)$') { $path = Join-Path $root $Matches[1]; $hash=$Matches[2]; if (-not (Test-Path $path)) { $ok=$false } else { $actual=(Get-FileHash -Algorithm SHA256 -Path $path).Hash.ToLower(); if ($actual -ne $hash) { $ok=$false } } } }; if (-not $ok) { exit 1 }" || (
+		call :log "Checksum invalido, recriando runtime"
+		rmdir /s /q "%RUNTIME_DIR%"
+		mkdir "%RUNTIME_DIR%" || exit /b 1
+	)
+	if exist "%PY_DIR%\python.exe" (
+		call :log "Runtime ja validado"
+		exit /b 0
+	)
+)
 
 call :log "Baixando CPython embutido %PY_VERSION%"
 powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/%PY_VERSION%/python-%PY_VERSION%-embed-amd64.zip' -OutFile '%PY_EMBED_ZIP%'" || exit /b 1
@@ -42,6 +56,9 @@ call :log "Baixando wheels offline"
 
 call :log "Instalando dependencias do wheelhouse"
 "%PY_DIR%\python.exe" -m pip install --no-index --find-links "%WHEEL_DIR%" -r "%LOCK_FILE%" || exit /b 1
+
+call :log "Gerando checksums do runtime"
+powershell -NoProfile -Command "$lines=@(); if (Test-Path '%PY_EMBED_ZIP%') { $h=(Get-FileHash -Algorithm SHA256 -Path '%PY_EMBED_ZIP%').Hash.ToLower(); $lines += ('python-embed.zip|' + $h) } if (Test-Path '%WHEEL_DIR%') { Get-ChildItem -Path '%WHEEL_DIR%\\*.whl' | ForEach-Object { $h=(Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash.ToLower(); $lines += ('wheels\\' + $_.Name + '|' + $h) } } $lines | Set-Content -Path '%CHECKSUM_FILE%'" || exit /b 1
 
 call :log "Runtime pronto"
 exit /b 0
