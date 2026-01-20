@@ -35,7 +35,7 @@ email:
   to_addresses: ["ops@example.com"]
   use_tls: true
   timeout_seconds: 10
-  subject: "SentinelTray Notification"
+  subject: "SentinelTray Alerta"
   retry_attempts: 2
   retry_backoff_seconds: 3
   dry_run: false

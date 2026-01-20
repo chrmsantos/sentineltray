@@ -163,7 +163,7 @@ def test_email_sender_subject_and_body(monkeypatch) -> None:
 
     msg = captured["message"]
     assert msg is not None
-    assert "SentinelTray" in msg["Subject"]
+    assert msg["Subject"] == "SentinelTray Informação"
     content = msg.get_content()
     assert content.startswith("SentinelTray")
     assert "Informação" in content

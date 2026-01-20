@@ -25,8 +25,10 @@ class WindowTextDetector:
 
     def _window_exists(self, window, timeout: float = 0.0) -> bool:
         try:
-            if hasattr(window, "exists"):
-                return window.exists(timeout=timeout)
+            if hasattr(window, "exists") and window.exists(timeout=timeout):
+                return True
+            if hasattr(window, "is_minimized") and window.is_minimized():
+                return True
             if hasattr(window, "is_visible"):
                 return window.is_visible()
             return True
@@ -161,7 +163,7 @@ class WindowTextDetector:
 
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
-        self._minimize_all_windows()
+        self._minimize_all_windows(exclude=window)
         retry_delays = (1.0, 2.0, 4.0)
         if not self._window_exists(window, timeout=2):
             for delay in retry_delays:
@@ -197,11 +199,16 @@ class WindowTextDetector:
 
         return texts
 
-    def _minimize_all_windows(self) -> None:
+    def _minimize_all_windows(self, exclude=None) -> None:
         try:
+            exclude_handle = None
+            if exclude is not None and hasattr(exclude, "handle"):
+                exclude_handle = exclude.handle
             desktop = Desktop(backend="uia")
             for item in desktop.windows():
                 try:
+                    if exclude_handle and hasattr(item, "handle") and item.handle == exclude_handle:
+                        continue
                     if hasattr(item, "minimize"):
                         item.minimize()
                 except Exception:
