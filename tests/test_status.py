@@ -25,7 +25,11 @@ def test_status_store_snapshot() -> None:
     assert snapshot.uptime_seconds == 42
     assert snapshot.error_count == 2
 
-    text = format_status(snapshot)
+    text = format_status(
+        snapshot,
+        window_title_regex="APP",
+        phrase_regex="ALERT",
+    )
     assert "Em execução: sim" in text
     assert "Pausado: sim" in text
     assert "19-01-2026 - 23:00" in text
