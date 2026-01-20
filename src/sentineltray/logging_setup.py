@@ -61,6 +61,13 @@ def _install_exception_hooks() -> None:
     logger = logging.getLogger(__name__)
 
     def handle_exception(exc_type, exc, tb) -> None:
+        if exc_type in (KeyboardInterrupt, SystemExit):
+            logger.info(
+                "Shutdown requested",
+                exc_info=(exc_type, exc, tb),
+                extra={"category": "shutdown"},
+            )
+            return
         logger.critical(
             "Unhandled exception",
             exc_info=(exc_type, exc, tb),
@@ -71,6 +78,13 @@ def _install_exception_hooks() -> None:
 
     if hasattr(threading, "excepthook"):
         def _thread_excepthook(args: threading.ExceptHookArgs) -> None:
+            if args.exc_type in (KeyboardInterrupt, SystemExit):
+                logger.info(
+                    "Thread shutdown requested",
+                    exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
+                    extra={"category": "shutdown"},
+                )
+                return
             logger.critical(
                 "Unhandled thread exception",
                 exc_info=(args.exc_type, args.exc_value, args.exc_traceback),
