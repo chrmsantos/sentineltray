@@ -89,4 +89,4 @@ email:
   subject: "SentinelTray Notification"
   retry_attempts: 3
   retry_backoff_seconds: 5
-  dry_run: true
+  dry_run: false
