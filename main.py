@@ -49,7 +49,8 @@ status_export_file: "logs/status.json"
 telemetry_file: "logs/telemetry.json"
 status_refresh_seconds: 1
 allow_window_restore: true
-start_minimized: false
+start_minimized: true
+auto_start: true
 log_only_mode: false
 log_file: "logs/sentineltray.log"
 log_level: "INFO"
@@ -95,6 +96,51 @@ def _ask_reedit(path: Path, reason: str) -> bool:
 def _pid_file_path() -> Path:
     base = get_user_data_dir()
     return base / "sentineltray.pid"
+
+
+def _startup_dir() -> Path:
+    appdata = os.environ.get("APPDATA")
+    if not appdata:
+        raise ValueError("APPDATA is required for Windows startup path")
+    return Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+
+
+def _startup_cmd_path() -> Path:
+    return _startup_dir() / "SentinelTray.cmd"
+
+
+def _ensure_autostart(enabled: bool) -> None:
+    try:
+        startup_dir = _startup_dir()
+        startup_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        return
+
+    cmd_path = _startup_cmd_path()
+    if not enabled:
+        try:
+            if cmd_path.exists():
+                cmd_path.unlink()
+        except Exception:
+            return
+        return
+
+    root = Path(__file__).resolve().parent
+    run_cmd = root / "scripts" / "run.cmd"
+    content = "\r\n".join(
+        [
+            "@echo off",
+            f'start "" /min "{run_cmd}"',
+        ]
+    ) + "\r\n"
+    try:
+        if cmd_path.exists():
+            current = cmd_path.read_text(encoding="utf-8", errors="ignore")
+            if current == content:
+                return
+        cmd_path.write_text(content, encoding="utf-8")
+    except Exception:
+        return
 
 
 def _ensure_single_instance_mutex() -> bool:
@@ -188,6 +234,8 @@ def main() -> int:
         config = load_config(str(local_path))
     except Exception as exc:
         _handle_config_error(local_path, exc)
+    if not use_cli:
+        _ensure_autostart(getattr(config, "auto_start", True))
     if use_cli:
         run(config)
     else:
