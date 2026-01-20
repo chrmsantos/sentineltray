@@ -20,6 +20,12 @@ error_backoff_max_seconds: 300
 # Debounce de mensagens repetidas.
 debounce_seconds: 600
 
+# Maximo de eventos no historico em memoria.
+max_history: 50
+
+# Arquivo de estado local (UserData).
+state_file: "state.json"
+
 # Arquivo de telemetria local. Logs e status ficam em SystemData\sentineltray\logs.
 telemetry_file: "logs/telemetry.json"
 
@@ -42,6 +48,7 @@ start_minimized: false
 log_only_mode: false
 
 # Configuracao de logs.
+log_file: "logs/sentineltray.log"
 log_level: "INFO"
 log_console_level: "WARNING"
 log_console_enabled: true
