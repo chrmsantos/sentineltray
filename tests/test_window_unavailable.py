@@ -14,7 +14,14 @@ def test_run_loop_skips_window_unavailable(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    base = tmp_path / ".stray_local"
+    base = (
+        tmp_path
+        / "AppData"
+        / "Local"
+        / "AxonZ"
+        / "SentinelTray"
+        / "UserData"
+    )
     project_root = get_project_root()
     config = AppConfig(
         window_title_regex="APP",

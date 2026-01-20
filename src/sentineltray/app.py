@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event
 
-from .config import AppConfig, get_user_data_dir
+from .config import AppConfig, get_project_root, get_user_data_dir
 from .detector import WindowTextDetector, WindowUnavailableError
-from .logging_setup import setup_logging
+from .logging_setup import sanitize_text, setup_logging
 from .status import StatusStore
 from .email_sender import EmailAuthError, build_sender
 from .telemetry import JsonWriter
@@ -82,6 +82,20 @@ def _to_ascii(text: str) -> str:
     return text.encode("ascii", "backslashreplace").decode("ascii")
 
 
+def _summarize_text(text: str) -> str:
+    cleaned = _normalize(text or "")
+    if not cleaned:
+        return ""
+    digest = hashlib.sha256(cleaned.encode("utf-8")).hexdigest()[:12]
+    return f"texto(len={len(cleaned)}, sha={digest})"
+
+
+def _safe_status_text(text: str) -> str:
+    if not text:
+        return ""
+    return sanitize_text(_to_ascii(text))
+
+
 def _get_version() -> str:
     try:
         return importlib.metadata.version("sentineltray")
@@ -95,7 +109,7 @@ def _get_release_date() -> str:
 
 def _get_commit_hash() -> str:
     try:
-        base = Path(__file__).resolve().parents[2]
+        base = get_project_root()
         head_path = base / ".git" / "HEAD"
         if not head_path.exists():
             return ""
@@ -172,7 +186,9 @@ class Notifier:
             return True
         except EmailAuthError as exc:
             self._email_disabled = True
-            self.status.set_last_error(_to_ascii(f"error: smtp auth failed: {exc}"))
+            self.status.set_last_error(
+                _safe_status_text(f"error: smtp auth failed: {exc}")
+            )
             LOGGER.error(
                 "SMTP authentication failed; disabling email notifications",
                 extra={"category": category},
@@ -194,15 +210,16 @@ class Notifier:
             if age_seconds >= self.config.debounce_seconds:
                 send_items.append(text)
             else:
+                summary = _summarize_text(text)
                 LOGGER.info(
                     "Debounce active for %s (age %s seconds)",
-                    text,
+                    summary,
                     age_seconds,
                     extra={"category": "send"},
                 )
 
         if normalized:
-            self.status.set_last_match(normalized[0])
+            self.status.set_last_match(_summarize_text(normalized[0]))
 
         for text in send_items:
             if self._send_message(text, category="send", force_send=True):
@@ -220,7 +237,7 @@ class Notifier:
             _save_state(self._state_path, self._history)
 
     def _handle_error(self, message: str) -> None:
-        safe_message = _to_ascii(message)
+        safe_message = _safe_status_text(message)
         self.status.set_last_error(safe_message)
         try:
             if self.config.log_only_mode:
@@ -260,7 +277,7 @@ class Notifier:
             f"last_send={snapshot.last_send} "
             f"last_error={snapshot.last_error}"
         )
-        safe_message = _to_ascii(message)
+        safe_message = _safe_status_text(message)
         try:
             sent = self._send_message(safe_message, category="send")
             if sent or self.config.log_only_mode:
@@ -289,11 +306,11 @@ class Notifier:
             "running": snapshot.running,
             "paused": snapshot.paused,
             "uptime_seconds": snapshot.uptime_seconds,
-            "last_scan": _to_ascii(snapshot.last_scan),
-            "last_match": _to_ascii(snapshot.last_match),
-            "last_send": _to_ascii(snapshot.last_send),
-            "last_error": _to_ascii(snapshot.last_error),
-            "last_healthcheck": _to_ascii(snapshot.last_healthcheck),
+            "last_scan": _safe_status_text(snapshot.last_scan),
+            "last_match": _safe_status_text(snapshot.last_match),
+            "last_send": _safe_status_text(snapshot.last_send),
+            "last_error": _safe_status_text(snapshot.last_error),
+            "last_healthcheck": _safe_status_text(snapshot.last_healthcheck),
             "error_count": snapshot.error_count,
         }
         try:
@@ -304,11 +321,11 @@ class Notifier:
         status_payload = {
             "running": snapshot.running,
             "paused": snapshot.paused,
-            "last_scan": snapshot.last_scan,
-            "last_match": snapshot.last_match,
-            "last_send": snapshot.last_send,
-            "last_error": snapshot.last_error,
-            "last_healthcheck": snapshot.last_healthcheck,
+            "last_scan": _safe_status_text(snapshot.last_scan),
+            "last_match": _safe_status_text(snapshot.last_match),
+            "last_send": _safe_status_text(snapshot.last_send),
+            "last_error": _safe_status_text(snapshot.last_error),
+            "last_healthcheck": _safe_status_text(snapshot.last_healthcheck),
             "uptime_seconds": snapshot.uptime_seconds,
             "error_count": snapshot.error_count,
         }

@@ -10,5 +10,5 @@ logs/status.csv
 logs/config.checksum
 config.local.yaml
 *.local.yaml
-tmp/.stray_local/logs/
-tmp/.stray_local/*.pid
+tmp/AppData/Local/AxonZ/SentinelTray/UserData/
+tmp/AppData/Local/AxonZ/SentinelTray/SystemData/sentineltray/logs/

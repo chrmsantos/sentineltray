@@ -1,8 +1,13 @@
 # Changelog
 
+## 2026-01-20 (0.2.0-beta.7)
+
+- Move sensitive user data to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData and operational logs/status to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray.
+- Redact sensitive data from logs, status exports, and telemetry while preserving diagnostic utility.
+
 ## 2026-01-19 (0.2.0-beta.6)
 
-- Store operational logs, telemetry, and status exports under the project logs/ folder; sensitive data remains in %USERPROFILE%\.stray_local.
+- Store operational logs, telemetry, and status exports under the project logs/ folder; sensitive data remains in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData.
 - Allow running main.py directly by bootstrapping src/ onto the import path.
 
 ## 2026-01-19 (0.2.0-beta.5)
@@ -21,7 +26,7 @@
 
 ## 2026-01-19 (0.2.0-beta.2)
 
-- Move local user data directory to %USERPROFILE%\.stray_local for configs, logs, and telemetry.
+- Move local user data directory to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData for configs, logs, and telemetry.
 - Skip scans without error alerts when the target window is unavailable or disabled.
 
 ## 2026-01-19 (0.2.0-beta.1)

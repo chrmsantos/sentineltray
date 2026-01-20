@@ -14,16 +14,18 @@ Esta aplicação processa dados pessoais apenas para enviar alertas e manter o h
 
 Dados sensiveis necessarios ao funcionamento ficam exclusivamente em:
 
-%USERPROFILE%\.stray_local
+%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData
 
 Isto inclui:
 
 - config.local.yaml (credenciais e enderecos)
 - state.json (histórico local)
 
-Dados operacionais (diagnostico e status) ficam dentro do projeto, em logs/:
+Dados operacionais (diagnostico e status) ficam em:
 
-- logs/*.log (diagnostico)
+%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs
+
+- *.log (diagnostico)
 - telemetry.json (estado operacional)
 - status.json e status.csv (exportacao de status)
 - config.checksum (integridade de configuracao)
@@ -32,7 +34,7 @@ O repositório contém apenas templates comentados e exemplos fictícios.
 
 ## Execução inicial
 
-Ao iniciar, se %USERPROFILE%\.stray_local\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em logs/ no projeto.
+Ao iniciar, se %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray\logs.
 
 ## Segurança e minimização
 
@@ -47,7 +49,7 @@ Ao iniciar, se %USERPROFILE%\.stray_local\config.local.yaml não existir, o apli
 
 ## Direitos do titular
 
-O usuário pode remover ou corrigir os dados a qualquer momento editando ou apagando os arquivos em %USERPROFILE%\.stray_local.
+O usuário pode remover ou corrigir os dados a qualquer momento editando ou apagando os arquivos em %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData.
 
 ## Contato
 

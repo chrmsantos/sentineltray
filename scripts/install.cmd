@@ -6,7 +6,7 @@ rem Licencas: Python (PSF), pip (PSF), GitHub (terms), dependencias via requirem
 rem O usuario deve revisar as licencas antes de instalar.
 
 set "REPO_URL=https://github.com/chrmsantos/sentineltray/archive/refs/heads/master.zip"
-set "INSTALL_DIR=%USERPROFILE%\sentineltray-app"
+set "INSTALL_DIR=%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray"
 set "TEMP_ZIP=%TEMP%\sentineltray.zip"
 set "EXTRACT_DIR=%TEMP%\sentineltray-extract"
 set "LOG_DIR=%TEMP%\sentineltray-install"

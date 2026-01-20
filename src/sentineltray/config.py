@@ -11,15 +11,34 @@ import yaml
 MAX_LOG_FILES = 5
 
 
-def get_user_data_dir() -> Path:
+def _get_user_root() -> Path:
     user_root = os.environ.get("USERPROFILE")
     if not user_root:
-        raise ValueError("USERPROFILE is required for sensitive data storage")
-    return Path(user_root) / ".stray_local"
+        raise ValueError("USERPROFILE is required for SentinelTray paths")
+    return Path(user_root)
+
+
+def get_user_data_dir() -> Path:
+    return (
+        _get_user_root()
+        / "AppData"
+        / "Local"
+        / "AxonZ"
+        / "SentinelTray"
+        / "UserData"
+    )
 
 
 def get_project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+    return (
+        _get_user_root()
+        / "AppData"
+        / "Local"
+        / "AxonZ"
+        / "SentinelTray"
+        / "SystemData"
+        / "sentineltray"
+    )
 
 
 @dataclass(frozen=True)

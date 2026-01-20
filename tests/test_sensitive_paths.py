@@ -65,7 +65,14 @@ def test_sensitive_paths_forced_to_user_root(
 
     config = load_config(str(config_path))
 
-    base = tmp_path / ".stray_local"
+    base = (
+        tmp_path
+        / "AppData"
+        / "Local"
+        / "AxonZ"
+        / "SentinelTray"
+        / "UserData"
+    )
     project_root = get_project_root()
     assert config.state_file == str(base / "state.json")
     assert config.log_file == str(project_root / "logs" / "sentineltray.log")
