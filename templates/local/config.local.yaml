@@ -20,6 +20,9 @@ error_backoff_max_seconds: 300
 # Debounce de mensagens repetidas.
 debounce_seconds: 600
 
+# Envia alertas mesmo que o texto tenha sido enviado antes.
+send_repeated_matches: true
+
 # Maximo de eventos no historico em memoria.
 max_history: 50
 

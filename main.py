@@ -31,6 +31,8 @@ LOCAL_TEMPLATE = """# SentinelTray sobrescritas locais
 window_title_regex: ""
 phrase_regex: ""
 poll_interval_seconds: 180
+debounce_seconds: 600
+send_repeated_matches: true
 email:
     smtp_host: ""
     smtp_port: 587

@@ -207,24 +207,27 @@ class Notifier:
         self.status.set_last_scan(_now_iso())
         matches = self._detector.find_matches(self.config.phrase_regex)
         normalized = [_normalize(text) for text in matches if text]
-        now = datetime.now(timezone.utc)
-        send_items: list[str] = []
-        for text in normalized:
-            last_sent = self._last_sent.get(text)
-            if last_sent is None:
-                send_items.append(text)
-                continue
-            age_seconds = int((now - last_sent).total_seconds())
-            if age_seconds >= self.config.debounce_seconds:
-                send_items.append(text)
-            else:
-                summary = _summarize_text(text)
-                LOGGER.info(
-                    "Debounce active for %s (age %s seconds)",
-                    summary,
-                    age_seconds,
-                    extra={"category": "send"},
-                )
+        if self.config.send_repeated_matches:
+            send_items = list(normalized)
+        else:
+            now = datetime.now(timezone.utc)
+            send_items: list[str] = []
+            for text in normalized:
+                last_sent = self._last_sent.get(text)
+                if last_sent is None:
+                    send_items.append(text)
+                    continue
+                age_seconds = int((now - last_sent).total_seconds())
+                if age_seconds >= self.config.debounce_seconds:
+                    send_items.append(text)
+                else:
+                    summary = _summarize_text(text)
+                    LOGGER.info(
+                        "Debounce active for %s (age %s seconds)",
+                        summary,
+                        age_seconds,
+                        extra={"category": "send"},
+                    )
 
         if normalized:
             self.status.set_last_match(_summarize_text(normalized[0]))
