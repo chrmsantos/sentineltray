@@ -92,14 +92,25 @@ def _format_timestamp(value: str) -> str:
         return value
 
 
-def format_status(snapshot: StatusSnapshot) -> str:
+def format_status(
+    snapshot: StatusSnapshot,
+    *,
+    window_title_regex: str = "",
+    phrase_regex: str = "",
+) -> str:
     running = "sim" if snapshot.running else "nao"
     paused = "sim" if snapshot.paused else "nao"
+    phrase_label = phrase_regex or "<qualquer texto>"
+    window_label = window_title_regex or "<janela configurada>"
     lines = [
         f"Em execução: {running}",
         f"Pausado: {paused}",
         f"Última verificação: {_format_timestamp(snapshot.last_scan)}",
-        f"Última mensagem encontrada: {_format_timestamp(snapshot.last_match)}",
+        (
+            "Última incidência de "
+            f"{phrase_label} encontrada em {window_label}: "
+            f"{_format_timestamp(snapshot.last_match)}"
+        ),
         f"Último envio de alerta: {_format_timestamp(snapshot.last_send)}",
         f"Último erro registrado: {_format_timestamp(snapshot.last_error)}",
         f"Último resumo de saúde: {_format_timestamp(snapshot.last_healthcheck)}",

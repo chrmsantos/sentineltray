@@ -60,7 +60,13 @@ def run_tray(config: AppConfig) -> None:
         nonlocal status_label
         snapshot = status.snapshot()
         if status_label is not None and status_label.winfo_exists():
-            status_label.config(text=format_status(snapshot))
+            status_label.config(
+                text=format_status(
+                    snapshot,
+                    window_title_regex=config.window_title_regex,
+                    phrase_regex=config.phrase_regex,
+                )
+            )
         if (
             config.show_error_window
             and snapshot.last_error
@@ -157,7 +163,11 @@ def run_tray(config: AppConfig) -> None:
 
         status_label = tk.Label(
             status_window,
-            text=format_status(status.snapshot()),
+            text=format_status(
+                status.snapshot(),
+                window_title_regex=config.window_title_regex,
+                phrase_regex=config.phrase_regex,
+            ),
             justify="left",
             anchor="nw",
             font=("Segoe UI", 12),
@@ -195,7 +205,11 @@ def run_tray(config: AppConfig) -> None:
                     return
 
         def copy_status() -> None:
-            text = format_status(status.snapshot())
+            text = format_status(
+                status.snapshot(),
+                window_title_regex=config.window_title_regex,
+                phrase_regex=config.phrase_regex,
+            )
             try:
                 status_window.clipboard_clear()
                 status_window.clipboard_append(text)
@@ -205,7 +219,13 @@ def run_tray(config: AppConfig) -> None:
         def refresh_now() -> None:
             snapshot = status.snapshot()
             if status_label is not None and status_label.winfo_exists():
-                status_label.config(text=format_status(snapshot))
+                status_label.config(
+                    text=format_status(
+                        snapshot,
+                        window_title_regex=config.window_title_regex,
+                        phrase_regex=config.phrase_regex,
+                    )
+                )
 
         menu_font = tkfont.Font(family="Segoe UI", size=11, weight="bold")
         item_font = tkfont.Font(family="Segoe UI", size=11, weight="normal")
