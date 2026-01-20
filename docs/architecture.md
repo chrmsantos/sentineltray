@@ -16,7 +16,6 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - When the target window is temporarily unavailable or disabled, an alert is sent and the scan is skipped.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
-- Status report emails are sent every 7 scan iterations with detailed runtime fields.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
 - Tray icon is rendered via Pillow with fixed-size rectangle glyphs.
@@ -26,7 +25,6 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Local telemetry file captures last activity for quick diagnostics and lives in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
 - Status export JSON supports local integrations.
 - Status export CSV supports local integrations.
-- Status exports include last_report_send to track report cadence.
 - Tray abre automaticamente o status na inicializacao e usa icone em formato de olho.
 - Status inclui atalhos para abrir configuracoes e o repositorio.
 - Interface exibe o nome e a descricao resumida do projeto no topo.
