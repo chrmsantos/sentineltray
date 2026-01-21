@@ -23,68 +23,6 @@ _ensure_src_on_path()
 from sentineltray.config import get_user_data_dir, load_config
 from sentineltray.cli import run_cli
 
-LOCAL_TEMPLATE = """# SentinelTray sobrescritas locais
-# Preencha os valores abaixo e reinicie o app.
-
-window_title_regex: ""
-phrase_regex: ""
-poll_interval_seconds: 180
-debounce_seconds: 600
-send_repeated_matches: true
-email:
-    smtp_host: ""
-    smtp_port: 587
-    smtp_username: ""
-    smtp_password: ""
-    from_address: ""
-    to_addresses: []
-    use_tls: true
-    timeout_seconds: 45
-    subject: "SentinelTray Alerta"
-    retry_attempts: 3
-    retry_backoff_seconds: 5
-    dry_run: true
-status_export_csv: "logs/status.csv"
-status_export_file: "logs/status.json"
-telemetry_file: "logs/telemetry.json"
-status_refresh_seconds: 1
-allow_window_restore: true
-auto_start: true
-log_only_mode: false
-log_file: "logs/sentineltray.log"
-log_level: "INFO"
-log_console_level: "WARNING"
-log_console_enabled: true
-log_max_bytes: 5000000
-log_backup_count: 5
-log_run_files_keep: 5
-config_checksum_file: "logs/config.checksum"
-min_free_disk_mb: 100
-"""
-
-
-def _open_for_editing(path: Path) -> None:
-    if hasattr(os, "startfile"):
-        try:
-            os.startfile(str(path))
-        except OSError:
-            return
-
-
-def _ask_reedit(path: Path, reason: str) -> bool:
-    message = (
-        "Erro nas configuracoes.\n\n"
-        f"Arquivo: {path}\n"
-        f"Motivo: {reason}\n\n"
-        "Deseja reabrir o arquivo para editar?"
-    )
-    print(message)
-    try:
-        answer = input("Abrir para editar? [s/N]: ").strip().lower()
-    except (EOFError, KeyboardInterrupt):
-        return False
-    return answer in {"s", "sim", "y", "yes"}
-
 
 def _pid_file_path() -> Path:
     base = get_user_data_dir()
@@ -208,30 +146,33 @@ def _ensure_single_instance() -> None:
     atexit.register(_cleanup)
 
 
-def _write_local_template(path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(LOCAL_TEMPLATE, encoding="utf-8")
-
-
 def _ensure_local_override(path: Path) -> None:
     if not path.exists():
-        _write_local_template(path)
-        _open_for_editing(path)
-        raise SystemExit(f"Local config created at {path}. Fill it and restart.")
+        raise SystemExit(
+            "Config local ausente. Crie o arquivo em: "
+            f"{path}\n"
+            "Preencha todos os campos obrigatorios e reinicie o programa."
+        )
 
     content = path.read_text(encoding="utf-8").strip()
     if not content:
-        _write_local_template(path)
-        _open_for_editing(path)
-        raise SystemExit(f"Local config is empty at {path}. Fill it and restart.")
+        raise SystemExit(
+            "Config local vazio. Preencha o arquivo em: "
+            f"{path}\n"
+            "Salve as alteracoes e reinicie o programa."
+        )
 
 
 def _handle_config_error(path: Path, exc: Exception) -> None:
     reason = str(exc)
-    if _ask_reedit(path, reason):
-        _open_for_editing(path)
-        raise SystemExit(f"Reabra e edite o arquivo: {path}") from exc
-    raise SystemExit("Execucao encerrada pelo usuario.") from exc
+    message = (
+        "Erro nas configuracoes.\n\n"
+        f"Arquivo: {path}\n"
+        f"Detalhe: {reason}\n\n"
+        "Corrija o arquivo e reinicie o programa.\n"
+        "O SentinelTray sera encerrado para permitir as correcoes."
+    )
+    raise SystemExit(message) from exc
 
 
 def main() -> int:

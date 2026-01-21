@@ -8,6 +8,7 @@
 - Add write failure counters to exports and improve runtime preflight checks.
 - Make window visibility checks more tolerant to avoid false unavailable errors.
 - Adjust alert email wording for detected text.
+- Stop auto-creating config templates; report configuration errors with explicit guidance and exit.
 
 ## 2026-01-20 (0.2.0-beta.7)
 
