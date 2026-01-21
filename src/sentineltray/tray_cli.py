@@ -4,7 +4,7 @@ import ctypes
 import logging
 from threading import Event
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 import pystray
 
 from .cli import run_cli
@@ -50,18 +50,19 @@ def _install_console_close_handler() -> object:
 def _build_icon_image() -> Image.Image:
     image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-    emoji = "🤓"
-    font = None
-    try:
-        font = ImageFont.truetype("seguiemj.ttf", 32)
-    except Exception:
-        font = ImageFont.load_default()
-    text_bbox = draw.textbbox((0, 0), emoji, font=font)
-    text_width = text_bbox[2] - text_bbox[0]
-    text_height = text_bbox[3] - text_bbox[1]
-    x = (64 - text_width) // 2
-    y = (64 - text_height) // 2
-    draw.text((x, y), emoji, font=font, fill=(255, 255, 255, 255))
+    radius = 18
+    center = (32, 32)
+    draw.ellipse(
+        (
+            center[0] - radius,
+            center[1] - radius,
+            center[0] + radius,
+            center[1] + radius,
+        ),
+        fill=(0, 200, 0, 255),
+        outline=(0, 120, 0, 255),
+        width=2,
+    )
     return image
 
 
