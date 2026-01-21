@@ -23,6 +23,7 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Logs include a structured category field (scan/send/error/etc).
 - Logs, telemetry, and status exports redact sensitive strings and store match summaries as hashes.
 - Telemetry, status exports, and state storage are written atomically to avoid corruption on abrupt shutdown.
+- Export files include counters for write failures (telemetry/status CSV/state) to aid diagnostics.
 - Local telemetry file captures last activity for quick diagnostics and lives in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
 - Status export JSON supports local integrations.
 - Status export CSV supports local integrations.
@@ -52,3 +53,10 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 2. Extract visible texts.
 3. Filter by phrase regex.
 4. Send new matches.
+
+## Comportamentos críticos
+
+- Idle gate: só escaneia após 2+ minutos sem interação do usuário.
+- Backoff: erros consecutivos aumentam o intervalo até o máximo configurado.
+- Watchdog: reinicia componentes se um ciclo exceder o timeout configurado.
+- Persistência: falhas de escrita são contadas e expostas nos exports.

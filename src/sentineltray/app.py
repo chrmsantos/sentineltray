@@ -157,6 +157,10 @@ class Notifier:
         self._release_date = _get_release_date()
         self._commit_hash = _get_commit_hash()
         self._email_disabled = False
+        self._telemetry_write_errors = 0
+        self._status_export_errors = 0
+        self._status_csv_errors = 0
+        self._state_write_errors = 0
         self._update_config_checksum()
 
     def _reset_components(self) -> None:
@@ -247,9 +251,20 @@ class Notifier:
         if len(self._history) > self.config.max_history:
             self._history = self._history[-self.config.max_history :]
             self._last_sent = self._build_last_sent_map(self._history)
-            _save_state(self._state_path, self._history)
+            self._persist_state()
         elif send_items:
+            self._persist_state()
+
+    def _persist_state(self) -> None:
+        try:
             _save_state(self._state_path, self._history)
+        except Exception as exc:
+            self._state_write_errors += 1
+            LOGGER.exception(
+                "State persistence failed: %s",
+                exc,
+                extra={"category": "error"},
+            )
 
     def _handle_error(self, message: str) -> None:
         safe_message = _safe_status_text(message)
@@ -328,10 +343,15 @@ class Notifier:
             "last_error": _safe_status_text(snapshot.last_error),
             "last_healthcheck": _safe_status_text(snapshot.last_healthcheck),
             "error_count": snapshot.error_count,
+            "telemetry_write_errors": self._telemetry_write_errors,
+            "status_export_errors": self._status_export_errors,
+            "status_csv_errors": self._status_csv_errors,
+            "state_write_errors": self._state_write_errors,
         }
         try:
             self._telemetry.write(payload)
         except Exception as exc:
+            self._telemetry_write_errors += 1
             LOGGER.exception("Telemetry write failed: %s", exc, extra={"category": "error"})
 
         status_payload = {
@@ -344,10 +364,14 @@ class Notifier:
             "last_healthcheck": _safe_status_text(snapshot.last_healthcheck),
             "uptime_seconds": snapshot.uptime_seconds,
             "error_count": snapshot.error_count,
+            "status_export_errors": self._status_export_errors,
+            "status_csv_errors": self._status_csv_errors,
+            "state_write_errors": self._state_write_errors,
         }
         try:
             self._status_export.write(status_payload)
         except Exception as exc:
+            self._status_export_errors += 1
             LOGGER.exception("Status export failed: %s", exc, extra={"category": "error"})
 
         self._write_status_csv(status_payload)
@@ -361,6 +385,7 @@ class Notifier:
                 writer.writerow([key, value])
             atomic_write_text(path, buffer.getvalue(), encoding="utf-8")
         except Exception as exc:
+            self._status_csv_errors += 1
             LOGGER.exception("Status CSV export failed: %s", exc, extra={"category": "error"})
 
     def _update_config_checksum(self) -> None:
