@@ -59,16 +59,17 @@ scripts\run.cmd
 
 If you run main.py directly, it automatically adds src/ to the import path.
 
-The app runs in the system tray by default. Use the tray menu to open Status.
-Clique com o botão esquerdo no ícone para abrir o Status. A janela abre automaticamente ao iniciar, a menos que start_minimized esteja ativo.
-No Status, use os botões para abrir o arquivo de configurações, a pasta de dados, os logs e o repositório, além de copiar e atualizar o status.
-O título da interface mostra o nome e a descrição do projeto.
+SentinelTray agora funciona apenas via CLI. Ao iniciar, você verá um prompt simples
+com comandos para status, pausa e atalhos para abrir configurações, dados e logs.
 
-CLI mode (no tray):
+Comandos principais:
 
-```powershell
-scripts\run.cmd --cli
-```
+- status
+- pause / resume / toggle
+- watch [segundos]
+- open config | open data | open logs | open repo
+- help
+- exit
 
 ## Notes
 
@@ -88,15 +89,10 @@ scripts\run.cmd --cli
 - Repeated messages are debounced by time window to avoid spam.
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.
-- Tray status shows error count and last error reason.
 - Logs include a structured category field.
 - Local telemetry file captures last activity for quick diagnostics and lives in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
 - Status export JSON available at status_export_file (UserData\logs by default).
 - Status export CSV available at status_export_csv (UserData\logs by default).
-- UI refresh interval is configurable via status_refresh_seconds.
-- Data folder shortcut available in the Status window.
-- Status window uses larger, user-friendly text, fits its content, and shows version/date discreetly.
-- Silent mode can suppress the error popup while keeping tray status updated.
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
 - Email subject always includes SentinelTray, and the body starts with a SentinelTray title in PT-BR.

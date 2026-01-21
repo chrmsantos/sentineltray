@@ -76,41 +76,15 @@ watchdog_timeout_seconds: 60
 watchdog_restart: true
 
 email:
-  # Exemplo Gmail (SMTP):
-  # smtp_host: "smtp.gmail.com"
-  # smtp_port: 587
-  # smtp_username: "seu.usuario@gmail.com"
-  # smtp_password: "sua_senha_de_app"
-  # from_address: "seu.usuario@gmail.com"
-  # to_addresses: ["destinatario@gmail.com"]
-  # use_tls: true
-  # Exemplo Proton Mail (via Proton Mail Bridge):
-  # 1) Instale o Proton Mail Bridge e conecte sua conta.
-  # 2) Abra o Bridge e copie host, porta, usuario e senha gerados.
-  # smtp_host: "127.0.0.1"
-  # smtp_port: 1025
-  # smtp_username: "seu_usuario_bridge"
-  # smtp_password: "sua_senha_bridge"
-  # from_address: "seu.usuario@proton.me"
-  # to_addresses: ["destinatario@proton.me"]
-  # use_tls: false
-  # Exemplo Outlook/Office 365 (SMTP):
-  # smtp_host: "smtp.office365.com"
-  # smtp_port: 587
-  # smtp_username: "seu.usuario@outlook.com"
-  # smtp_password: "sua_senha_de_app"
-  # from_address: "seu.usuario@outlook.com"
-  # to_addresses: ["destinatario@outlook.com"]
-  # use_tls: true
-  smtp_host: "smtp.exemplo.local"
+  smtp_host: "smtp.gmail.com"
   smtp_port: 587
-  smtp_username: "usuario"
-  smtp_password: ""
-  from_address: "sentineltray@exemplo.local"
-  to_addresses: ["operador@exemplo.local"]
+  smtp_username: "username@gmail.com"
+  smtp_password: "app password"
+  from_address: "username@gmail.com"
+  to_addresses: ["username@gmail.com"]
   use_tls: true
   timeout_seconds: 45
-  subject: "SentinelTray Alerta"
+  subject: "SentinelTray Notification"
   retry_attempts: 3
   retry_backoff_seconds: 5
   dry_run: false

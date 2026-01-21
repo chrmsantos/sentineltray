@@ -1,7 +1,0 @@
-Metadata-Version: 2.4
-Name: sentineltray
-Version: 0.1.0
-License: GPL-3.0-only
-Requires-Python: >=3.11
-License-File: LICENSE
-Dynamic: license-file
