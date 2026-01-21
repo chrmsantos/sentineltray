@@ -35,6 +35,15 @@ class WindowTextDetector:
         except Exception:
             return False
 
+    def _window_has_area(self, window) -> bool:
+        try:
+            if hasattr(window, "rectangle"):
+                rect = window.rectangle()
+                return rect.width() > 0 and rect.height() > 0
+        except Exception:
+            return False
+        return False
+
     def _select_best_window(self, desktop: Desktop):
         candidates = desktop.windows(title_re=self._window_title_regex)
         if not candidates:
@@ -136,6 +145,12 @@ class WindowTextDetector:
                     window = self._get_window()
                 except Exception:
                     continue
+        if self._window_exists(window, timeout=0.0) and self._window_has_area(window):
+            LOGGER.warning(
+                "Target window visibility check failed; proceeding with scan",
+                extra={"category": "scan"},
+            )
+            return
         raise WindowUnavailableError("Target window not visible") from last_exc
 
     def _minimize_window(self, window) -> None:
@@ -158,6 +173,8 @@ class WindowTextDetector:
             user32.ShowWindow(handle, 3)
             user32.BringWindowToTop(handle)
             user32.SetForegroundWindow(handle)
+            user32.SetWindowPos(handle, -1, 0, 0, 0, 0, 0x0001 | 0x0002)
+            user32.SetWindowPos(handle, -2, 0, 0, 0, 0, 0x0001 | 0x0002)
         except Exception:
             LOGGER.debug("Failed to force window foreground", exc_info=True)
 
