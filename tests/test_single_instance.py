@@ -1,0 +1,67 @@
+import os
+from pathlib import Path
+
+import pytest
+
+import main
+
+
+def test_single_instance_kills_previous(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    pid_path = (
+        tmp_path
+        / "AppData"
+        / "Local"
+        / "AxonZ"
+        / "SentinelTray"
+        / "UserData"
+        / "sentineltray.pid"
+    )
+    pid_path.parent.mkdir(parents=True, exist_ok=True)
+    pid_path.write_text("1234", encoding="utf-8")
+
+    called: dict[str, list[str]] = {}
+
+    def fake_run(args, **kwargs):
+        called["args"] = args
+        return type("R", (), {"returncode": 0})()
+
+    monkeypatch.setattr(main.subprocess, "run", fake_run)
+    monkeypatch.setattr(main.os, "getpid", lambda: 4321)
+
+    main._ensure_single_instance()
+
+    assert called["args"][0] == "taskkill"
+    assert pid_path.read_text(encoding="utf-8") == "4321"
+
+
+def test_mutex_returns_false_when_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeKernel32:
+        def CreateMutexW(self, *_args):
+            return 123
+
+        def GetLastError(self) -> int:
+            return 183
+
+    class FakeWindll:
+        kernel32 = FakeKernel32()
+
+    monkeypatch.setattr(main, "_MUTEX_HANDLE", None)
+    monkeypatch.setattr(main.ctypes, "windll", FakeWindll())
+    assert main._ensure_single_instance_mutex() is False
+
+
+def test_mutex_returns_true_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeKernel32:
+        def CreateMutexW(self, *_args):
+            return 123
+
+        def GetLastError(self) -> int:
+            return 0
+
+    class FakeWindll:
+        kernel32 = FakeKernel32()
+
+    monkeypatch.setattr(main, "_MUTEX_HANDLE", None)
+    monkeypatch.setattr(main.ctypes, "windll", FakeWindll())
+    assert main._ensure_single_instance_mutex() is True
