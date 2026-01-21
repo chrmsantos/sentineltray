@@ -6,7 +6,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 _MUTEX_HANDLE = None
 
@@ -21,9 +20,8 @@ def _ensure_src_on_path() -> None:
 
 _ensure_src_on_path()
 
-from sentineltray.app import run
 from sentineltray.config import get_user_data_dir, load_config
-from sentineltray.tray_app import run_tray
+from sentineltray.cli import run_cli
 
 LOCAL_TEMPLATE = """# SentinelTray sobrescritas locais
 # Preencha os valores abaixo e reinicie o app.
@@ -51,7 +49,6 @@ status_export_file: "logs/status.json"
 telemetry_file: "logs/telemetry.json"
 status_refresh_seconds: 1
 allow_window_restore: true
-start_minimized: true
 auto_start: true
 log_only_mode: false
 log_file: "logs/sentineltray.log"
@@ -81,18 +78,12 @@ def _ask_reedit(path: Path, reason: str) -> bool:
         f"Motivo: {reason}\n\n"
         "Deseja reabrir o arquivo para editar?"
     )
+    print(message)
     try:
-        import tkinter as tk
-        from tkinter import messagebox
-
-        root = tk.Tk()
-        root.withdraw()
-        try:
-            return messagebox.askyesno("SentinelTray", message)
-        finally:
-            root.destroy()
-    except Exception:
+        answer = input("Abrir para editar? [s/N]: ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
         return False
+    return answer in {"s", "sim", "y", "yes"}
 
 
 def _pid_file_path() -> Path:
@@ -245,13 +236,7 @@ def _handle_config_error(path: Path, exc: Exception) -> None:
 
 def main() -> int:
     _ensure_single_instance()
-    use_cli = False
     args = [arg for arg in sys.argv[1:] if arg]
-    for arg in args:
-        if arg == "--cli":
-            use_cli = True
-        else:
-            raise SystemExit("Somente --cli e permitido. Use config.local.yaml.")
 
     try:
         local_path = get_user_data_dir() / "config.local.yaml"
@@ -259,13 +244,8 @@ def main() -> int:
         config = load_config(str(local_path))
     except Exception as exc:
         _handle_config_error(local_path, exc)
-    if not use_cli:
-        _ensure_autostart(getattr(config, "auto_start", True))
-    if use_cli:
-        run(config)
-    else:
-        run_tray(config)
-    return 0
+    _ensure_autostart(getattr(config, "auto_start", True))
+    return run_cli(config, args)
 
 
 if __name__ == "__main__":
