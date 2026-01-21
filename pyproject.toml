@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=69.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentineltray"
+version = "1.0.0b1"
+requires-python = ">=3.11"
+license = { text = "GPL-3.0-only" }
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
