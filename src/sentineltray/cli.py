@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+import msvcrt
 from pathlib import Path
 from threading import Event, Thread
 from typing import Iterable, Tuple
@@ -97,7 +98,39 @@ def _print_help() -> None:
     print("\n".join(lines))
 
 
-def run_cli(config: AppConfig, args: Iterable[str] | None = None) -> int:
+def _read_command(exit_event: Event | None) -> str | None:
+    if exit_event is None:
+        return input("> ")
+
+    buffer = ""
+    prompt_shown = False
+    while not exit_event.is_set():
+        if not prompt_shown:
+            print("> ", end="", flush=True)
+            prompt_shown = True
+        if msvcrt.kbhit():
+            ch = msvcrt.getwch()
+            if ch in {"\r", "\n"}:
+                print("")
+                return buffer
+            if ch in {"\b", "\x7f"}:
+                if buffer:
+                    buffer = buffer[:-1]
+                    print("\b \b", end="", flush=True)
+                continue
+            buffer += ch
+            print(ch, end="", flush=True)
+        else:
+            time.sleep(0.05)
+    return None
+
+
+def run_cli(
+    config: AppConfig,
+    args: Iterable[str] | None = None,
+    *,
+    exit_event: Event | None = None,
+) -> int:
     _ = list(args or [])
     status = StatusStore()
     stop_event = Event()
@@ -109,7 +142,10 @@ def run_cli(config: AppConfig, args: Iterable[str] | None = None) -> int:
     try:
         while True:
             try:
-                raw = input("> ")
+                raw = _read_command(exit_event)
+                if raw is None:
+                    print("\nEncerrando...")
+                    break
             except (EOFError, KeyboardInterrupt):
                 print("\nEncerrando...")
                 break
