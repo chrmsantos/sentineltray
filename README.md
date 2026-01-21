@@ -58,8 +58,9 @@ scripts\run.cmd
 
 If you run main.py directly, it automatically adds src/ to the import path.
 
-SentinelTray agora funciona apenas via CLI. Ao iniciar, você verá um prompt simples
-com comandos para status, pausa e atalhos para abrir configurações, dados e logs.
+SentinelTray inicia em segundo plano com um ícone na bandeja do sistema.
+Clique com o botão esquerdo para abrir o CLI e usar os comandos.
+Clique com o botão direito para Abrir ou Sair.
 
 Comandos principais:
 

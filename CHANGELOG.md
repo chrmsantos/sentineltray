@@ -9,6 +9,7 @@
 - Make window visibility checks more tolerant to avoid false unavailable errors.
 - Adjust alert email wording for detected text.
 - Stop auto-creating config templates; report configuration errors with explicit guidance and exit.
+- Start hidden with tray icon for CLI access and background operation.
 
 ## 2026-01-20 (0.2.0-beta.7)
 
