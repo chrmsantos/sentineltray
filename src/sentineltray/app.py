@@ -9,12 +9,12 @@ import json
 import logging
 import shutil
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event
 
-from .config import AppConfig, get_project_root, get_user_data_dir
+from .config import AppConfig, MonitorConfig, get_project_root, get_user_data_dir
 from .detector import WindowTextDetector, WindowUnavailableError
 from .logging_setup import sanitize_text, setup_logging
 from .status import StatusStore
@@ -27,6 +27,16 @@ LOGGER = logging.getLogger(__name__)
 
 class _LASTINPUTINFO(ctypes.Structure):
     _fields_ = [("cbSize", ctypes.c_uint), ("dwTime", ctypes.c_uint)]
+
+
+@dataclass
+class MonitorRuntime:
+    key: str
+    config: MonitorConfig
+    detector: WindowTextDetector
+    sender: object
+    last_sent: dict[str, datetime] = field(default_factory=dict)
+    email_disabled: bool = False
 
 
 def _get_idle_seconds() -> float:
@@ -141,14 +151,11 @@ class Notifier:
     status: StatusStore
 
     def __post_init__(self) -> None:
-        self._detector = WindowTextDetector(
-            self.config.window_title_regex,
-            allow_window_restore=self.config.allow_window_restore,
-        )
-        self._sender = build_sender(self.config.email)
+        self._monitors = self._build_monitors()
         self._state_path = Path(self.config.state_file)
         self._history = _load_state(self._state_path)
-        self._last_sent = self._build_last_sent_map(self._history)
+        for monitor in self._monitors:
+            monitor.last_sent = self._build_last_sent_map(self._history, monitor.key)
         self._started_at = datetime.now(timezone.utc)
         self._next_healthcheck = time.monotonic() + self.config.healthcheck_interval_seconds
         self._telemetry = JsonWriter(Path(self.config.telemetry_file))
@@ -156,7 +163,6 @@ class Notifier:
         self._app_version = _get_version()
         self._release_date = _get_release_date()
         self._commit_hash = _get_commit_hash()
-        self._email_disabled = False
         self._telemetry_write_errors = 0
         self._status_export_errors = 0
         self._status_csv_errors = 0
@@ -164,18 +170,25 @@ class Notifier:
         self._update_config_checksum()
 
     def _reset_components(self) -> None:
-        self._detector = WindowTextDetector(
-            self.config.window_title_regex,
-            allow_window_restore=self.config.allow_window_restore,
-        )
-        self._sender = build_sender(self.config.email)
+        for monitor in self._monitors:
+            monitor.detector = WindowTextDetector(
+                monitor.config.window_title_regex,
+                allow_window_restore=self.config.allow_window_restore,
+            )
+            monitor.sender = build_sender(monitor.config.email)
+            monitor.email_disabled = False
 
-    def _build_last_sent_map(self, history: list[dict[str, str]]) -> dict[str, datetime]:
+    def _build_last_sent_map(
+        self, history: list[dict[str, str]], monitor_key: str | None
+    ) -> dict[str, datetime]:
         last_sent: dict[str, datetime] = {}
         for item in history:
             text = item.get("text")
             sent_at = item.get("sent_at")
+            item_monitor = item.get("monitor")
             if not isinstance(text, str) or not isinstance(sent_at, str):
+                continue
+            if monitor_key and item_monitor not in (None, monitor_key):
                 continue
             try:
                 timestamp = datetime.fromisoformat(sent_at)
@@ -184,8 +197,42 @@ class Notifier:
             last_sent[text] = timestamp
         return last_sent
 
-    def _send_message(self, message: str, *, category: str, force_send: bool = False) -> bool:
-        if self._email_disabled:
+    def _build_monitors(self) -> list[MonitorRuntime]:
+        monitors = self.config.monitors
+        if not monitors:
+            monitors = [
+                MonitorConfig(
+                    window_title_regex=self.config.window_title_regex,
+                    phrase_regex=self.config.phrase_regex,
+                    email=self.config.email,
+                )
+            ]
+
+        runtimes: list[MonitorRuntime] = []
+        for monitor in monitors:
+            key = f"{monitor.window_title_regex}|{monitor.phrase_regex}"
+            runtimes.append(
+                MonitorRuntime(
+                    key=key,
+                    config=monitor,
+                    detector=WindowTextDetector(
+                        monitor.window_title_regex,
+                        allow_window_restore=self.config.allow_window_restore,
+                    ),
+                    sender=build_sender(monitor.email),
+                )
+            )
+        return runtimes
+
+    def _send_message(
+        self,
+        monitor: "MonitorRuntime",
+        message: str,
+        *,
+        category: str,
+        force_send: bool = False,
+    ) -> bool:
+        if monitor.email_disabled:
             LOGGER.warning(
                 "Email disabled after authentication failure; skipping send",
                 extra={"category": category},
@@ -198,10 +245,10 @@ class Notifier:
             )
             return False
         try:
-            self._sender.send(message)
+            monitor.sender.send(message)
             return True
         except EmailAuthError as exc:
-            self._email_disabled = True
+            monitor.email_disabled = True
             self.status.set_last_error(
                 _safe_status_text(f"error: smtp auth failed: {exc}")
             )
@@ -213,46 +260,52 @@ class Notifier:
 
     def scan_once(self) -> None:
         self.status.set_last_scan(_now_iso())
-        matches = self._detector.find_matches(self.config.phrase_regex)
-        normalized = [_normalize(text) for text in matches if text]
-        if self.config.send_repeated_matches:
-            send_items = list(normalized)
-        else:
-            now = datetime.now(timezone.utc)
-            send_items: list[str] = []
-            for text in normalized:
-                last_sent = self._last_sent.get(text)
-                if last_sent is None:
-                    send_items.append(text)
-                    continue
-                age_seconds = int((now - last_sent).total_seconds())
-                if age_seconds >= self.config.debounce_seconds:
-                    send_items.append(text)
-                else:
-                    summary = _summarize_text(text)
-                    LOGGER.info(
-                        "Debounce active for %s (age %s seconds)",
-                        summary,
-                        age_seconds,
-                        extra={"category": "send"},
+        any_match = False
+        for monitor in self._monitors:
+            matches = monitor.detector.find_matches(monitor.config.phrase_regex)
+            normalized = [_normalize(text) for text in matches if text]
+            if self.config.send_repeated_matches:
+                send_items = list(normalized)
+            else:
+                now = datetime.now(timezone.utc)
+                send_items = []
+                for text in normalized:
+                    last_sent = monitor.last_sent.get(text)
+                    if last_sent is None:
+                        send_items.append(text)
+                        continue
+                    age_seconds = int((now - last_sent).total_seconds())
+                    if age_seconds >= self.config.debounce_seconds:
+                        send_items.append(text)
+                    else:
+                        summary = _summarize_text(text)
+                        LOGGER.info(
+                            "Debounce active for %s (age %s seconds)",
+                            summary,
+                            age_seconds,
+                            extra={"category": "send"},
+                        )
+
+            if normalized:
+                any_match = True
+                self.status.set_last_match(_summarize_text(normalized[0]))
+
+            for text in send_items:
+                if self._send_message(monitor, text, category="send", force_send=True):
+                    self.status.set_last_send(_now_iso())
+                    LOGGER.info("Sent message", extra={"category": "send"})
+                    sent_at = _now_iso()
+                    self._history.append(
+                        {"text": text, "sent_at": sent_at, "monitor": monitor.key}
                     )
-
-        if normalized:
-            self.status.set_last_match(_summarize_text(normalized[0]))
-
-        for text in send_items:
-            if self._send_message(text, category="send", force_send=True):
-                self.status.set_last_send(_now_iso())
-                LOGGER.info("Sent message", extra={"category": "send"})
-                sent_at = _now_iso()
-                self._history.append({"text": text, "sent_at": sent_at})
-                self._last_sent[text] = datetime.fromisoformat(sent_at)
+                    monitor.last_sent[text] = datetime.fromisoformat(sent_at)
 
         if len(self._history) > self.config.max_history:
             self._history = self._history[-self.config.max_history :]
-            self._last_sent = self._build_last_sent_map(self._history)
+            for monitor in self._monitors:
+                monitor.last_sent = self._build_last_sent_map(self._history, monitor.key)
             self._persist_state()
-        elif send_items:
+        elif any_match:
             self._persist_state()
 
     def _persist_state(self) -> None:
@@ -275,7 +328,11 @@ class Notifier:
                     "Log-only mode active; sending error notification anyway",
                     extra={"category": "error"},
                 )
-            if self._send_message(safe_message, category="error", force_send=True):
+            sent_any = False
+            for monitor in self._monitors:
+                if self._send_message(monitor, safe_message, category="error", force_send=True):
+                    sent_any = True
+            if sent_any:
                 self.status.set_last_send(_now_iso())
                 LOGGER.info("Sent error notification", extra={"category": "error"})
         except Exception as exc:
@@ -288,8 +345,11 @@ class Notifier:
     def _send_startup_test(self) -> None:
         message = "info: startup test message"
         try:
-            sent = self._send_message(message, category="send", force_send=True)
-            if sent or self.config.log_only_mode:
+            sent_any = False
+            for monitor in self._monitors:
+                if self._send_message(monitor, message, category="send", force_send=True):
+                    sent_any = True
+            if sent_any or self.config.log_only_mode:
                 self.status.set_last_send(_now_iso())
                 LOGGER.info("Sent startup test message", extra={"category": "send"})
         except Exception as exc:
@@ -309,8 +369,11 @@ class Notifier:
         )
         safe_message = _safe_status_text(message)
         try:
-            sent = self._send_message(safe_message, category="send")
-            if sent or self.config.log_only_mode:
+            sent_any = False
+            for monitor in self._monitors:
+                if self._send_message(monitor, safe_message, category="send"):
+                    sent_any = True
+            if sent_any or self.config.log_only_mode:
                 self.status.set_last_send(_now_iso())
                 self.status.set_last_healthcheck(_now_iso())
                 LOGGER.info("Sent healthcheck message", extra={"category": "send"})
@@ -334,6 +397,10 @@ class Notifier:
             "release_date": self._release_date,
             "commit_hash": self._commit_hash,
             "window_title_hash": _hash_value(self.config.window_title_regex),
+            "window_title_hashes": [
+                _hash_value(monitor.config.window_title_regex) for monitor in self._monitors
+            ],
+            "monitor_count": len(self._monitors),
             "running": snapshot.running,
             "paused": snapshot.paused,
             "uptime_seconds": snapshot.uptime_seconds,
@@ -364,6 +431,7 @@ class Notifier:
             "last_healthcheck": _safe_status_text(snapshot.last_healthcheck),
             "uptime_seconds": snapshot.uptime_seconds,
             "error_count": snapshot.error_count,
+            "monitor_count": len(self._monitors),
             "status_export_errors": self._status_export_errors,
             "status_csv_errors": self._status_csv_errors,
             "state_write_errors": self._state_write_errors,

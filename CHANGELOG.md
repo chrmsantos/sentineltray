@@ -10,6 +10,7 @@
 - Adjust alert email wording for detected text.
 - Stop auto-creating config templates; report configuration errors with explicit guidance and exit.
 - Start hidden with tray icon for CLI access and background operation.
+- Add multi-monitor support with per-monitor email settings and regex usage guidance.
 
 ## 2026-01-20 (0.2.0-beta.7)
 

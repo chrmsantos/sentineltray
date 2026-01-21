@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 import logging
 import os
 from pathlib import Path
@@ -62,6 +62,13 @@ class EmailConfig:
 
 
 @dataclass(frozen=True)
+class MonitorConfig:
+    window_title_regex: str
+    phrase_regex: str
+    email: EmailConfig
+
+
+@dataclass(frozen=True)
 class AppConfig:
     window_title_regex: str
     phrase_regex: str
@@ -94,6 +101,7 @@ class AppConfig:
     send_repeated_matches: bool
     email: EmailConfig
     auto_start: bool = True
+    monitors: list[MonitorConfig] = field(default_factory=list)
 
 
 def _get_required(data: dict[str, Any], key: str) -> Any:
@@ -121,8 +129,7 @@ def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, An
     return merged
 
 
-def _build_config(data: dict[str, Any]) -> AppConfig:
-    email_data = _get_required(data, "email")
+def _build_email_config(email_data: dict[str, Any]) -> EmailConfig:
     to_raw = _get_required(email_data, "to_addresses")
     if isinstance(to_raw, str):
         to_addresses = [item.strip() for item in to_raw.split(",") if item.strip()]
@@ -131,7 +138,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
     else:
         raise ValueError("email.to_addresses must be a list or comma-separated string")
 
-    email = EmailConfig(
+    return EmailConfig(
         smtp_host=str(_get_required(email_data, "smtp_host")),
         smtp_port=int(_get_required(email_data, "smtp_port")),
         smtp_username=str(_get_required(email_data, "smtp_username")),
@@ -145,6 +152,33 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         retry_backoff_seconds=int(_get_required(email_data, "retry_backoff_seconds")),
         dry_run=bool(_get_required(email_data, "dry_run")),
     )
+
+
+def _build_config(data: dict[str, Any]) -> AppConfig:
+    monitors: list[MonitorConfig] = []
+    monitors_data = data.get("monitors")
+    if monitors_data is not None:
+        if not isinstance(monitors_data, list) or not monitors_data:
+            raise ValueError("monitors must be a non-empty list")
+        for entry in monitors_data:
+            if not isinstance(entry, dict):
+                raise ValueError("monitors entries must be objects")
+            monitor_email = _build_email_config(_get_required(entry, "email"))
+            monitors.append(
+                MonitorConfig(
+                    window_title_regex=str(_get_required(entry, "window_title_regex")),
+                    phrase_regex=str(_get_required(entry, "phrase_regex")),
+                    email=monitor_email,
+                )
+            )
+
+    email = None
+    if "email" in data:
+        email = _build_email_config(_get_required(data, "email"))
+    elif monitors:
+        email = monitors[0].email
+    else:
+        raise ValueError("email is required")
 
     log_backup_count = int(_get_required(data, "log_backup_count"))
     log_run_files_keep = int(_get_required(data, "log_run_files_keep"))
@@ -163,9 +197,16 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         )
         log_run_files_keep = MAX_LOG_FILES
 
+    if monitors:
+        window_title_regex = monitors[0].window_title_regex
+        phrase_regex = monitors[0].phrase_regex
+    else:
+        window_title_regex = str(_get_required(data, "window_title_regex"))
+        phrase_regex = str(_get_required(data, "phrase_regex"))
+
     config = AppConfig(
-        window_title_regex=str(_get_required(data, "window_title_regex")),
-        phrase_regex=str(_get_required(data, "phrase_regex")),
+        window_title_regex=window_title_regex,
+        phrase_regex=phrase_regex,
         poll_interval_seconds=int(_get_required(data, "poll_interval_seconds")),
         healthcheck_interval_seconds=int(
             _get_required(data, "healthcheck_interval_seconds")
@@ -203,6 +244,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         send_repeated_matches=bool(data.get("send_repeated_matches", True)),
         email=email,
         auto_start=bool(data.get("auto_start", True)),
+        monitors=monitors,
     )
     config = _apply_sensitive_path_policy(config)
     _validate_config(config)
@@ -319,6 +361,19 @@ def _validate_config(config: AppConfig) -> None:
         _validate_regex("window_title_regex", config.window_title_regex)
     if config.phrase_regex:
         _validate_regex("phrase_regex", config.phrase_regex)
+    if config.monitors:
+        for monitor in config.monitors:
+            if monitor.window_title_regex:
+                _validate_regex("monitors.window_title_regex", monitor.window_title_regex)
+            if monitor.phrase_regex:
+                _validate_regex("monitors.phrase_regex", monitor.phrase_regex)
+            if not monitor.email.dry_run:
+                if not monitor.email.smtp_host:
+                    raise ValueError("monitors.email.smtp_host is required")
+                if not monitor.email.from_address:
+                    raise ValueError("monitors.email.from_address is required")
+                if not monitor.email.to_addresses:
+                    raise ValueError("monitors.email.to_addresses is required")
     if config.watchdog_timeout_seconds < 1:
         raise ValueError("watchdog_timeout_seconds must be >= 1")
 
