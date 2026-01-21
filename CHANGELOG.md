@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-01-21
+## 2026-01-21 (1.0.0-beta.1)
 
 - Use atomic writes for telemetry, status exports, state storage, and config checksums to prevent corruption on abrupt shutdown.
 - Restore CLI entrypoint module to resolve missing import at startup.
