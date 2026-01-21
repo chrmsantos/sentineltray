@@ -34,7 +34,7 @@ def _build_body(message: str) -> tuple[str, str]:
         details = "Sem detalhes adicionais."
 
     if category == "Alerta" and details == text:
-        details = "Encontramos o seguinte texto na tela:\n" + details
+        details = "Encontrado o seguinte texto na tela:\n" + details
 
     body = (
         "SentinelTray\n\n"
