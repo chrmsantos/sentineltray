@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-01-21
+
+- Use atomic writes for telemetry, status exports, state storage, and config checksums to prevent corruption on abrupt shutdown.
+
 ## 2026-01-20 (0.2.0-beta.7)
 
 - Move sensitive user data and operational logs/status to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData.

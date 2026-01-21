@@ -22,6 +22,7 @@ Versao beta: 0.2.0-beta.1 (19-01-2026)
 - Tray status shows error count and last error reason.
 - Logs include a structured category field (scan/send/error/etc).
 - Logs, telemetry, and status exports redact sensitive strings and store match summaries as hashes.
+- Telemetry, status exports, and state storage are written atomically to avoid corruption on abrupt shutdown.
 - Local telemetry file captures last activity for quick diagnostics and lives in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
 - Status export JSON supports local integrations.
 - Status export CSV supports local integrations.
