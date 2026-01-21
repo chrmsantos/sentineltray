@@ -71,6 +71,63 @@ Comandos principais:
 - help
 - exit
 
+## Regex (curingas) e exemplos
+
+Use regex nas strings de titulo/nome da janela e no texto a procurar. Dicas:
+
+- `.*` corresponde a qualquer sequencia de caracteres.
+- `.` corresponde a um unico caractere.
+- `?` torna o caractere anterior opcional.
+- `[A-Z]` corresponde a um conjunto/intervalo.
+- `\d` para numeros, `\s` para espacos, `^` inicio e `$` fim.
+
+Exemplos:
+
+- window_title_regex: 'Siscam.*Desktop'
+- window_title_regex: '^Sino\\.Siscam\\..*'
+- phrase_regex: 'PROTOCOLOS?\\s+NAO\\s+RECEBIDOS'
+- phrase_regex: 'ALERTA|CRITICO'
+
+## Monitores multiplos (titulo + texto + email)
+
+Para monitorar mais de um par titulo + texto, use `monitors`.
+Cada item deve ter sua propria configuracao de email.
+Quando `monitors` for usado, o bloco `email` no topo pode ser omitido.
+
+Exemplo:
+
+monitors:
+   - window_title_regex: 'APP1'
+      phrase_regex: 'ALERTA1'
+      email:
+         smtp_host: 'smtp.local'
+         smtp_port: 587
+         smtp_username: ''
+         smtp_password: ''
+         from_address: 'alerts1@example.com'
+         to_addresses: ['ops1@example.com']
+         use_tls: true
+         timeout_seconds: 10
+         subject: 'SentinelTray Notification'
+         retry_attempts: 0
+         retry_backoff_seconds: 0
+         dry_run: true
+   - window_title_regex: 'APP2'
+      phrase_regex: 'ALERTA2'
+      email:
+         smtp_host: 'smtp.local'
+         smtp_port: 587
+         smtp_username: ''
+         smtp_password: ''
+         from_address: 'alerts2@example.com'
+         to_addresses: ['ops2@example.com']
+         use_tls: true
+         timeout_seconds: 10
+         subject: 'SentinelTray Notification'
+         retry_attempts: 0
+         retry_backoff_seconds: 0
+         dry_run: true
+
 ## Notes
 
 - Logs are written per execution with detailed fields and kept with a max of 5 files in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs (values above 5 are capped).

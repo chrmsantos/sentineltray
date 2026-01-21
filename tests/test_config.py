@@ -40,3 +40,78 @@ def test_log_retention_is_capped(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 
     assert config.log_backup_count == 5
     assert config.log_run_files_keep == 5
+
+
+def test_load_config_with_monitors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        "\n".join(
+            [
+                "monitors:",
+                "  - window_title_regex: 'APP1'",
+                "    phrase_regex: 'ALERT1'",
+                "    email:",
+                "      smtp_host: 'smtp.local'",
+                "      smtp_port: 587",
+                "      smtp_username: ''",
+                "      smtp_password: ''",
+                "      from_address: 'alerts1@example.com'",
+                "      to_addresses: ['ops1@example.com']",
+                "      use_tls: true",
+                "      timeout_seconds: 10",
+                "      subject: 'SentinelTray Notification'",
+                "      retry_attempts: 0",
+                "      retry_backoff_seconds: 0",
+                "      dry_run: true",
+                "  - window_title_regex: 'APP2'",
+                "    phrase_regex: 'ALERT2'",
+                "    email:",
+                "      smtp_host: 'smtp.local'",
+                "      smtp_port: 587",
+                "      smtp_username: ''",
+                "      smtp_password: ''",
+                "      from_address: 'alerts2@example.com'",
+                "      to_addresses: ['ops2@example.com']",
+                "      use_tls: true",
+                "      timeout_seconds: 10",
+                "      subject: 'SentinelTray Notification'",
+                "      retry_attempts: 0",
+                "      retry_backoff_seconds: 0",
+                "      dry_run: true",
+                "poll_interval_seconds: 1",
+                "healthcheck_interval_seconds: 60",
+                "error_backoff_base_seconds: 5",
+                "error_backoff_max_seconds: 10",
+                "debounce_seconds: 0",
+                "max_history: 10",
+                "state_file: 'state.json'",
+                "log_file: 'logs/sentineltray.log'",
+                "log_level: 'INFO'",
+                "log_console_level: 'WARNING'",
+                "log_console_enabled: true",
+                "log_max_bytes: 5000000",
+                "log_backup_count: 5",
+                "log_run_files_keep: 5",
+                "telemetry_file: 'logs/telemetry.json'",
+                "status_export_file: 'logs/status.json'",
+                "status_export_csv: 'logs/status.csv'",
+                "status_refresh_seconds: 1",
+                "allow_window_restore: true",
+                "start_minimized: true",
+                "log_only_mode: false",
+                "config_checksum_file: 'logs/config.checksum'",
+                "min_free_disk_mb: 100",
+                "show_error_window: true",
+                "watchdog_timeout_seconds: 60",
+                "watchdog_restart: true",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_config(str(config_path))
+
+    assert len(config.monitors) == 2
+    assert config.monitors[0].window_title_regex == "APP1"
+    assert config.monitors[1].phrase_regex == "ALERT2"
