@@ -52,6 +52,7 @@ def test_run_loop_skips_window_unavailable(
         show_error_window=True,
         watchdog_timeout_seconds=60,
         watchdog_restart=True,
+        send_repeated_matches=True,
         email=EmailConfig(
             smtp_host="smtp.local",
             smtp_port=587,

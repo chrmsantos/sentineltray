@@ -39,6 +39,7 @@ def test_prepare_window_restores_minimized(monkeypatch) -> None:
 
     detector = WindowTextDetector("APP", allow_window_restore=True)
     monkeypatch.setattr(detector, "_get_window", lambda: FakeWindow())
+    monkeypatch.setattr(detector, "_minimize_all_windows", lambda *args, **kwargs: None)
 
     detector.find_matches("ALERT")
 
