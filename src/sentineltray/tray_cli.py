@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import ctypes
 import logging
-from threading import Event
+import time
+from threading import Event, Thread
 
 from PIL import Image, ImageDraw
 import pystray
@@ -74,6 +75,9 @@ def run_tray_cli(config: AppConfig) -> int:
         "SentinelTray: Monitorando",
     )
 
+    exit_code: dict[str, int] = {"code": 0}
+    icon_started_at = time.monotonic()
+
     def on_open(_icon: pystray.Icon, _item: pystray.MenuItem) -> None:
         _show_console()
 
@@ -86,14 +90,37 @@ def run_tray_cli(config: AppConfig) -> int:
         pystray.MenuItem("Sair", on_exit),
     )
 
-    icon.run_detached()
+    def run_cli_worker() -> None:
+        try:
+            exit_code["code"] = run_cli(config, exit_event=exit_event)
+        finally:
+            exit_event.set()
+            try:
+                icon.stop()
+            except Exception:
+                LOGGER.debug("Failed to stop tray icon", exc_info=True)
+
+    def setup_icon(_icon: pystray.Icon) -> None:
+        LOGGER.info("Tray icon starting", extra={"category": "startup"})
+        _icon.visible = True
+        elapsed_ms = (time.monotonic() - icon_started_at) * 1000
+        LOGGER.info(
+            "Tray icon visible after %.0f ms",
+            elapsed_ms,
+            extra={"category": "startup"},
+        )
+
+    worker = Thread(target=run_cli_worker, daemon=True)
     _install_console_close_handler()
     _hide_console()
+    worker.start()
 
     try:
-        return run_cli(config, exit_event=exit_event)
+        icon.run(setup=setup_icon)
+    except Exception:
+        LOGGER.exception("Tray icon failed to start", extra={"category": "startup"})
     finally:
-        try:
-            icon.stop()
-        except Exception:
-            LOGGER.debug("Failed to stop tray icon", exc_info=True)
+        exit_event.set()
+        worker.join(timeout=5)
+
+    return exit_code["code"]
