@@ -1,6 +1,6 @@
 # Architecture
 
-Versao beta: 0.2.0-beta.1 (19-01-2026)
+Versao beta: 1.0.0-beta.1 (21-01-2026)
 
 ## Overview
 
