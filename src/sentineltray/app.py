@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import io
 import ctypes
 import hashlib
 import importlib.metadata
@@ -18,7 +19,7 @@ from .detector import WindowTextDetector, WindowUnavailableError
 from .logging_setup import sanitize_text, setup_logging
 from .status import StatusStore
 from .email_sender import EmailAuthError, build_sender
-from .telemetry import JsonWriter
+from .telemetry import JsonWriter, atomic_write_text
 from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
@@ -67,7 +68,11 @@ def _load_state(path: Path) -> list[dict[str, str]]:
 
 
 def _save_state(path: Path, items: list[dict[str, str]]) -> None:
-    path.write_text(json.dumps(items, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(
+        path,
+        json.dumps(items, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
 
 def _normalize(text: str) -> str:
@@ -349,12 +354,12 @@ class Notifier:
 
     def _write_status_csv(self, payload: dict[str, object]) -> None:
         path = Path(self.config.status_export_csv)
-        path.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with path.open("w", encoding="utf-8", newline="") as handle:
-                writer = csv.writer(handle)
-                for key, value in payload.items():
-                    writer.writerow([key, value])
+            buffer = io.StringIO()
+            writer = csv.writer(buffer)
+            for key, value in payload.items():
+                writer.writerow([key, value])
+            atomic_write_text(path, buffer.getvalue(), encoding="utf-8")
         except Exception as exc:
             LOGGER.exception("Status CSV export failed: %s", exc, extra={"category": "error"})
 
@@ -366,8 +371,7 @@ class Notifier:
                 return
             checksum = hashlib.sha256(config_path.read_bytes()).hexdigest()
             path = Path(self.config.config_checksum_file)
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(checksum, encoding="utf-8")
+            atomic_write_text(path, checksum, encoding="utf-8")
         except Exception as exc:
             LOGGER.exception("Config checksum update failed: %s", exc, extra={"category": "error"})
 
