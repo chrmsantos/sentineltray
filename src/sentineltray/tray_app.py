@@ -61,11 +61,12 @@ def run_tray(config: AppConfig) -> None:
         snapshot = status.snapshot()
         if status_label is not None and status_label.winfo_exists():
             status_label.config(
-                text=format_status(
-                    snapshot,
-                    window_title_regex=config.window_title_regex,
-                    phrase_regex=config.phrase_regex,
-                )
+                    text=format_status(
+                        snapshot,
+                        window_title_regex=config.window_title_regex,
+                        phrase_regex=config.phrase_regex,
+                        poll_interval_seconds=config.poll_interval_seconds,
+                    )
             )
         # Erros ficam apenas registrados no painel principal.
         root.after(int(config.status_refresh_seconds * 1000), refresh_status)
@@ -125,11 +126,12 @@ def run_tray(config: AppConfig) -> None:
 
         status_label = tk.Label(
             status_window,
-            text=format_status(
-                status.snapshot(),
-                window_title_regex=config.window_title_regex,
-                phrase_regex=config.phrase_regex,
-            ),
+                text=format_status(
+                    status.snapshot(),
+                    window_title_regex=config.window_title_regex,
+                    phrase_regex=config.phrase_regex,
+                    poll_interval_seconds=config.poll_interval_seconds,
+                ),
             justify="left",
             anchor="nw",
             font=("Segoe UI", 12),
@@ -182,11 +184,12 @@ def run_tray(config: AppConfig) -> None:
             snapshot = status.snapshot()
             if status_label is not None and status_label.winfo_exists():
                 status_label.config(
-                    text=format_status(
-                        snapshot,
-                        window_title_regex=config.window_title_regex,
-                        phrase_regex=config.phrase_regex,
-                    )
+                        text=format_status(
+                            snapshot,
+                            window_title_regex=config.window_title_regex,
+                            phrase_regex=config.phrase_regex,
+                            poll_interval_seconds=config.poll_interval_seconds,
+                        )
                 )
 
         menu_font = tkfont.Font(family="Segoe UI", size=11, weight="bold")

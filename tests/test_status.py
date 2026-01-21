@@ -29,7 +29,12 @@ def test_status_store_snapshot() -> None:
         snapshot,
         window_title_regex="APP",
         phrase_regex="ALERT",
+        poll_interval_seconds=60,
     )
     assert "Em execução: sim" in text
     assert "Pausado: sim" in text
     assert "19-01-2026 - 23:00" in text
+    assert "janela monitorada: APP" in text
+    assert "texto monitorado: ALERT" in text
+    assert "próxima verificação: 19-01-2026 - 23:01" in text
+    assert "Última identificação: 19-01-2026 - 23:00" in text

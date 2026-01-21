@@ -71,7 +71,14 @@ def _watch_status(config: AppConfig, status: StatusStore, interval_seconds: int)
     print("Monitorando status. Pressione Ctrl+C para sair.")
     try:
         while True:
-            print(format_status(status.snapshot(), window_title_regex=config.window_title_regex, phrase_regex=config.phrase_regex))
+            print(
+                format_status(
+                    status.snapshot(),
+                    window_title_regex=config.window_title_regex,
+                    phrase_regex=config.phrase_regex,
+                    poll_interval_seconds=config.poll_interval_seconds,
+                )
+            )
             time.sleep(interval)
     except KeyboardInterrupt:
         print("Monitoramento interrompido.")
@@ -111,7 +118,14 @@ def run_cli(config: AppConfig, args: Iterable[str] | None = None) -> int:
             if not command:
                 continue
             if command == "status":
-                print(format_status(status.snapshot(), window_title_regex=config.window_title_regex, phrase_regex=config.phrase_regex))
+                print(
+                    format_status(
+                        status.snapshot(),
+                        window_title_regex=config.window_title_regex,
+                        phrase_regex=config.phrase_regex,
+                        poll_interval_seconds=config.poll_interval_seconds,
+                    )
+                )
             elif command == "pause":
                 pause_event.set()
                 print("Pausado.")

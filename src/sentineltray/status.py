@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import Lock
 
 
@@ -92,24 +92,39 @@ def _format_timestamp(value: str) -> str:
         return value
 
 
+def _format_next_check(last_scan: str, poll_interval_seconds: int | None) -> str:
+    if not last_scan or not poll_interval_seconds:
+        return ""
+    try:
+        timestamp = datetime.fromisoformat(last_scan)
+        next_timestamp = timestamp + timedelta(seconds=int(poll_interval_seconds))
+        return next_timestamp.strftime("%d-%m-%Y - %H:%M")
+    except ValueError:
+        return ""
+
+
 def format_status(
     snapshot: StatusSnapshot,
     *,
     window_title_regex: str = "",
     phrase_regex: str = "",
+    poll_interval_seconds: int | None = None,
 ) -> str:
     running = "sim" if snapshot.running else "nao"
     paused = "sim" if snapshot.paused else "nao"
     phrase_label = phrase_regex or "<qualquer texto>"
     window_label = window_title_regex or "<janela configurada>"
+    last_scan = _format_timestamp(snapshot.last_scan)
+    next_check = _format_next_check(snapshot.last_scan, poll_interval_seconds)
+    last_identification = _format_timestamp(snapshot.last_match) or snapshot.last_match
     lines = [
         f"Em execução: {running}",
         f"Pausado: {paused}",
-        f"Última verificação: {_format_timestamp(snapshot.last_scan)}",
-        (
-            "Última incidência de "
-            f"{phrase_label} encontrada em {window_label}"
-        ),
+        f"janela monitorada: {window_label}",
+        f"texto monitorado: {phrase_label}",
+        f"Última verificação: {last_scan}",
+        f"próxima verificação: {next_check}",
+        f"Última identificação: {last_identification}",
         f"Último envio de alerta: {_format_timestamp(snapshot.last_send)}",
         f"Último erro registrado: {_format_timestamp(snapshot.last_error)}",
         f"Último resumo de saúde: {_format_timestamp(snapshot.last_healthcheck)}",
