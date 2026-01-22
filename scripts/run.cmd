@@ -17,14 +17,14 @@ call :log "INFO" "Iniciando run.cmd"
 call :log_context
 
 if not exist "%PYTHON%" (
-  call :log "ERROR" "Runtime nao encontrado. Execute scripts\bootstrap_self_contained.cmd primeiro."
-  echo Runtime nao encontrado. Execute scripts\bootstrap_self_contained.cmd primeiro.
+  call :log "ERROR" "Runtime nao encontrado."
+  echo Runtime nao encontrado.
   exit /b 1
 )
 
 if not exist "%CHECKSUMS%" (
-  call :log "ERROR" "Runtime incompleto. Reexecute scripts\bootstrap_self_contained.cmd."
-  echo Runtime incompleto. Reexecute scripts\bootstrap_self_contained.cmd.
+  call :log "ERROR" "Runtime incompleto."
+  echo Runtime incompleto.
   exit /b 1
 )
 

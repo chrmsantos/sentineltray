@@ -8,7 +8,7 @@ Versao beta: 1.0.0-beta.1 (21-01-2026)
 - Minimized target windows are restored and focused before scanning.
 - Email delivery uses SMTP with optional TLS.
 - State is stored in state.json to prevent duplicate sends.
-- Runtime is self-contained (embedded CPython + offline wheelhouse) managed by scripts/bootstrap_self_contained.cmd and validated by runtime/checksums.txt.
+- Runtime is self-contained (embedded CPython + offline wheelhouse) validated by runtime/checksums.txt.
 - Logs are created per execution with detailed fields and kept with a max of 5 files in %SENTINELTRAY_DATA_DIR%\logs (values above 5 are capped).
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
@@ -45,8 +45,6 @@ Versao beta: 1.0.0-beta.1 (21-01-2026)
 - Watchdog detects long scans and can reset components.
 - Sensitive data paths are enforced under %SENTINELTRAY_DATA_DIR%; operational logs remain in %SENTINELTRAY_DATA_DIR%\logs.
 - Politica de privacidade detalhada em PRIVACY.md.
-- Instalacao automatica disponivel via install.cmd (suporta /dir para destino customizado).
-- Destino de instalacao padrao: %USERPROFILE%\AxonZ\SystemData\sentineltray.
 - Dados locais residem em %SENTINELTRAY_DATA_DIR% (portable), com fallback para %LOCALAPPDATA%.
 - Config is loaded exclusively from %SENTINELTRAY_DATA_DIR%\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
