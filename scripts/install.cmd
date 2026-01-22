@@ -88,6 +88,10 @@ set "SRC_DIR="
 for /d %%D in ("%EXTRACT_DIR%\sentineltray-*") do set "SRC_DIR=%%D"
 if not defined SRC_DIR call :fail "Diretorio de origem nao encontrado"
 
+if not exist "%SRC_DIR%\runtime\checksums.txt" (
+	call :fail "Pacote sem runtime. Use a distribuicao self-contained (release) com runtime incluido"
+)
+
 set "BACKUP_DIR="
 if /I "%MODE%"=="update" (
 	if exist "%INSTALL_DIR%" (
@@ -104,7 +108,11 @@ powershell -NoProfile -Command "Copy-Item -Path '%SRC_DIR%\*' -Destination '%INS
 cd /d "%INSTALL_DIR%" || (call :rollback & call :fail "Falha ao acessar diretorio de instalacao")
 
 call :log "INFO" "Preparando runtime auto-contido"
-call "%INSTALL_DIR%\scripts\bootstrap_self_contained.cmd" || (call :rollback & call :fail "Falha ao preparar runtime")
+call "%INSTALL_DIR%\scripts\bootstrap_self_contained.cmd"
+if errorlevel 1 (
+	call :rollback
+	call :fail "Falha ao preparar runtime"
+)
 
 call :log "INFO" "Copiando config.local.yaml (se necessario)"
 call :copy_config
