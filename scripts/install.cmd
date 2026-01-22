@@ -22,7 +22,7 @@ set "DOWNLOADED_ZIP=0"
 
 :parse
 if "%~1"=="" goto parsed
-if /I "%~1"=="/offline" set "OFFLINE=1"
+lif /I "%~1"=="/offline" set "OFFLINE=1"
 if /I "%~1"=="/zip" set "ZIP_PATH=%~2" & shift
 if /I "%~1"=="/dir" set "INSTALL_DIR=%~2" & shift
 if /I "%~1"=="/update" set "MODE=update"
@@ -90,6 +90,7 @@ if not defined SRC_DIR call :fail "Diretorio de origem nao encontrado"
 
 if not exist "%SRC_DIR%\runtime\checksums.txt" (
 	call :fail "Pacote sem runtime. Use a distribuicao self-contained (release) com runtime incluido"
+	exit /b 1
 )
 
 set "BACKUP_DIR="
@@ -112,6 +113,7 @@ call "%INSTALL_DIR%\scripts\bootstrap_self_contained.cmd"
 if errorlevel 1 (
 	call :rollback
 	call :fail "Falha ao preparar runtime"
+	exit /b 1
 )
 
 call :log "INFO" "Copiando config.local.yaml (se necessario)"
