@@ -12,6 +12,7 @@ logs/config.checksum
 config.local.yaml
 *.local.yaml
 runtime/
+UserData/
 tmp/AppData/Local/AxonZ/SentinelTray/UserData/
 tmp/AppData/Local/AxonZ/SentinelTray/UserData/logs/
 tmp/UserData/
