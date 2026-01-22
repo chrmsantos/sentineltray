@@ -17,7 +17,7 @@ from threading import Event
 from .config import AppConfig, MonitorConfig, get_project_root, get_user_data_dir
 from .detector import WindowTextDetector, WindowUnavailableError
 from .logging_setup import sanitize_text, setup_logging
-from .status import StatusStore
+from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, build_sender
 from .telemetry import JsonWriter, atomic_write_text
 from . import __release_date__, __version_label__
@@ -552,21 +552,13 @@ class Notifier:
         uptime_seconds = int((datetime.now(timezone.utc) - self._started_at).total_seconds())
         self.status.set_uptime_seconds(uptime_seconds)
         snapshot = self.status.snapshot()
-        match_age_seconds = 0
-        if snapshot.last_match_at:
-            try:
-                last_match_at = datetime.fromisoformat(snapshot.last_match_at)
-                match_age_seconds = int((datetime.now(timezone.utc) - last_match_at).total_seconds())
-            except ValueError:
-                match_age_seconds = 0
-        message = (
-            "info: healthcheck "
-            f"uptime_seconds={uptime_seconds} "
-            f"last_scan={snapshot.last_scan} "
-            f"last_match_age_seconds={match_age_seconds} "
-            f"last_send={snapshot.last_send} "
-            f"last_error={snapshot.last_error}"
+        status_text = format_status(
+            snapshot,
+            window_title_regex=self.config.window_title_regex,
+            phrase_regex=self.config.phrase_regex,
+            poll_interval_seconds=self.config.poll_interval_seconds,
         )
+        message = f"info: {status_text}"
         safe_message = _safe_status_text(message)
         try:
             sent_any = False

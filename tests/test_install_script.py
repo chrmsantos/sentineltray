@@ -11,3 +11,8 @@ def test_install_script_has_logging_and_retention() -> None:
     assert "Select-Object -Skip 5" in content
     assert ":fail" in content
     assert ":log" in content
+    assert "/offline" in content
+    assert "/uninstall" in content
+    assert "validate_hash" in content
+    assert "rollback" in content
+    assert "create_shortcut.ps1" in content

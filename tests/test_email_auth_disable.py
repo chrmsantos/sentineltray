@@ -34,6 +34,7 @@ def test_auth_failure_disables_email_sends() -> None:
         show_error_window=True,
         watchdog_timeout_seconds=60,
         watchdog_restart=True,
+        send_repeated_matches=True,
         email=EmailConfig(
             smtp_host="smtp.local",
             smtp_port=587,
@@ -65,5 +66,5 @@ def test_auth_failure_disables_email_sends() -> None:
     notifier._send_startup_test()
 
     assert calls["count"] == 1
-    assert notifier._email_disabled
+    assert notifier._monitors[0].email_disabled
     assert "smtp auth failed" in notifier.status.snapshot().last_error.lower()

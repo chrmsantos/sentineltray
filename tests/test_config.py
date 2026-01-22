@@ -13,7 +13,7 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.window_title_regex == "Sino\\.Siscam\\.Desktop"
     assert config.phrase_regex == "ALERT"
     assert config.poll_interval_seconds == 180
-    assert config.healthcheck_interval_seconds == 3600
+    assert config.healthcheck_interval_seconds == 900
     assert config.error_backoff_base_seconds == 5
     assert config.error_backoff_max_seconds == 300
     assert config.debounce_seconds == 600

@@ -112,7 +112,6 @@ class AppConfig:
     email_queue_max_attempts: int = 10
     email_queue_retry_base_seconds: int = 30
     log_throttle_seconds: int = 60
-    auto_start: bool = True
     monitors: list[MonitorConfig] = field(default_factory=list)
 
 
@@ -277,7 +276,6 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         email_queue_max_attempts=int(data.get("email_queue_max_attempts", 10)),
         email_queue_retry_base_seconds=int(data.get("email_queue_retry_base_seconds", 30)),
         log_throttle_seconds=int(data.get("log_throttle_seconds", 60)),
-        auto_start=bool(data.get("auto_start", True)),
         monitors=monitors,
     )
     config = _apply_sensitive_path_policy(config)

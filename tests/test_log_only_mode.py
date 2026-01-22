@@ -33,6 +33,7 @@ def test_log_only_mode_skips_send() -> None:
         show_error_window=True,
         watchdog_timeout_seconds=60,
         watchdog_restart=True,
+        send_repeated_matches=True,
         email=EmailConfig(
             smtp_host="smtp.local",
             smtp_port=587,
