@@ -14,7 +14,8 @@ Esta aplicação processa dados pessoais apenas para enviar alertas e manter o h
 
 Dados sensiveis necessarios ao funcionamento ficam exclusivamente em:
 
-%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData
+- %SENTINELTRAY_DATA_DIR% (quando definido; run.cmd usa a pasta de instalacao)
+- ou %LOCALAPPDATA%\AxonZ\SentinelTray\UserData (fallback padrao)
 
 Isto inclui:
 
@@ -23,7 +24,7 @@ Isto inclui:
 
 Dados operacionais (diagnostico e status) ficam em:
 
-%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs
+- %SENTINELTRAY_DATA_DIR%\logs
 
 - *.log (diagnostico)
 - telemetry.json (estado operacional)
@@ -34,7 +35,7 @@ O repositório contém apenas templates comentados e exemplos fictícios.
 
 ## Execução inicial
 
-Ao iniciar, se %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
+Ao iniciar, se %SENTINELTRAY_DATA_DIR%\config.local.yaml não existir, o aplicativo cria o arquivo e o abre para preenchimento inicial. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em %SENTINELTRAY_DATA_DIR%\logs.
 
 ## Segurança e minimização
 
@@ -49,7 +50,7 @@ Ao iniciar, se %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.lo
 
 ## Direitos do titular
 
-O usuário pode remover ou corrigir os dados a qualquer momento editando ou apagando os arquivos em %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData.
+O usuário pode remover ou corrigir os dados a qualquer momento editando ou apagando os arquivos em %SENTINELTRAY_DATA_DIR%.
 
 ## Contato
 

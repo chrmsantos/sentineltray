@@ -21,7 +21,7 @@ def _ensure_src_on_path() -> None:
 _ensure_src_on_path()
 
 from sentineltray.config import get_user_data_dir, load_config
-from sentineltray.tray_cli import run_tray_cli
+from sentineltray.tray_app import run_tray
 
 
 def _pid_file_path() -> Path:
@@ -118,7 +118,8 @@ def main() -> int:
         config = load_config(str(local_path))
     except Exception as exc:
         _handle_config_error(local_path, exc)
-    return run_tray_cli(config)
+    run_tray(config)
+    return 0
 
 
 if __name__ == "__main__":

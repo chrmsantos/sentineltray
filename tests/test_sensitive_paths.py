@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sentineltray.config import get_user_log_dir, load_config
+from sentineltray.config import get_user_data_dir, get_user_log_dir, load_config
 
 
 def test_sensitive_paths_forced_to_user_root(
@@ -65,14 +65,7 @@ def test_sensitive_paths_forced_to_user_root(
 
     config = load_config(str(config_path))
 
-    base = (
-        tmp_path
-        / "AppData"
-        / "Local"
-        / "AxonZ"
-        / "SentinelTray"
-        / "UserData"
-    )
+    base = get_user_data_dir()
     log_root = get_user_log_dir()
     assert config.state_file == str(base / "state.json")
     assert config.log_file == str(log_root / "sentineltray.log")

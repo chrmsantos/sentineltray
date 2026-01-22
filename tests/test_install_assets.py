@@ -10,6 +10,7 @@ def test_bootstrap_script_has_logging() -> None:
     assert "bootstrap_" in content
     assert "Select-Object -Skip 5" in content
     assert ":log" in content
+    assert ":log_context" in content
     assert "Invoke-WebRequest" not in content
 
 
@@ -19,6 +20,8 @@ def test_create_shortcut_supports_start_menu() -> None:
     assert "CreateStartMenu" in content
     assert "WScript.Shell" in content
     assert "StartMenuName" in content
+    assert "LogPath" in content
+    assert "Write-Log" in content
 
 
 def test_uninstall_script_exists() -> None:

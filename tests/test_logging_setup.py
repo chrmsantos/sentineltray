@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from logging.handlers import RotatingFileHandler
@@ -18,12 +19,15 @@ def test_setup_logging_creates_run_log_and_prunes(tmp_path: Path) -> None:
         os.utime(path, (1, 1))
         existing.append(path)
 
-    setup_logging(str(base_log))
+    setup_logging(str(base_log), app_version="1.2.3", release_date="2026-01-22")
 
     logs = sorted(log_dir.glob("sentineltray_*.log"))
     assert len(logs) == 5
     assert any(path not in existing for path in logs)
     assert base_log.exists()
+    assert (log_dir / "sentineltray.jsonl").exists()
+    json_runs = sorted(log_dir.glob("sentineltray_*.jsonl"))
+    assert json_runs
     assert logging.getLogger("PIL").level == logging.WARNING
     assert logging.getLogger("PIL.Image").level == logging.WARNING
 
@@ -75,3 +79,26 @@ def test_sanitize_text_redacts_sensitive_values() -> None:
     assert "<email>" in sanitized
     assert "<phone>" in sanitized
     assert "token=<redacted>" in sanitized
+
+
+def test_json_log_contains_context(tmp_path: Path) -> None:
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    base_log = log_dir / "sentineltray.log"
+
+    setup_logging(str(base_log), app_version="9.9.9", release_date="2026-01-22")
+    logger = logging.getLogger("sentineltray.test")
+    logger.info("test entry", extra={"category": "test"})
+
+    json_path = log_dir / "sentineltray.jsonl"
+    assert json_path.exists()
+    line = json_path.read_text(encoding="utf-8").splitlines()[-1]
+    payload = json.loads(line)
+    assert payload["category"] == "test"
+    assert payload["message"] == "test entry"
+    assert payload["app_version"] == "9.9.9"
+    assert payload["release_date"] == "2026-01-22"
+    assert payload["session_id"]
+
+    for handler in logging.getLogger().handlers:
+        handler.close()

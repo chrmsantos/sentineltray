@@ -10,7 +10,7 @@ set "INSTALL_DIR=%USERPROFILE%\AxonZ\SystemData\sentineltray"
 set "TEMP_ZIP=%TEMP%\sentineltray.zip"
 set "EXTRACT_DIR=%TEMP%\sentineltray-extract"
 set "LOG_DIR=%TEMP%\sentineltray-install"
-set "USER_DATA_DIR=%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData"
+set "USER_DATA_DIR=%INSTALL_DIR%\UserData"
 set "REPO_SHA256="
 set "MODE=install"
 set "OFFLINE=0"
@@ -24,7 +24,7 @@ set "DOWNLOADED_ZIP=0"
 if "%~1"=="" goto parsed
 if /I "%~1"=="/offline" set "OFFLINE=1"
 if /I "%~1"=="/zip" set "ZIP_PATH=%~2" & shift
-if /I "%~1"=="/dir" call :log "Parametro /dir ignorado; instalacao fixa em %INSTALL_DIR%" & shift
+if /I "%~1"=="/dir" set "INSTALL_DIR=%~2" & shift
 if /I "%~1"=="/update" set "MODE=update"
 if /I "%~1"=="/uninstall" set "MODE=uninstall"
 if /I "%~1"=="/no-desktop" set "CREATE_DESKTOP=0"
@@ -34,13 +34,16 @@ shift
 goto parse
 :parsed
 
+set "USER_DATA_DIR=%INSTALL_DIR%\UserData"
+
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "LOG_TS=%%I"
 set "LOG_FILE=%LOG_DIR%\install_%LOG_TS%.log"
 
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 powershell -NoProfile -Command "Get-ChildItem -Path '%LOG_DIR%\install_*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -Skip 5 | Remove-Item -Force -ErrorAction SilentlyContinue" >nul 2>nul
 
-call :log "Iniciando instalacao do SentinelTray"
+call :log "INFO" "Iniciando instalacao do SentinelTray"
+call :log_context
 call :check_powershell
 call :remove_autostart_legacy
 
@@ -48,12 +51,12 @@ if /I "%MODE%"=="uninstall" goto uninstall
 
 if /I "%MODE%"=="update" (
 	if not exist "%INSTALL_DIR%" (
-		call :log "Instalacao anterior nao encontrada; usando modo install"
+		call :log "WARN" "Instalacao anterior nao encontrada; usando modo install"
 		set "MODE=install"
 	)
 )
 
-call :log "Destino: %INSTALL_DIR%"
+call :log "INFO" "Destino: %INSTALL_DIR%"
 call :ensure_install_dir
 call :check_write
 call :check_disk
@@ -61,13 +64,13 @@ call :check_disk
 if "%OFFLINE%"=="1" (
 	if "%ZIP_PATH%"=="" call :fail "Modo offline requer /zip <caminho>"
 	set "TEMP_ZIP=%ZIP_PATH%"
-	call :log "Modo offline: usando zip local %TEMP_ZIP%"
+	call :log "INFO" "Modo offline: usando zip local %TEMP_ZIP%"
 ) else (
 	if not "%ZIP_PATH%"=="" (
 		set "TEMP_ZIP=%ZIP_PATH%"
-		call :log "Usando zip local %TEMP_ZIP%"
+		call :log "INFO" "Usando zip local %TEMP_ZIP%"
 	) else (
-		call :log "Baixando codigo do GitHub"
+		call :log "INFO" "Baixando codigo do GitHub"
 		powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%REPO_URL%' -OutFile '%TEMP_ZIP%'" || call :fail "Falha ao baixar o pacote do GitHub"
 		set "DOWNLOADED_ZIP=1"
 	)
@@ -76,7 +79,7 @@ if "%OFFLINE%"=="1" (
 if not exist "%TEMP_ZIP%" call :fail "Arquivo zip nao encontrado"
 call :validate_hash
 
-call :log "Extraindo arquivos"
+call :log "INFO" "Extraindo arquivos"
 if exist "%EXTRACT_DIR%" rmdir /s /q "%EXTRACT_DIR%"
 mkdir "%EXTRACT_DIR%" || call :fail "Falha ao preparar diretorio temporario"
 powershell -NoProfile -Command "Expand-Archive -Path '%TEMP_ZIP%' -DestinationPath '%EXTRACT_DIR%' -Force" || call :fail "Falha ao extrair o pacote"
@@ -94,49 +97,49 @@ if /I "%MODE%"=="update" (
 	)
 )
 
-call :log "Copiando arquivos do projeto"
+call :log "INFO" "Copiando arquivos do projeto"
 if not exist "%INSTALL_DIR%" mkdir "%INSTALL_DIR%" || call :fail "Nao foi possivel criar diretorio de instalacao"
 powershell -NoProfile -Command "Copy-Item -Path '%SRC_DIR%\*' -Destination '%INSTALL_DIR%' -Recurse -Force" || (call :rollback & call :fail "Falha ao copiar arquivos")
 
 cd /d "%INSTALL_DIR%" || (call :rollback & call :fail "Falha ao acessar diretorio de instalacao")
 
-call :log "Preparando runtime auto-contido"
+call :log "INFO" "Preparando runtime auto-contido"
 call "%INSTALL_DIR%\scripts\bootstrap_self_contained.cmd" || (call :rollback & call :fail "Falha ao preparar runtime")
 
-call :log "Copiando config.local.yaml (se necessario)"
+call :log "INFO" "Copiando config.local.yaml (se necessario)"
 call :copy_config
 
-call :log "Criando atalhos"
+call :log "INFO" "Criando atalhos"
 set "SHORTCUT_FLAGS="
 if "%CREATE_DESKTOP%"=="1" set "SHORTCUT_FLAGS=!SHORTCUT_FLAGS! -CreateDesktop"
 if "%CREATE_START_MENU%"=="1" set "SHORTCUT_FLAGS=!SHORTCUT_FLAGS! -CreateStartMenu"
 if not "%SHORTCUT_FLAGS%"=="" (
-	powershell -NoProfile -ExecutionPolicy Bypass -File "%INSTALL_DIR%\scripts\create_shortcut.ps1" -InstallDir "%INSTALL_DIR%" %SHORTCUT_FLAGS% -StartMenuName "%START_MENU_NAME%" || (call :rollback & call :fail "Falha ao criar atalhos")
+	powershell -NoProfile -ExecutionPolicy Bypass -File "%INSTALL_DIR%\scripts\create_shortcut.ps1" -InstallDir "%INSTALL_DIR%" %SHORTCUT_FLAGS% -StartMenuName "%START_MENU_NAME%" -LogPath "%LOG_FILE%" || (call :rollback & call :fail "Falha ao criar atalhos")
 ) else (
-	call :log "Atalhos desativados por parametro"
+	call :log "INFO" "Atalhos desativados por parametro"
 )
 
-call :log "Limpando arquivos temporarios"
+call :log "INFO" "Limpando arquivos temporarios"
 if "%DOWNLOADED_ZIP%"=="1" if exist "%TEMP_ZIP%" del /f /q "%TEMP_ZIP%" >nul 2>nul
 if exist "%EXTRACT_DIR%" rmdir /s /q "%EXTRACT_DIR%" >nul 2>nul
 
 if not "%BACKUP_DIR%"=="" if exist "%BACKUP_DIR%" rmdir /s /q "%BACKUP_DIR%" >nul 2>nul
 
-call :log "Instalacao concluida"
+call :log "INFO" "Instalacao concluida"
 echo Instalacao concluida.
 echo Execute: %INSTALL_DIR%\scripts\run.cmd
 exit /b 0
 
 :uninstall
-call :log "Iniciando desinstalacao"
+call :log "INFO" "Iniciando desinstalacao"
 call :remove_autostart_legacy
 call :remove_shortcuts
 if exist "%INSTALL_DIR%" (
 	rmdir /s /q "%INSTALL_DIR%" || call :fail "Falha ao remover diretorio de instalacao"
 ) else (
-	call :log "Diretorio de instalacao nao encontrado"
+	call :log "WARN" "Diretorio de instalacao nao encontrado"
 )
-call :log "Desinstalacao concluida"
+call :log "INFO" "Desinstalacao concluida"
 echo Desinstalacao concluida.
 exit /b 0
 
@@ -170,10 +173,6 @@ powershell -NoProfile -Command "$actual=(Get-FileHash -Algorithm SHA256 -Path '%
 exit /b 0
 
 :copy_config
-if "%USERPROFILE%"=="" (
-	call :log "USERPROFILE nao definido; pulando copia de config.local.yaml"
-	exit /b 0
-)
 if not exist "%USER_DATA_DIR%" mkdir "%USER_DATA_DIR%" >nul 2>nul
 set "CONFIG_PATH=%USER_DATA_DIR%\config.local.yaml"
 set "TEMPLATE_PATH=%INSTALL_DIR%\templates\local\config.local.yaml"
@@ -211,11 +210,33 @@ if exist "%INSTALL_DIR%" rmdir /s /q "%INSTALL_DIR%" >nul 2>nul
 exit /b 0
 
 :log
-echo [%DATE% %TIME%] %*
->>"%LOG_FILE%" echo [%DATE% %TIME%] %*
+set "LEVEL=%~1"
+set "MESSAGE=%~2"
+if /I "%LEVEL%"=="INFO" goto log_known
+if /I "%LEVEL%"=="WARN" goto log_known
+if /I "%LEVEL%"=="ERROR" goto log_known
+if /I "%LEVEL%"=="DEBUG" goto log_known
+set "LEVEL=INFO"
+set "MESSAGE=%*"
+:log_known
+echo [%DATE% %TIME%] [%LEVEL%] %MESSAGE%
+>>"%LOG_FILE%" echo [%DATE% %TIME%] [%LEVEL%] %MESSAGE%
+exit /b 0
+
+:log_context
+call :log "INFO" "Modo: %MODE%"
+call :log "INFO" "Offline: %OFFLINE%"
+call :log "INFO" "InstallDir: %INSTALL_DIR%"
+call :log "INFO" "UserDataDir: %USER_DATA_DIR%"
+call :log "INFO" "ZipPath: %ZIP_PATH%"
+call :log "INFO" "CreateDesktop: %CREATE_DESKTOP%"
+call :log "INFO" "CreateStartMenu: %CREATE_START_MENU%"
+call :log "INFO" "StartMenuName: %START_MENU_NAME%"
+for /f %%I in ('ver') do call :log "INFO" "OS: %%I"
+for /f %%I in ('powershell -NoProfile -Command "$PSVersionTable.PSVersion.ToString()"') do call :log "INFO" "PowerShell: %%I"
 exit /b 0
 
 :fail
-call :log "ERRO: %*"
+call :log "ERROR" "%*"
 echo Falha na instalacao. Consulte o log: %LOG_FILE%
 exit /b 1

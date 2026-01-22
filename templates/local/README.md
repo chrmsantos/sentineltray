@@ -7,7 +7,8 @@ Use estes arquivos como referência para criar os arquivos locais no computador 
 ## Como usar
 
 1. Crie o arquivo de configuracao em:
-   %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml
+   %SENTINELTRAY_DATA_DIR%\config.local.yaml (quando definido; run.cmd usa a pasta de instalacao)
+   ou %LOCALAPPDATA%\AxonZ\SentinelTray\UserData\config.local.yaml
 2. Preencha os campos obrigatorios e reinicie o aplicativo.
 3. state.json é apenas um exemplo do formato de histórico local.
 
@@ -33,11 +34,4 @@ Cada item deve ter um bloco `email` completo.
 ## Observações
 
 - Não inclua credenciais reais em arquivos de exemplo.
-- Parâmetros adicionais de robustez disponíveis:
-   - min_repeat_seconds
-   - error_notification_cooldown_seconds
-   - window_error_backoff_base_seconds / window_error_backoff_max_seconds
-   - window_error_circuit_threshold / window_error_circuit_seconds
-   - email_queue_file / email_queue_max_items / email_queue_max_age_seconds
-   - email_queue_max_attempts / email_queue_retry_base_seconds
-   - log_throttle_seconds
+- Parâmetros adicionais de robustez disponíveis: min_repeat_seconds; error_notification_cooldown_seconds; window_error_backoff_base_seconds / window_error_backoff_max_seconds; window_error_circuit_threshold / window_error_circuit_seconds; email_queue_file / email_queue_max_items / email_queue_max_age_seconds; email_queue_max_attempts / email_queue_retry_base_seconds; log_throttle_seconds.

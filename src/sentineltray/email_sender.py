@@ -5,12 +5,20 @@ import logging
 import smtplib
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from email.message import EmailMessage
 from pathlib import Path
 from typing import Callable
 
 from .config import EmailConfig
+from .email_queue_utils import (
+    build_new_item,
+    compute_next_attempt,
+    compute_oldest_age_seconds,
+    normalize_item,
+    parse_timestamp,
+    prune_items,
+)
 from .telemetry import atomic_write_text
 
 LOGGER = logging.getLogger(__name__)
@@ -24,7 +32,10 @@ class EmailQueued(RuntimeError):
     """Raised when a message is queued after a transient failure."""
 
 
-def _build_subject(_subject: str, category: str) -> str:
+def _build_subject(subject: str, category: str) -> str:
+    base = (subject or "").strip()
+    if base:
+        return f"SentinelTray {base} - {category}"
     return f"SentinelTray {category}"
 
 
@@ -152,12 +163,6 @@ class DiskEmailQueue:
     def _now(self) -> datetime:
         return datetime.now(timezone.utc)
 
-    def _parse_timestamp(self, value: str) -> datetime | None:
-        try:
-            return datetime.fromisoformat(value)
-        except ValueError:
-            return None
-
     def _load_items(self) -> list[dict[str, object]]:
         if not self._path.exists():
             return []
@@ -168,50 +173,14 @@ class DiskEmailQueue:
         if not isinstance(data, list):
             return []
         items: list[dict[str, object]] = []
+        now = self._now()
         for raw in data:
             if not isinstance(raw, dict):
                 continue
-            message = raw.get("message")
-            if not isinstance(message, str) or not message.strip():
-                continue
-            created_at = raw.get("created_at")
-            if not isinstance(created_at, str):
-                created_at = self._now().isoformat()
-            attempts = int(raw.get("attempts", 0))
-            next_attempt_at = raw.get("next_attempt_at")
-            if not isinstance(next_attempt_at, str):
-                next_attempt_at = self._now().isoformat()
-            items.append(
-                {
-                    "message": message,
-                    "created_at": created_at,
-                    "attempts": attempts,
-                    "next_attempt_at": next_attempt_at,
-                }
-            )
+            normalized = normalize_item(raw, now)
+            if normalized:
+                items.append(normalized)
         return items
-
-    def _prune_items(self, items: list[dict[str, object]]) -> list[dict[str, object]]:
-        now = self._now()
-        pruned: list[dict[str, object]] = []
-        for item in items:
-            created_raw = item.get("created_at")
-            created_at = (
-                self._parse_timestamp(created_raw)
-                if isinstance(created_raw, str)
-                else None
-            )
-            attempts = int(item.get("attempts", 0))
-            if self._max_attempts and attempts > self._max_attempts:
-                continue
-            if self._max_age_seconds and created_at:
-                if (now - created_at).total_seconds() > self._max_age_seconds:
-                    continue
-            pruned.append(item)
-
-        if self._max_items and len(pruned) > self._max_items:
-            pruned = pruned[-self._max_items :]
-        return pruned
 
     def _save_items(self, items: list[dict[str, object]]) -> None:
         payload = json.dumps(items, ensure_ascii=False, indent=2)
@@ -219,15 +188,14 @@ class DiskEmailQueue:
 
     def enqueue(self, message: str) -> None:
         items = self._load_items()
-        items.append(
-            {
-                "message": message,
-                "created_at": self._now().isoformat(),
-                "attempts": 0,
-                "next_attempt_at": self._now().isoformat(),
-            }
+        items.append(build_new_item(message, self._now()))
+        items = prune_items(
+            items,
+            now=self._now(),
+            max_items=self._max_items,
+            max_age_seconds=self._max_age_seconds,
+            max_attempts=self._max_attempts,
         )
-        items = self._prune_items(items)
         self._save_items(items)
 
     def drain(self, send_func: Callable[[str], None]) -> QueueStats:
@@ -245,7 +213,7 @@ class DiskEmailQueue:
             message = str(item.get("message", ""))
             next_attempt_raw = item.get("next_attempt_at")
             next_attempt_at = (
-                self._parse_timestamp(next_attempt_raw)
+                parse_timestamp(next_attempt_raw)
                 if isinstance(next_attempt_raw, str)
                 else None
             )
@@ -262,27 +230,24 @@ class DiskEmailQueue:
             except Exception:
                 failed += 1
                 attempts = int(item.get("attempts", 0)) + 1
-                delay = 0
-                if self._retry_base_seconds:
-                    delay = self._retry_base_seconds * (2 ** max(0, attempts - 1))
-                next_attempt_at = now + timedelta(seconds=delay)
+                next_attempt_at = compute_next_attempt(
+                    now,
+                    attempts=attempts,
+                    retry_base_seconds=self._retry_base_seconds,
+                )
                 item["attempts"] = attempts
                 item["next_attempt_at"] = next_attempt_at.isoformat()
                 remaining.append(item)
 
-        remaining = self._prune_items(remaining)
+        remaining = prune_items(
+            remaining,
+            now=now,
+            max_items=self._max_items,
+            max_age_seconds=self._max_age_seconds,
+            max_attempts=self._max_attempts,
+        )
         self._save_items(remaining)
-
-        oldest_age_seconds = 0
-        if remaining:
-            created_times = [
-                self._parse_timestamp(item.get("created_at"))
-                for item in remaining
-            ]
-            created_times = [value for value in created_times if value]
-            if created_times:
-                oldest = min(created_times)
-                oldest_age_seconds = int((now - oldest).total_seconds())
+        oldest_age_seconds = compute_oldest_age_seconds(remaining, now)
 
         return QueueStats(
             queued=len(remaining),
@@ -297,14 +262,7 @@ class DiskEmailQueue:
         if not items:
             return QueueStats(queued=0, sent=0, failed=0, deferred=0, oldest_age_seconds=0)
         now = self._now()
-        created_times = [
-            self._parse_timestamp(item.get("created_at")) for item in items
-        ]
-        created_times = [value for value in created_times if value]
-        oldest_age_seconds = 0
-        if created_times:
-            oldest = min(created_times)
-            oldest_age_seconds = int((now - oldest).total_seconds())
+        oldest_age_seconds = compute_oldest_age_seconds(items, now)
         return QueueStats(
             queued=len(items),
             sent=0,

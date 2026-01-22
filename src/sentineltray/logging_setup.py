@@ -1,12 +1,16 @@
+import json
 import logging
 import os
+import platform
 import re
 import sys
 import threading
+import time
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path, PureWindowsPath
+from uuid import uuid4
 
 MAX_LOG_FILES = 5
 
@@ -22,6 +26,41 @@ class CategoryFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         if not hasattr(record, "category"):
             record.category = "general"
+        return True
+
+
+class ContextFilter(logging.Filter):
+    def __init__(self, *, session_id: str, app_version: str, release_date: str, commit_hash: str) -> None:
+        super().__init__()
+        self._session_id = session_id
+        self._app_version = app_version
+        self._release_date = release_date
+        self._commit_hash = commit_hash
+        self._hostname = platform.node()
+        self._platform = platform.platform()
+        self._python = platform.python_version()
+        self._pid = os.getpid()
+        self._process_start = time.time()
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not hasattr(record, "session_id"):
+            record.session_id = self._session_id
+        if not hasattr(record, "app_version"):
+            record.app_version = self._app_version
+        if not hasattr(record, "release_date"):
+            record.release_date = self._release_date
+        if not hasattr(record, "commit_hash"):
+            record.commit_hash = self._commit_hash
+        if not hasattr(record, "hostname"):
+            record.hostname = self._hostname
+        if not hasattr(record, "platform"):
+            record.platform = self._platform
+        if not hasattr(record, "python_version"):
+            record.python_version = self._python
+        if not hasattr(record, "pid"):
+            record.pid = self._pid
+        if not hasattr(record, "uptime_seconds"):
+            record.uptime_seconds = max(0.0, time.time() - self._process_start)
         return True
 
 
@@ -55,6 +94,38 @@ class RedactionFilter(logging.Filter):
 class SanitizingFormatter(logging.Formatter):
     def formatException(self, ei) -> str:
         return sanitize_text(super().formatException(ei))
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        message = sanitize_text(record.getMessage())
+        timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()
+        payload = {
+            "timestamp": timestamp,
+            "level": record.levelname,
+            "category": getattr(record, "category", "general"),
+            "logger": record.name,
+            "message": message,
+            "file": record.filename,
+            "line": record.lineno,
+            "function": record.funcName,
+            "process": record.process,
+            "process_name": record.processName,
+            "thread": record.thread,
+            "thread_name": record.threadName,
+            "session_id": getattr(record, "session_id", ""),
+            "app_version": getattr(record, "app_version", ""),
+            "release_date": getattr(record, "release_date", ""),
+            "commit_hash": getattr(record, "commit_hash", ""),
+            "hostname": getattr(record, "hostname", ""),
+            "platform": getattr(record, "platform", ""),
+            "python_version": getattr(record, "python_version", ""),
+            "pid": getattr(record, "pid", record.process),
+            "uptime_seconds": round(getattr(record, "uptime_seconds", 0.0), 3),
+        }
+        if record.exc_info:
+            payload["exception"] = sanitize_text(self.formatException(record.exc_info))
+        return json.dumps(payload, ensure_ascii=False)
 
 
 def _install_exception_hooks() -> None:
@@ -92,10 +163,9 @@ def _install_exception_hooks() -> None:
         threading.excepthook = _thread_excepthook
 
 
-def _build_run_log_path(log_file: str) -> Path:
-    base_path = Path(log_file)
-    if not base_path.suffix:
-        base_path = base_path.with_suffix(".log")
+def _build_run_log_path(base_path: Path, *, suffix: str | None = None) -> Path:
+    if suffix:
+        base_path = base_path.with_suffix(suffix)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{base_path.stem}_{timestamp}_{os.getpid()}{base_path.suffix}"
     return base_path.parent / filename
@@ -129,17 +199,31 @@ def setup_logging(
     log_max_bytes: int = 5_000_000,
     log_backup_count: int = 5,
     log_run_files_keep: int = 5,
+    app_version: str | None = None,
+    release_date: str | None = None,
+    commit_hash: str | None = None,
 ) -> None:
     base_path = Path(log_file)
     if not base_path.suffix:
         base_path = base_path.with_suffix(".log")
     base_path.parent.mkdir(parents=True, exist_ok=True)
-    run_path = _build_run_log_path(str(base_path))
+    run_path = _build_run_log_path(base_path)
+    json_base_path = base_path.with_suffix(".jsonl")
+    json_run_path = _build_run_log_path(base_path, suffix=".jsonl")
+
+    session_id = uuid4().hex
+    context_filter = ContextFilter(
+        session_id=session_id,
+        app_version=str(app_version or ""),
+        release_date=str(release_date or ""),
+        commit_hash=str(commit_hash or ""),
+    )
 
     formatter = SanitizingFormatter(
         "%(asctime)s %(levelname)s %(category)s %(name)s %(filename)s:%(lineno)d "
         "%(funcName)s %(process)d %(processName)s %(thread)d %(threadName)s %(message)s"
     )
+    json_formatter = JsonFormatter()
 
     resolved_level = _resolve_level(log_level, logging.INFO)
     resolved_console_level = _resolve_level(log_console_level, logging.WARNING)
@@ -160,6 +244,7 @@ def setup_logging(
         rotating_handler.setLevel(resolved_level)
         rotating_handler.addFilter(CategoryFilter())
         rotating_handler.addFilter(RedactionFilter())
+        rotating_handler.addFilter(context_filter)
         handlers.append(rotating_handler)
 
         run_handler = logging.FileHandler(run_path, encoding="utf-8")
@@ -167,13 +252,36 @@ def setup_logging(
         run_handler.setLevel(resolved_level)
         run_handler.addFilter(CategoryFilter())
         run_handler.addFilter(RedactionFilter())
+        run_handler.addFilter(context_filter)
         handlers.append(run_handler)
+
+        json_handler = RotatingFileHandler(
+            json_base_path,
+            maxBytes=log_max_bytes,
+            backupCount=effective_backup_count,
+            encoding="utf-8",
+        )
+        json_handler.setFormatter(json_formatter)
+        json_handler.setLevel(resolved_level)
+        json_handler.addFilter(CategoryFilter())
+        json_handler.addFilter(RedactionFilter())
+        json_handler.addFilter(context_filter)
+        handlers.append(json_handler)
+
+        json_run_handler = logging.FileHandler(json_run_path, encoding="utf-8")
+        json_run_handler.setFormatter(json_formatter)
+        json_run_handler.setLevel(resolved_level)
+        json_run_handler.addFilter(CategoryFilter())
+        json_run_handler.addFilter(RedactionFilter())
+        json_run_handler.addFilter(context_filter)
+        handlers.append(json_run_handler)
     except OSError as exc:
         fallback = logging.StreamHandler()
         fallback.setFormatter(formatter)
         fallback.setLevel(resolved_level)
         fallback.addFilter(CategoryFilter())
         fallback.addFilter(RedactionFilter())
+        fallback.addFilter(context_filter)
         handlers.append(fallback)
         logging.getLogger(__name__).warning(
             "Failed to initialize file logging: %s",
@@ -187,6 +295,7 @@ def setup_logging(
         console_handler.setLevel(resolved_console_level)
         console_handler.addFilter(CategoryFilter())
         console_handler.addFilter(RedactionFilter())
+        console_handler.addFilter(context_filter)
         handlers.append(console_handler)
 
     root = logging.getLogger()
@@ -201,6 +310,18 @@ def setup_logging(
 
     logging.getLogger("PIL").setLevel(logging.WARNING)
     logging.getLogger("PIL.Image").setLevel(logging.WARNING)
+
+    logging.getLogger(__name__).info(
+        "Logging initialized",
+        extra={
+            "category": "startup",
+            "log_file": str(base_path),
+            "run_log_file": str(run_path),
+            "json_log_file": str(json_base_path),
+            "json_run_log_file": str(json_run_path),
+            "session_id": session_id,
+        },
+    )
     if effective_backup_count != log_backup_count:
         logging.getLogger(__name__).warning(
             "log_backup_count capped at %s (requested %s)",
@@ -218,5 +339,12 @@ def setup_logging(
         run_path.parent,
         base_path.stem,
         base_path.suffix,
+        keep=effective_run_files_keep,
+    )
+
+    _cleanup_old_logs(
+        json_run_path.parent,
+        json_base_path.stem,
+        json_base_path.suffix,
         keep=effective_run_files_keep,
     )
