@@ -11,6 +11,7 @@ Please report security issues privately.
 Preferred channel: GitHub Security Advisories for this repository.
 
 Include:
+
 - Version and commit hash
 - Reproduction steps
 - Impact assessment
