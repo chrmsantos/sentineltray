@@ -51,8 +51,9 @@ portable, self-contained setup). Otherwise it falls back to:
 
 - %LOCALAPPDATA%\AxonZ\SentinelTray\UserData\config.local.yaml
 
-If config.local.yaml is missing, empty, or invalid, the app creates it,
-opens it for editing, and exits so you can fill it.
+If config.local.yaml is missing or invalid, the app exits with guidance.
+The installer copies templates/local/config.local.yaml into the UserData folder
+when the file does not exist.
 
 Local documentation for sample state files lives under templates/local/.
 
