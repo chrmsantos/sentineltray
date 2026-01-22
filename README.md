@@ -37,14 +37,11 @@ Edite config.local.yaml e defina:
 - whatsapp.window_title_regex, whatsapp.retry_attempts, whatsapp.retry_backoff_seconds
 
 The application always reads the local config file. Default location is driven by
-`SENTINELTRAY_DATA_DIR` when set (run.cmd sets it to the install folder for a
-portable, self-contained setup). Otherwise it falls back to:
+`SENTINELTRAY_DATA_DIR` when set. Otherwise it falls back to:
 
 - %LOCALAPPDATA%\AxonZ\SentinelTray\UserData\config.local.yaml
 
 If config.local.yaml is missing or invalid, the app exits with guidance.
-The installer copies templates/local/config.local.yaml into the UserData folder
-when the file does not exist.
 
 Local documentation for sample state files lives under templates/local/.
 
