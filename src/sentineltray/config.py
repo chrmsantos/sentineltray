@@ -36,10 +36,7 @@ def get_user_log_dir() -> Path:
 def get_project_root() -> Path:
     return (
         _get_user_root()
-        / "AppData"
-        / "Local"
         / "AxonZ"
-        / "SentinelTray"
         / "SystemData"
         / "sentineltray"
     )

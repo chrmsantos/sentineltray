@@ -6,7 +6,7 @@ rem Licencas: Python (PSF), pip (PSF), GitHub (terms), dependencias via requirem
 rem O usuario deve revisar as licencas antes de instalar.
 
 set "REPO_URL=https://github.com/chrmsantos/sentineltray/archive/refs/heads/master.zip"
-set "INSTALL_DIR=%USERPROFILE%\AppData\Local\AxonZ\SentinelTray\SystemData\sentineltray"
+set "INSTALL_DIR=%USERPROFILE%\AxonZ\SystemData\sentineltray"
 set "TEMP_ZIP=%TEMP%\sentineltray.zip"
 set "EXTRACT_DIR=%TEMP%\sentineltray-extract"
 set "LOG_DIR=%TEMP%\sentineltray-install"
@@ -195,7 +195,7 @@ if exist "%INSTALL_DIR%\shortcuts\SentinelTray.lnk" del /f /q "%INSTALL_DIR%\sho
 exit /b 0
 
 :remove_autostart_legacy
-powershell -NoProfile -Command "$startup=Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup\SentinelTray.cmd'; if (Test-Path $startup) { Remove-Item -LiteralPath $startup -Force }; $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'; if (Get-ItemProperty -Path $key -Name 'SentinelTray' -ErrorAction SilentlyContinue) { Remove-ItemProperty -Path $key -Name 'SentinelTray' -ErrorAction SilentlyContinue }" >nul 2>nul
+powershell -NoProfile -Command "$startup=Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup\SentinelTray.cmd'; if (Test-Path $startup) { Remove-Item -LiteralPath $startup -Force }; $key='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'; if (Test-Path $key) { $props=Get-ItemProperty -Path $key; foreach ($name in $props.PSObject.Properties.Name) { if ($name -in 'PSPath','PSParentPath','PSChildName','PSDrive','PSProvider') { continue }; $value=$props.$name; if ($name -eq 'SentinelTray' -or ($value -is [string] -and $value -match 'run\.py')) { Remove-ItemProperty -Path $key -Name $name -ErrorAction SilentlyContinue } } }" >nul 2>nul
 exit /b 0
 
 :rollback
