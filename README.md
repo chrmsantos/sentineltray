@@ -1,6 +1,6 @@
 # SentinelTray
 
-Versão beta: 1.0.0-beta.1 (21-01-2026)
+Versão beta: 1.0.0-beta.2 (22-01-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
