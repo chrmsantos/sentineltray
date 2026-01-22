@@ -20,6 +20,11 @@ from .logging_setup import sanitize_text, setup_logging
 from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, build_sender
+from .whatsapp_sender import (
+    WhatsAppError,
+    WhatsAppSender,
+    build_message_template,
+)
 from .telemetry import JsonWriter, atomic_write_text
 from . import __release_date__, __version_label__
 
@@ -185,6 +190,12 @@ class Notifier:
             "oldest_age_seconds": 0,
         }
         self._sender = None
+        self._whatsapp_sender: WhatsAppSender | None = None
+        if self.config.whatsapp.enabled:
+            self._whatsapp_sender = WhatsAppSender(
+                config=self.config.whatsapp,
+                log_throttle_seconds=self.config.log_throttle_seconds,
+            )
         self._update_config_checksum()
 
     def _reset_components(self) -> None:
@@ -214,44 +225,69 @@ class Notifier:
             text = item.get("text")
             sent_at = item.get("sent_at")
             item_monitor = item.get("monitor")
-            if not isinstance(text, str) or not isinstance(sent_at, str):
-                continue
-            if monitor_key and item_monitor not in (None, monitor_key):
-                continue
+        if self.config.log_only_mode and not force_send:
+            LOGGER.info(
+                "Log-only mode active, skipping send",
+                extra={"category": category},
+            )
+            return False
+
+        sent_any = False
+
+        if monitor.email_disabled:
+            LOGGER.warning(
+                "Email disabled after authentication failure; skipping send",
+                extra={"category": category},
+            )
+        else:
+            sender = self._sender or monitor.sender
             try:
-                timestamp = datetime.fromisoformat(sent_at)
-            except ValueError:
-                continue
-            last_sent[text] = timestamp
-        return last_sent
-
-    def _build_monitors(self) -> list[MonitorRuntime]:
-        monitors = self.config.monitors
-        if not monitors:
-            monitors = [
-                MonitorConfig(
-                    window_title_regex=self.config.window_title_regex,
-                    phrase_regex=self.config.phrase_regex,
-                    email=self.config.email,
+                monitor.last_send_queued = False
+                sender.send(message)
+                sent_any = True
+            except EmailQueued:
+                monitor.last_send_queued = True
+                LOGGER.info("Message queued for retry", extra={"category": category})
+                sent_any = True
+            except EmailAuthError as exc:
+                monitor.email_disabled = True
+                self.status.set_last_error(
+                    _safe_status_text(f"error: smtp auth failed: {exc}")
                 )
-            ]
+                LOGGER.error(
+                    "Email auth failed; disabling email sends",
+                    extra={"category": "send"},
+                )
+            except Exception as exc:
+                LOGGER.warning(
+                    "Failed to send notification: %s",
+                    exc,
+                    extra={"category": category},
+                )
 
-        runtimes: list[MonitorRuntime] = []
-        monitor_count = len(monitors)
-        for monitor in monitors:
-            key = f"{monitor.window_title_regex}|{monitor.phrase_regex}"
-            runtimes.append(
-                MonitorRuntime(
-                    key=key,
-                    config=monitor,
-                    detector=WindowTextDetector(
-                        monitor.window_title_regex,
-                        allow_window_restore=self.config.allow_window_restore,
-                        log_throttle_seconds=self.config.log_throttle_seconds,
-                    ),
-                    sender=build_sender(
-                        monitor.email,
-                        queue_path=self._queue_path_for_monitor(key, monitor_count),
+        if self._whatsapp_sender:
+            try:
+                whatsapp_message = build_message_template(
+                    self.config.whatsapp.message_template,
+                    message=message,
+                    window=monitor.config.window_title_regex,
+                )
+                self._whatsapp_sender.send(whatsapp_message)
+                sent_any = True
+            except WhatsAppError as exc:
+                LOGGER.warning(
+                    "WhatsApp send failed: %s",
+                    exc,
+                    extra={"category": "whatsapp"},
+                )
+            except Exception as exc:
+                LOGGER.warning(
+                    "Unexpected WhatsApp error: %s",
+                    exc,
+                    extra={"category": "whatsapp"},
+                )
+
+        return sent_any
                         queue_max_items=self.config.email_queue_max_items,
                         queue_max_age_seconds=self.config.email_queue_max_age_seconds,
                         queue_max_attempts=self.config.email_queue_max_attempts,
@@ -759,7 +795,12 @@ class Notifier:
                     )
         self._queue_stats = total
 
-    def run_loop(self, stop_event: Event, pause_event: Event | None = None) -> None:
+    def run_loop(
+        self,
+        stop_event: Event,
+        pause_event: Event | None = None,
+        manual_scan_event: Event | None = None,
+    ) -> None:
         setup_logging(
             self.config.log_file,
             log_level=self.config.log_level,
@@ -784,6 +825,19 @@ class Notifier:
         self._update_telemetry()
         error_count = 0
 
+        def _wait_for_next_scan(wait_seconds: int) -> bool:
+            if wait_seconds <= 0:
+                return False
+            deadline = time.monotonic() + wait_seconds
+            while not stop_event.is_set():
+                if manual_scan_event is not None and manual_scan_event.is_set():
+                    return True
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    return False
+                stop_event.wait(min(0.5, remaining))
+            return False
+
         was_paused = False
         while not stop_event.is_set():
             loop_started = time.perf_counter()
@@ -801,6 +855,11 @@ class Notifier:
             self.status.set_paused(False)
             started_at = time.monotonic()
             try:
+                manual_requested = False
+                if manual_scan_event is not None and manual_scan_event.is_set():
+                    manual_scan_event.clear()
+                    manual_requested = True
+                    LOGGER.info("Manual scan requested", extra={"category": "control"})
                 disk_started = time.perf_counter()
                 self._ensure_free_disk()
                 LOGGER.info(
@@ -818,7 +877,7 @@ class Notifier:
                         extra={"category": "perf"},
                     )
                     self._next_queue_drain = now + 30
-                if _is_user_idle(120):
+                if manual_requested or _is_user_idle(120):
                     self.scan_once()
                     if self._last_scan_error:
                         error_count += 1
@@ -871,7 +930,8 @@ class Notifier:
                     backoff_seconds,
                     extra={"category": "error"},
                 )
-            stop_event.wait(wait_seconds)
+            if _wait_for_next_scan(wait_seconds):
+                continue
 
         self.status.set_running(False)
         self.status.set_paused(False)

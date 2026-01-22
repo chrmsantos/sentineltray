@@ -137,6 +137,15 @@ class WindowTextDetector:
             self._last_window = window_spec
             return window_spec
 
+    def check_ready(self) -> None:
+        window = self._get_window()
+        if not self._window_exists(window, timeout=1.0):
+            raise WindowUnavailableError("Target window not found")
+        if not self._window_has_area(window):
+            raise WindowUnavailableError("Target window has no visible area")
+        if not self._window_is_enabled(window):
+            raise WindowUnavailableError("Target window not enabled")
+
     def _prepare_window(self, window) -> None:
         try:
             if hasattr(window, "is_minimized") and window.is_minimized():

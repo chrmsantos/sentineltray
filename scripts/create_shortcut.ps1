@@ -53,6 +53,39 @@ try {
     $shortcut.WorkingDirectory = $InstallDir
     $shortcut.WindowStyle = 1
     $shortcut.Description = "SentinelTray"
+    $python = Join-Path $InstallDir "runtime\python\python.exe"
+    $iconDir = Join-Path $InstallDir "assets"
+    $iconPath = Join-Path $iconDir "sentineltray.ico"
+    if (-not (Test-Path -LiteralPath $iconDir)) {
+        New-Item -ItemType Directory -Path $iconDir -Force | Out-Null
+    }
+    if (-not (Test-Path -LiteralPath $iconPath)) {
+        if (Test-Path -LiteralPath $python) {
+            $iconPathPy = $iconPath.Replace("\", "\\")
+            $code = @"
+from PIL import Image, ImageDraw
+size = 256
+image = Image.new("RGB", (size, size), color=(28, 40, 56))
+draw = ImageDraw.Draw(image)
+def scale(value):
+    return int(round(value * size / 64))
+draw.ellipse((scale(8), scale(18), scale(56), scale(46)), outline=(255, 255, 255), width=scale(3))
+draw.ellipse((scale(24), scale(24), scale(40), scale(40)), outline=(255, 255, 255), width=scale(2))
+draw.ellipse((scale(28), scale(28), scale(36), scale(36)), fill=(90, 180, 255))
+image.save(r"$iconPathPy", format="ICO", sizes=[(256, 256), (64, 64), (48, 48), (32, 32), (16, 16)])
+"@
+            & $python -c $code
+            if (Test-Path -LiteralPath $iconPath) {
+                Write-Log "Icone criado: $iconPath"
+            }
+        }
+        else {
+            Write-Log "Runtime nao encontrado; icone nao foi gerado" "WARN"
+        }
+    }
+    if (Test-Path -LiteralPath $iconPath) {
+        $shortcut.IconLocation = $iconPath
+    }
     $shortcut.Save()
 
     if ($CreateDesktop) {
