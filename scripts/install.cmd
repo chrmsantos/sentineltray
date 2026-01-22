@@ -110,11 +110,22 @@ call :log "INFO" "Copiando config.local.yaml (se necessario)"
 call :copy_config
 
 call :log "INFO" "Criando atalhos"
+set "SHORTCUT_SCRIPT=%INSTALL_DIR%\scripts\create_shortcut.ps1"
+if not exist "%SHORTCUT_SCRIPT%" (
+	call :log "WARN" "create_shortcut.ps1 nao encontrado em %SHORTCUT_SCRIPT%"
+	if exist "%SRC_DIR%\scripts\create_shortcut.ps1" (
+		call :log "INFO" "Recopiando scripts a partir do pacote extraido"
+		powershell -NoProfile -Command "Copy-Item -Path '%SRC_DIR%\scripts\*' -Destination '%INSTALL_DIR%\scripts' -Recurse -Force" || call :fail "Falha ao copiar scripts"
+	) else (
+		call :fail "create_shortcut.ps1 ausente no pacote; reinstale com pacote valido"
+	)
+)
+if not exist "%SHORTCUT_SCRIPT%" call :fail "create_shortcut.ps1 nao encontrado apos recopia"
 set "SHORTCUT_FLAGS="
 if "%CREATE_DESKTOP%"=="1" set "SHORTCUT_FLAGS=!SHORTCUT_FLAGS! -CreateDesktop"
 if "%CREATE_START_MENU%"=="1" set "SHORTCUT_FLAGS=!SHORTCUT_FLAGS! -CreateStartMenu"
 if not "%SHORTCUT_FLAGS%"=="" (
-	powershell -NoProfile -ExecutionPolicy Bypass -File "%INSTALL_DIR%\scripts\create_shortcut.ps1" -InstallDir "%INSTALL_DIR%" %SHORTCUT_FLAGS% -StartMenuName "%START_MENU_NAME%" -LogPath "%LOG_FILE%" || (call :rollback & call :fail "Falha ao criar atalhos")
+	powershell -NoProfile -ExecutionPolicy Bypass -File "%SHORTCUT_SCRIPT%" -InstallDir "%INSTALL_DIR%" %SHORTCUT_FLAGS% -StartMenuName "%START_MENU_NAME%" -LogPath "%LOG_FILE%" || (call :rollback & call :fail "Falha ao criar atalhos")
 ) else (
 	call :log "INFO" "Atalhos desativados por parametro"
 )

@@ -4,6 +4,7 @@
 
 - Improve visibility timeout handling to reduce false warnings when the target window reports visible/enabled after retries.
 - Stabilize scan preparation by refocusing and clicking the title bar to reduce interference from temporary overlays.
+- Fix installer shortcut creation when create_shortcut.ps1 is missing after copy.
 - Add WhatsApp Desktop delivery channel with dedicated configuration and UI controls.
 - Add manual scan, update/restart options, and startup validation of monitored window and WhatsApp availability.
 - Add automated security checks (CodeQL, pip-audit, bandit), SBOM, and SLSA provenance for releases.
