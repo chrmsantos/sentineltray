@@ -3,6 +3,11 @@
 ## Unreleased
 
 - Improve visibility timeout handling to reduce false warnings when the target window reports visible/enabled after retries.
+- Add WhatsApp Desktop delivery channel with dedicated configuration and UI controls.
+- Add manual scan, update/restart options, and startup validation of monitored window and WhatsApp availability.
+- Add automated security checks (CodeQL, pip-audit, bandit), SBOM, and SLSA provenance for releases.
+- Add security and audit documentation, plus issue/PR templates and release checklist.
+- Add mypy type checking configuration and CI step.
 
 ## 2026-01-21 (1.0.0-beta.1)
 
