@@ -59,7 +59,7 @@ Local documentation for sample state files lives under templates/local/.
 
 ## Instalacao automatica (Windows CMD)
 
-Use o script em scripts/install.cmd (arquivo unico/standalone) para baixar o projeto
+Use o script em install.cmd (arquivo unico/standalone) para baixar o projeto
 do GitHub e instalar o runtime auto-contido (CPython embutido + dependencias já inclusas).
 O instalador gera logs em %TEMP%\sentineltray-install e mantém apenas os 5 mais recentes.
 Durante a instalacao, um atalho SentinelTray.lnk e criado em shortcuts/ e copiado

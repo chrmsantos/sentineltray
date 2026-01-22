@@ -193,7 +193,7 @@ def run_tray(config: AppConfig) -> None:
 
     def request_update() -> None:
         root_dir = get_project_root()
-        install_cmd = root_dir / "scripts" / "install.cmd"
+        install_cmd = root_dir / "install.cmd"
         if not install_cmd.exists():
             messagebox.showerror(
                 "Atualização",
