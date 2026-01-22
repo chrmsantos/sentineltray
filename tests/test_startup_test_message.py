@@ -33,6 +33,7 @@ def test_send_startup_test_message_sends_and_updates_status() -> None:
         show_error_window=True,
         watchdog_timeout_seconds=60,
         watchdog_restart=True,
+        send_repeated_matches=True,
         email=EmailConfig(
             smtp_host="smtp.local",
             smtp_port=587,

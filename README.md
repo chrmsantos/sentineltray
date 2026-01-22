@@ -11,13 +11,13 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 ## Setup (self-contained)
 
-1. Bootstrap the bundled runtime:
+1. Bootstrap the bundled runtime (totalmente offline):
 
    ```powershell
    scripts\bootstrap_self_contained.cmd
    ```
 
-   This downloads embedded CPython, pip, and all wheels into runtime/ using requirements.lock.
+   This validates the embedded CPython and dependencies already bundled in runtime/.
    Checksums are stored in runtime/checksums.txt and validated on startup.
 
 2. Edit config.local.yaml and set:
@@ -32,7 +32,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - email.retry_attempts
 - email.retry_backoff_seconds
 - email.dry_run = false when ready to send
-- status_export_csv, status_refresh_seconds, allow_window_restore, start_minimized, auto_start, send_repeated_matches
+- status_export_csv, status_refresh_seconds, allow_window_restore, start_minimized, send_repeated_matches
 - log_only_mode, config_checksum_file, min_free_disk_mb
 - log_level, log_console_level, log_console_enabled
 - log_max_bytes, log_backup_count, log_run_files_keep
@@ -54,9 +54,24 @@ Local documentation for sample state files lives under templates/local/.
 
 ## Instalacao automatica (Windows CMD)
 
-Use o script em scripts/install.cmd para baixar o projeto do GitHub e instalar
-o runtime auto-contido (CPython embutido + dependencias).
+Use o script em scripts/install.cmd (arquivo unico/standalone) para baixar o projeto
+do GitHub e instalar o runtime auto-contido (CPython embutido + dependencias já inclusas).
 O instalador gera logs em %TEMP%\sentineltray-install e mantém apenas os 5 mais recentes.
+Durante a instalacao, um atalho SentinelTray.lnk e criado em shortcuts/ e copiado
+para a área de trabalho do usuário.
+
+Opcoes:
+
+- /offline /zip <arquivo.zip> (instalacao offline com zip local)
+- /sha256 <hash> (valida integridade do zip)
+- /update (atualiza preservando rollback)
+- /uninstall (desinstala)
+- /no-desktop (nao cria atalho na area de trabalho)
+- /no-startmenu (nao cria atalho no Menu Iniciar)
+
+Para desinstalar:
+
+scripts\uninstall.cmd
 
 ## Run
 

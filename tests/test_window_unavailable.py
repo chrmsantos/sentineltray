@@ -5,6 +5,7 @@ from threading import Event
 import pytest
 
 from sentineltray.app import Notifier
+from sentineltray import app as app_module
 from sentineltray.config import AppConfig, EmailConfig, get_user_log_dir
 from sentineltray.detector import WindowUnavailableError
 from sentineltray.status import StatusStore
@@ -76,7 +77,7 @@ def test_run_loop_skips_window_unavailable(
         raise WindowUnavailableError("Target window not enabled")
 
     notifier.scan_once = fake_scan_once  # type: ignore[assignment]
-    monkeypatch.setattr("sentineltray.app._is_user_idle", lambda _: True)
+    monkeypatch.setattr(app_module, "_is_user_idle", lambda _: True)
 
     sends = {"count": 0}
 
@@ -100,4 +101,4 @@ def test_run_loop_skips_window_unavailable(
     snapshot = notifier.status.snapshot()
     assert snapshot.error_count == 0
     assert snapshot.last_error
-    assert sends["count"] == 1
+    assert sends["count"] == 2

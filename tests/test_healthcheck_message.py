@@ -33,6 +33,7 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
         show_error_window=True,
         watchdog_timeout_seconds=60,
         watchdog_restart=True,
+        send_repeated_matches=True,
         email=EmailConfig(
             smtp_host="smtp.local",
             smtp_port=587,
@@ -66,6 +67,7 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
 
     snapshot = status.snapshot()
     assert sent
-    assert sent[0].startswith("info: healthcheck")
+    assert sent[0].startswith("info:")
+    assert "Em execu" in sent[0]
     assert snapshot.last_healthcheck
     assert snapshot.uptime_seconds >= 0

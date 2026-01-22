@@ -1,7 +1,7 @@
 window_title_regex: 'Sino\.Siscam\.Desktop'
 phrase_regex: "ALERT"
 poll_interval_seconds: 180
-healthcheck_interval_seconds: 3600
+healthcheck_interval_seconds: 900
 error_backoff_base_seconds: 5
 error_backoff_max_seconds: 300
 debounce_seconds: 600

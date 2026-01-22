@@ -29,73 +29,6 @@ def _pid_file_path() -> Path:
     return base / "sentineltray.pid"
 
 
-def _startup_dir() -> Path:
-    appdata = os.environ.get("APPDATA")
-    if not appdata:
-        raise ValueError("APPDATA is required for Windows startup path")
-    return Path(appdata) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
-
-
-def _startup_cmd_path() -> Path:
-    return _startup_dir() / "SentinelTray.cmd"
-
-
-def _set_run_key(command: str | None) -> None:
-    try:
-        import winreg
-    except Exception:
-        return
-    key_path = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_SET_VALUE) as key:
-            if command is None:
-                try:
-                    winreg.DeleteValue(key, "SentinelTray")
-                except FileNotFoundError:
-                    return
-            else:
-                winreg.SetValueEx(key, "SentinelTray", 0, winreg.REG_SZ, command)
-    except Exception:
-        return
-
-
-def _ensure_autostart(enabled: bool) -> None:
-    try:
-        startup_dir = _startup_dir()
-        startup_dir.mkdir(parents=True, exist_ok=True)
-    except Exception:
-        return
-
-    cmd_path = _startup_cmd_path()
-    if not enabled:
-        try:
-            if cmd_path.exists():
-                cmd_path.unlink()
-        except Exception:
-            return
-        _set_run_key(None)
-        return
-
-    root = Path(__file__).resolve().parent
-    run_cmd = root / "scripts" / "run.cmd"
-    content = "\r\n".join(
-        [
-            "@echo off",
-            f'cd /d "{root}"',
-            f'start "" /min "{run_cmd}"',
-        ]
-    ) + "\r\n"
-    try:
-        if cmd_path.exists():
-            current = cmd_path.read_text(encoding="utf-8", errors="ignore")
-            if current == content:
-                _set_run_key(f'"{cmd_path}"')
-                return
-        cmd_path.write_text(content, encoding="utf-8")
-    except Exception:
-        return
-    _set_run_key(f'"{cmd_path}"')
-
 
 def _ensure_single_instance_mutex() -> bool:
     global _MUTEX_HANDLE
@@ -185,7 +118,6 @@ def main() -> int:
         config = load_config(str(local_path))
     except Exception as exc:
         _handle_config_error(local_path, exc)
-    _ensure_autostart(getattr(config, "auto_start", True))
     return run_tray_cli(config)
 
 

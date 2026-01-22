@@ -10,3 +10,13 @@ license = { text = "GPL-3.0-only" }
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+testpaths = ["tests"]
+norecursedirs = [
+	".venv",
+	"runtime",
+	"runtime/*",
+	"runtime/python",
+	"runtime/python/Lib",
+	"runtime/python/Lib/site-packages",
+	"**/site-packages",
+]

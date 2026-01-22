@@ -2,10 +2,11 @@ from datetime import datetime, timedelta, timezone
 
 from sentineltray.app import Notifier
 from sentineltray.config import AppConfig, EmailConfig
+from sentineltray.detector import WindowTextDetector
 from sentineltray.status import StatusStore
 
 
-def test_debounce_skips_recent_messages() -> None:
+def test_debounce_skips_recent_messages(monkeypatch) -> None:
     config = AppConfig(
         window_title_regex="APP",
         phrase_regex="ALERT",
@@ -35,6 +36,7 @@ def test_debounce_skips_recent_messages() -> None:
         show_error_window=True,
         watchdog_timeout_seconds=60,
         watchdog_restart=True,
+        send_repeated_matches=False,
         email=EmailConfig(
             smtp_host="smtp.local",
             smtp_port=587,
@@ -54,14 +56,11 @@ def test_debounce_skips_recent_messages() -> None:
     notifier = Notifier(config=config, status=status)
 
     now = datetime.now(timezone.utc)
-    notifier._last_sent = {
-        "recent": now,
-        "old": now - timedelta(seconds=700),
-    }
-
-    class FakeDetector:
-        def find_matches(self, _: str) -> list[str]:
-            return ["recent", "old"]
+    for monitor in notifier._monitors:
+        monitor.last_sent = {
+            "recent": now,
+            "old": now - timedelta(seconds=700),
+        }
 
     class FakeSender:
         def __init__(self) -> None:
@@ -70,7 +69,11 @@ def test_debounce_skips_recent_messages() -> None:
         def send(self, message: str) -> None:
             self.sent.append(message)
 
-    notifier._detector = FakeDetector()
+    monkeypatch.setattr(
+        WindowTextDetector,
+        "find_matches",
+        lambda _self, _pattern: ["recent", "old"],
+    )
     sender = FakeSender()
     notifier._sender = sender
 
