@@ -170,3 +170,12 @@ def test_prepare_window_visibility_timeout_accepts_visible(monkeypatch) -> None:
     monkeypatch.setattr(detector, "_force_foreground", lambda *_args, **_kwargs: None)
 
     detector._prepare_window(window)
+
+
+def test_click_title_bar_ignores_missing_rectangle() -> None:
+    detector = WindowTextDetector("APP", allow_window_restore=True)
+
+    class FakeWindow:
+        pass
+
+    detector._click_title_bar(FakeWindow())

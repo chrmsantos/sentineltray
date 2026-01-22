@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes
+from ctypes import wintypes
 import logging
 import re
 import time
@@ -156,6 +157,7 @@ class WindowTextDetector:
             if hasattr(window, "set_focus"):
                 window.set_focus()
             self._force_foreground(window)
+            self._click_title_bar(window)
         except Exception as exc:
             raise WindowUnavailableError("Target window could not be restored") from exc
 
@@ -181,6 +183,7 @@ class WindowTextDetector:
                         if hasattr(window, "maximize"):
                             window.maximize()
                     self._force_foreground(window)
+                    self._click_title_bar(window)
                 except Exception:
                     LOGGER.debug("Window restore retry failed", exc_info=True)
                 time.sleep(0.5)
@@ -232,6 +235,30 @@ class WindowTextDetector:
             user32.SetWindowPos(handle, -2, 0, 0, 0, 0, 0x0001 | 0x0002)
         except Exception:
             LOGGER.debug("Failed to force window foreground", exc_info=True)
+
+    def _click_title_bar(self, window) -> None:
+        try:
+            if not hasattr(window, "rectangle"):
+                return
+            rect = window.rectangle()
+            if not rect:
+                return
+            width = rect.width()
+            height = rect.height()
+            if width <= 0 or height <= 0:
+                return
+            x = rect.left + max(5, width // 2)
+            y = rect.top + 10
+            user32 = ctypes.windll.user32
+            point = wintypes.POINT()
+            if user32.GetCursorPos(ctypes.byref(point)) == 0:
+                return
+            user32.SetCursorPos(int(x), int(y))
+            user32.mouse_event(0x0002, 0, 0, 0, 0)
+            user32.mouse_event(0x0004, 0, 0, 0, 0)
+            user32.SetCursorPos(point.x, point.y)
+        except Exception:
+            LOGGER.debug("Failed to click title bar", exc_info=True)
 
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
