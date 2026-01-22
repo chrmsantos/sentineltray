@@ -17,6 +17,7 @@ from threading import Event
 from .config import AppConfig, MonitorConfig, get_project_root, get_user_data_dir
 from .detector import WindowTextDetector, WindowUnavailableError
 from .logging_setup import sanitize_text, setup_logging
+from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, build_sender
 from .telemetry import JsonWriter, atomic_write_text
@@ -374,7 +375,10 @@ class Notifier:
         self.status.set_last_scan(_now_iso())
         any_match = False
         self._last_scan_error = False
+        scan_started = time.perf_counter()
         for monitor in self._monitors:
+            monitor_started = time.perf_counter()
+            monitor_error: str | None = None
             now_mono = time.monotonic()
             if monitor.breaker_until and now_mono < monitor.breaker_until:
                 LOGGER.info(
@@ -391,72 +395,71 @@ class Notifier:
                 message = f"error: janela indisponível: {exc}"
                 self._handle_monitor_error(monitor, message)
                 self._last_scan_error = True
+                monitor_error = "window_unavailable"
                 continue
             except Exception as exc:
                 message = f"error: {exc}"
                 self._handle_monitor_error(monitor, message)
                 LOGGER.exception("Scan error: %s", exc, extra={"category": "error"})
                 self._last_scan_error = True
+                monitor_error = "exception"
                 continue
+            finally:
+                duration_ms = (time.perf_counter() - monitor_started) * 1000
+                LOGGER.info(
+                    "Monitor scan duration %.2fms",
+                    duration_ms,
+                    extra={
+                        "category": "perf",
+                        "monitor": _summarize_text(monitor.key),
+                        "error": monitor_error or "",
+                    },
+                )
 
             normalized = [_normalize(text) for text in matches if text]
             if normalized:
-                deduped: list[str] = []
-                seen: set[str] = set()
-                for text in normalized:
-                    if text in seen:
-                        continue
-                    seen.add(text)
-                    deduped.append(text)
-                if len(deduped) != len(normalized):
+                normalized, removed = dedupe_items(normalized)
+                if removed:
                     LOGGER.info(
                         "Deduplicated %s repeated matches in scan",
-                        len(normalized) - len(deduped),
+                        removed,
                         extra={"category": "scan"},
                     )
-                normalized = deduped
             if self.config.send_repeated_matches:
                 send_items = list(normalized)
             else:
                 now = datetime.now(timezone.utc)
-                send_items = []
-                for text in normalized:
-                    last_sent = monitor.last_sent.get(text)
-                    if last_sent is None:
-                        send_items.append(text)
-                        continue
-                    age_seconds = int((now - last_sent).total_seconds())
-                    if age_seconds >= self.config.debounce_seconds:
-                        send_items.append(text)
-                    else:
-                        summary = _summarize_text(text)
-                        LOGGER.info(
-                            "Debounce active for %s (age %s seconds)",
-                            summary,
-                            age_seconds,
-                            extra={"category": "send"},
-                        )
+                send_items, skipped = filter_debounce(
+                    normalized,
+                    monitor.last_sent,
+                    self.config.debounce_seconds,
+                    now,
+                )
+                for text, age_seconds in skipped:
+                    summary = _summarize_text(text)
+                    LOGGER.info(
+                        "Debounce active for %s (age %s seconds)",
+                        summary,
+                        age_seconds,
+                        extra={"category": "send"},
+                    )
 
             if send_items and self.config.min_repeat_seconds > 0:
                 now = datetime.now(timezone.utc)
-                repeat_filtered: list[str] = []
-                for text in send_items:
-                    last_sent = monitor.last_sent.get(text)
-                    if last_sent is None:
-                        repeat_filtered.append(text)
-                        continue
-                    age_seconds = int((now - last_sent).total_seconds())
-                    if age_seconds >= self.config.min_repeat_seconds:
-                        repeat_filtered.append(text)
-                    else:
-                        summary = _summarize_text(text)
-                        LOGGER.info(
-                            "Min repeat window active for %s (age %s seconds)",
-                            summary,
-                            age_seconds,
-                            extra={"category": "send"},
-                        )
-                send_items = repeat_filtered
+                send_items, skipped = filter_min_repeat(
+                    send_items,
+                    monitor.last_sent,
+                    self.config.min_repeat_seconds,
+                    now,
+                )
+                for text, age_seconds in skipped:
+                    summary = _summarize_text(text)
+                    LOGGER.info(
+                        "Min repeat window active for %s (age %s seconds)",
+                        summary,
+                        age_seconds,
+                        extra={"category": "send"},
+                    )
 
             if normalized:
                 any_match = True
@@ -483,6 +486,13 @@ class Notifier:
             self._persist_state()
         elif any_match:
             self._persist_state()
+
+        total_ms = (time.perf_counter() - scan_started) * 1000
+        LOGGER.info(
+            "Scan loop duration %.2fms",
+            total_ms,
+            extra={"category": "perf"},
+        )
 
     def _persist_state(self) -> None:
         try:
@@ -758,6 +768,9 @@ class Notifier:
             log_max_bytes=self.config.log_max_bytes,
             log_backup_count=self.config.log_backup_count,
             log_run_files_keep=self.config.log_run_files_keep,
+            app_version=self._app_version,
+            release_date=self._release_date,
+            commit_hash=self._commit_hash,
         )
         LOGGER.info(
             "SentinelTray started (beta %s, %s)",
@@ -773,6 +786,7 @@ class Notifier:
 
         was_paused = False
         while not stop_event.is_set():
+            loop_started = time.perf_counter()
             if pause_event is not None and pause_event.is_set():
                 if not was_paused:
                     LOGGER.info("Execution paused", extra={"category": "control"})
@@ -787,10 +801,22 @@ class Notifier:
             self.status.set_paused(False)
             started_at = time.monotonic()
             try:
+                disk_started = time.perf_counter()
                 self._ensure_free_disk()
+                LOGGER.info(
+                    "Disk check duration %.2fms",
+                    (time.perf_counter() - disk_started) * 1000,
+                    extra={"category": "perf"},
+                )
                 now = time.monotonic()
                 if now >= self._next_queue_drain:
+                    queue_started = time.perf_counter()
                     self._drain_queues()
+                    LOGGER.info(
+                        "Queue drain duration %.2fms",
+                        (time.perf_counter() - queue_started) * 1000,
+                        extra={"category": "perf"},
+                    )
                     self._next_queue_drain = now + 30
                 if _is_user_idle(120):
                     self.scan_once()
@@ -821,6 +847,11 @@ class Notifier:
             finally:
                 duration = time.monotonic() - started_at
                 self._handle_watchdog(duration)
+                LOGGER.info(
+                    "Loop iteration duration %.2fms",
+                    (time.perf_counter() - loop_started) * 1000,
+                    extra={"category": "perf"},
+                )
 
             self.status.set_uptime_seconds(
                 int((datetime.now(timezone.utc) - self._started_at).total_seconds())

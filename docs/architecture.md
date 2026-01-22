@@ -9,7 +9,7 @@ Versao beta: 1.0.0-beta.1 (21-01-2026)
 - Email delivery uses SMTP with optional TLS.
 - State is stored in state.json to prevent duplicate sends.
 - Runtime is self-contained (embedded CPython + offline wheelhouse) managed by scripts/bootstrap_self_contained.cmd and validated by runtime/checksums.txt.
-- Logs are created per execution with detailed fields and kept with a max of 5 files in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs (values above 5 are capped).
+- Logs are created per execution with detailed fields and kept with a max of 5 files in %SENTINELTRAY_DATA_DIR%\logs (values above 5 are capped).
 - Third-party debug log noise is suppressed at the logger level.
 - System tray UI shows status and controls exit.
 - Errors in each polling iteration are reported on screen and via email immediately, even when log-only mode is enabled.
@@ -22,9 +22,10 @@ Versao beta: 1.0.0-beta.1 (21-01-2026)
 - Tray status shows error count and last error reason.
 - Logs include a structured category field (scan/send/error/etc).
 - Logs, telemetry, and status exports redact sensitive strings and store match summaries as hashes.
+- Logs are emitted in both text and JSONL formats for easier ingestion.
 - Telemetry, status exports, and state storage are written atomically to avoid corruption on abrupt shutdown.
 - Export files include counters for write failures (telemetry/status CSV/state) to aid diagnostics.
-- Local telemetry file captures last activity for quick diagnostics and lives in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
+- Local telemetry file captures last activity for quick diagnostics and lives in %SENTINELTRAY_DATA_DIR%\logs.
 - Status export JSON supports local integrations.
 - Status export CSV supports local integrations.
 - Tray abre automaticamente o status na inicializacao e usa icone em formato de olho.
@@ -40,11 +41,12 @@ Versao beta: 1.0.0-beta.1 (21-01-2026)
 - Ambiguous window matches are resolved by selecting the most visible/focused candidate.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
-- Sensitive data paths are enforced under %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData; operational logs remain in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\logs.
+- Sensitive data paths are enforced under %SENTINELTRAY_DATA_DIR%; operational logs remain in %SENTINELTRAY_DATA_DIR%\logs.
 - Politica de privacidade detalhada em PRIVACY.md.
-- Instalacao automatica disponivel via scripts/install.cmd.
+- Instalacao automatica disponivel via scripts/install.cmd (suporta /dir para destino customizado).
 - Destino de instalacao padrao: %USERPROFILE%\AxonZ\SystemData\sentineltray.
-- Config is loaded exclusively from %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData\config.local.yaml.
+- Dados locais residem em %SENTINELTRAY_DATA_DIR% (portable), com fallback para %LOCALAPPDATA%.
+- Config is loaded exclusively from %SENTINELTRAY_DATA_DIR%\config.local.yaml.
 - Missing, empty, or invalid local override triggers file creation and edit prompt.
 - Local file templates live under templates/local/.
 

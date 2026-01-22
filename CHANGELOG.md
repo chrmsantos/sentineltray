@@ -18,7 +18,7 @@
 
 ## 2026-01-20 (0.2.0-beta.7)
 
-- Move sensitive user data and operational logs/status to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData.
+- Move sensitive user data and operational logs/status to %SENTINELTRAY_DATA_DIR% (portable) with fallback to %LOCALAPPDATA%\AxonZ\SentinelTray\UserData.
 - Redact sensitive data from logs, status exports, and telemetry while preserving diagnostic utility.
 - Add status report emails every 7 scan iterations and surface last_report_send in exports/UI.
 - Set default scan interval to 3 minutes in templates.
@@ -30,7 +30,7 @@
 
 ## 2026-01-19 (0.2.0-beta.6)
 
-- Store operational logs, telemetry, and status exports under the project logs/ folder; sensitive data remains in %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData.
+- Store operational logs, telemetry, and status exports under the project logs/ folder; sensitive data remains in %SENTINELTRAY_DATA_DIR%.
 - Allow running main.py directly by bootstrapping src/ onto the import path.
 
 ## 2026-01-19 (0.2.0-beta.5)
@@ -49,7 +49,7 @@
 
 ## 2026-01-19 (0.2.0-beta.2)
 
-- Move local user data directory to %USERPROFILE%\AppData\Local\AxonZ\SentinelTray\UserData for configs, logs, and telemetry.
+- Move local user data directory to %SENTINELTRAY_DATA_DIR% (portable) for configs, logs, and telemetry.
 - Skip scans without error alerts when the target window is unavailable or disabled.
 
 ## 2026-01-19 (0.2.0-beta.1)
@@ -110,5 +110,5 @@
 - Auto-create and open local override config when missing or invalid.
 - Create per-run detailed logs and retain only the last 5 files.
 - Suppress noisy third-party debug logs in per-run files.
-- Move local override config to %USERPROFILE%\sentineltray.
+- Move local override config to %SENTINELTRAY_DATA_DIR% (portable).
 - Add local template files with commented guidance.

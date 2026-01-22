@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 import main
+from sentineltray.config import get_user_data_dir
 
 
 def test_ensure_local_override_requires_file(tmp_path: Path) -> None:
@@ -29,15 +30,7 @@ def test_main_creates_local_override_when_missing(
     monkeypatch.setattr(sys, "argv", ["main.py"])
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
 
-    local_path = (
-        tmp_path
-        / "AppData"
-        / "Local"
-        / "AxonZ"
-        / "SentinelTray"
-        / "UserData"
-        / "config.local.yaml"
-    )
+    local_path = get_user_data_dir() / "config.local.yaml"
     assert not local_path.exists()
 
     with pytest.raises(SystemExit):

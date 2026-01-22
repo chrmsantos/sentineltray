@@ -6,10 +6,11 @@ from pathlib import Path
 from threading import Event, Thread
 from typing import Optional
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk
 import pystray
 import tkinter as tk
 import tkinter.font as tkfont
+import tkinter.messagebox as messagebox
 import webbrowser
 
 from .app import Notifier
@@ -18,6 +19,9 @@ from .status import StatusStore, format_status
 from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
+
+STATUS_REFRESH_SECONDS = 10
+LICENSE_LABEL = "GPL-3.0-only"
 
 
 def _build_image() -> Image.Image:
@@ -50,6 +54,10 @@ def run_tray(config: AppConfig) -> None:
     root = tk.Tk()
     root.withdraw()
 
+    icon_image = _build_image()
+    icon_photo = ImageTk.PhotoImage(icon_image)
+    root.iconphoto(True, icon_photo)
+
     status_window: Optional[tk.Toplevel] = None
     status_label: Optional[tk.Label] = None
     error_window: Optional[tk.Toplevel] = None
@@ -69,7 +77,7 @@ def run_tray(config: AppConfig) -> None:
                     )
             )
         # Erros ficam apenas registrados no painel principal.
-        root.after(int(config.status_refresh_seconds * 1000), refresh_status)
+        root.after(int(STATUS_REFRESH_SECONDS * 1000), refresh_status)
 
     def show_error(_message: str) -> None:
         # Mantido apenas para compatibilidade interna; janela removida.
@@ -96,6 +104,7 @@ def run_tray(config: AppConfig) -> None:
         status_window = tk.Toplevel(root)
         status_window.title("SentinelTray - Painel")
         status_window.resizable(False, False)
+        status_window.iconphoto(True, icon_photo)
 
         title = tk.Label(
             status_window,
@@ -123,6 +132,15 @@ def run_tray(config: AppConfig) -> None:
             fg="#666666",
         )
         version_label.pack(fill="x", padx=12, pady=(0, 6))
+
+        license_label = tk.Label(
+            status_window,
+            text=f"Licença: {LICENSE_LABEL}",
+            anchor="w",
+            font=("Segoe UI", 9),
+            fg="#666666",
+        )
+        license_label.pack(fill="x", padx=12, pady=(0, 8))
 
         status_label = tk.Label(
             status_window,
@@ -195,18 +213,35 @@ def run_tray(config: AppConfig) -> None:
         menu_font = tkfont.Font(family="Segoe UI", size=11, weight="bold")
         item_font = tkfont.Font(family="Segoe UI", size=11, weight="normal")
         menu = tk.Menu(status_window, font=menu_font)
-        commands_menu = tk.Menu(menu, tearoff=0, font=item_font)
-        commands_menu.add_command(label="Pausar ou continuar", command=toggle_pause)
-        commands_menu.add_command(label="Atualizar informações", command=refresh_now)
-        commands_menu.add_command(label="Copiar informações", command=copy_status)
-        commands_menu.add_separator()
-        commands_menu.add_command(label="Abrir configurações", command=open_config)
-        commands_menu.add_command(label="Abrir pasta de dados", command=open_data_dir)
-        commands_menu.add_command(label="Abrir registros", command=open_logs_dir)
-        commands_menu.add_command(label="Abrir site do projeto", command=open_repo)
-        commands_menu.add_separator()
-        commands_menu.add_command(label="Encerrar o programa", command=request_exit)
-        menu.add_cascade(label="Menu", menu=commands_menu)
+
+        file_menu = tk.Menu(menu, tearoff=0, font=item_font)
+        file_menu.add_command(label="Sair", command=request_exit)
+        menu.add_cascade(label="Arquivo", menu=file_menu)
+
+        view_menu = tk.Menu(menu, tearoff=0, font=item_font)
+        view_menu.add_command(label="Atualizar agora", command=refresh_now)
+        view_menu.add_command(label="Copiar status", command=copy_status)
+        menu.add_cascade(label="Exibir", menu=view_menu)
+
+        actions_menu = tk.Menu(menu, tearoff=0, font=item_font)
+        actions_menu.add_command(label="Pausar ou continuar", command=toggle_pause)
+        actions_menu.add_separator()
+        actions_menu.add_command(label="Abrir configurações", command=open_config)
+        actions_menu.add_command(label="Abrir pasta de dados", command=open_data_dir)
+        actions_menu.add_command(label="Abrir registros", command=open_logs_dir)
+        menu.add_cascade(label="Ações", menu=actions_menu)
+
+        help_menu = tk.Menu(menu, tearoff=0, font=item_font)
+        help_menu.add_command(label="Site do projeto", command=open_repo)
+        help_menu.add_command(
+            label="Sobre",
+            command=lambda: messagebox.showinfo(
+                "Sobre",
+                f"SentinelTray\nVersão {__version_label__}\nLicença {LICENSE_LABEL}",
+            ),
+        )
+        menu.add_cascade(label="Ajuda", menu=help_menu)
+
         status_window.config(menu=menu)
 
         status_window.update_idletasks()
@@ -224,7 +259,7 @@ def run_tray(config: AppConfig) -> None:
 
     icon = pystray.Icon(
         "sentineltray",
-        _build_image(),
+        icon_image,
         "SentinelTray",
         menu=pystray.Menu(
             pystray.MenuItem("Abrir status", on_status, default=True),
@@ -233,8 +268,7 @@ def run_tray(config: AppConfig) -> None:
     )
 
     icon.run_detached()
-    if not config.start_minimized:
-        root.after(0, show_status)
+    root.after(0, show_status)
     root.after(1000, refresh_status)
     root.mainloop()
 

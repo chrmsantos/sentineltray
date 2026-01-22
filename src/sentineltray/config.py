@@ -8,25 +8,47 @@ from typing import Any
 
 import yaml
 
+from .path_utils import ensure_under_root, resolve_log_path, resolve_sensitive_path
+from .validation_utils import validate_email_address, validate_regex
+
 MAX_LOG_FILES = 5
 
 
-def _get_user_root() -> Path:
+def _get_project_root_from_file() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _get_data_root_override() -> Path | None:
+    override = os.environ.get("SENTINELTRAY_DATA_DIR")
+    if override:
+        return Path(override)
+    return None
+
+
+def _get_default_user_data_dir() -> Path:
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata:
+        return Path(local_appdata) / "AxonZ" / "SentinelTray" / "UserData"
+
     user_root = os.environ.get("USERPROFILE")
-    if not user_root:
-        raise ValueError("USERPROFILE is required for SentinelTray paths")
-    return Path(user_root)
+    if user_root:
+        return (
+            Path(user_root)
+            / "AppData"
+            / "Local"
+            / "AxonZ"
+            / "SentinelTray"
+            / "UserData"
+        )
+
+    return get_project_root() / "UserData"
 
 
 def get_user_data_dir() -> Path:
-    return (
-        _get_user_root()
-        / "AppData"
-        / "Local"
-        / "AxonZ"
-        / "SentinelTray"
-        / "UserData"
-    )
+    override = _get_data_root_override()
+    if override is not None:
+        return override
+    return _get_default_user_data_dir()
 
 
 def get_user_log_dir() -> Path:
@@ -34,12 +56,10 @@ def get_user_log_dir() -> Path:
 
 
 def get_project_root() -> Path:
-    return (
-        _get_user_root()
-        / "AxonZ"
-        / "SystemData"
-        / "sentineltray"
-    )
+    override = os.environ.get("SENTINELTRAY_ROOT")
+    if override:
+        return Path(override)
+    return _get_project_root_from_file()
 
 
 @dataclass(frozen=True)
@@ -280,56 +300,24 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
     return config
 
 
-def _resolve_sensitive_path(base: Path, value: str) -> str:
-    candidate = Path(value)
-    if not candidate.is_absolute():
-        return str(base / candidate)
-    try:
-        if candidate.resolve().is_relative_to(base.resolve()):
-            return str(candidate)
-    except OSError:
-        pass
-    return str(base / candidate.name)
-
-
-def _resolve_log_path(base: Path, log_root: Path, value: str) -> str:
-    candidate = Path(value)
-    if not candidate.is_absolute():
-        return str(base / candidate)
-    try:
-        if candidate.resolve().is_relative_to(log_root.resolve()):
-            return str(candidate)
-    except OSError:
-        pass
-    return str(log_root / candidate.name)
-
-
 def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
     base = get_user_data_dir()
     log_root = get_user_log_dir()
 
     return replace(
         config,
-        state_file=_resolve_sensitive_path(base, config.state_file),
-        log_file=_resolve_log_path(base, log_root, config.log_file),
-        telemetry_file=_resolve_log_path(base, log_root, config.telemetry_file),
-        status_export_file=_resolve_log_path(base, log_root, config.status_export_file),
-        status_export_csv=_resolve_log_path(base, log_root, config.status_export_csv),
-        config_checksum_file=_resolve_log_path(base, log_root, config.config_checksum_file),
-        email_queue_file=_resolve_log_path(base, log_root, config.email_queue_file),
+        state_file=resolve_sensitive_path(base, config.state_file),
+        log_file=resolve_log_path(base, log_root, config.log_file),
+        telemetry_file=resolve_log_path(base, log_root, config.telemetry_file),
+        status_export_file=resolve_log_path(base, log_root, config.status_export_file),
+        status_export_csv=resolve_log_path(base, log_root, config.status_export_csv),
+        config_checksum_file=resolve_log_path(base, log_root, config.config_checksum_file),
+        email_queue_file=resolve_log_path(base, log_root, config.email_queue_file),
     )
 
 
 def _validate_config(config: AppConfig) -> None:
     log_root = get_user_log_dir().resolve()
-
-    def _must_be_under_logs(path_value: str, label: str) -> None:
-        try:
-            resolved = Path(path_value).resolve()
-            if not resolved.is_relative_to(log_root):
-                raise ValueError(f"{label} must be under {log_root}")
-        except OSError as exc:
-            raise ValueError(f"{label} must be under {log_root}") from exc
 
     if config.poll_interval_seconds < 1:
         raise ValueError("poll_interval_seconds must be >= 1")
@@ -365,12 +353,12 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("status_export_file is required")
     if not config.status_export_csv:
         raise ValueError("status_export_csv is required")
-    _must_be_under_logs(config.log_file, "log_file")
-    _must_be_under_logs(config.telemetry_file, "telemetry_file")
-    _must_be_under_logs(config.status_export_file, "status_export_file")
-    _must_be_under_logs(config.status_export_csv, "status_export_csv")
-    _must_be_under_logs(config.config_checksum_file, "config_checksum_file")
-    _must_be_under_logs(config.email_queue_file, "email_queue_file")
+    ensure_under_root(log_root, config.log_file, "log_file")
+    ensure_under_root(log_root, config.telemetry_file, "telemetry_file")
+    ensure_under_root(log_root, config.status_export_file, "status_export_file")
+    ensure_under_root(log_root, config.status_export_csv, "status_export_csv")
+    ensure_under_root(log_root, config.config_checksum_file, "config_checksum_file")
+    ensure_under_root(log_root, config.email_queue_file, "email_queue_file")
     if config.status_refresh_seconds < 1:
         raise ValueError("status_refresh_seconds must be >= 1")
     if config.min_free_disk_mb < 1:
@@ -412,19 +400,19 @@ def _validate_config(config: AppConfig) -> None:
             raise ValueError("email.from_address is required")
         if not config.email.to_addresses:
             raise ValueError("email.to_addresses is required")
-        _validate_email_address("email.from_address", config.email.from_address)
+        validate_email_address("email.from_address", config.email.from_address)
         for address in config.email.to_addresses:
-            _validate_email_address("email.to_addresses", address)
+            validate_email_address("email.to_addresses", address)
     if config.window_title_regex:
-        _validate_regex("window_title_regex", config.window_title_regex)
+        validate_regex("window_title_regex", config.window_title_regex)
     if config.phrase_regex:
-        _validate_regex("phrase_regex", config.phrase_regex)
+        validate_regex("phrase_regex", config.phrase_regex)
     if config.monitors:
         for monitor in config.monitors:
             if monitor.window_title_regex:
-                _validate_regex("monitors.window_title_regex", monitor.window_title_regex)
+                validate_regex("monitors.window_title_regex", monitor.window_title_regex)
             if monitor.phrase_regex:
-                _validate_regex("monitors.phrase_regex", monitor.phrase_regex)
+                validate_regex("monitors.phrase_regex", monitor.phrase_regex)
             if not monitor.email.dry_run:
                 if not monitor.email.smtp_host:
                     raise ValueError("monitors.email.smtp_host is required")
@@ -432,28 +420,11 @@ def _validate_config(config: AppConfig) -> None:
                     raise ValueError("monitors.email.from_address is required")
                 if not monitor.email.to_addresses:
                     raise ValueError("monitors.email.to_addresses is required")
-                _validate_email_address("monitors.email.from_address", monitor.email.from_address)
+                validate_email_address("monitors.email.from_address", monitor.email.from_address)
                 for address in monitor.email.to_addresses:
-                    _validate_email_address("monitors.email.to_addresses", address)
+                    validate_email_address("monitors.email.to_addresses", address)
     if config.watchdog_timeout_seconds < 1:
         raise ValueError("watchdog_timeout_seconds must be >= 1")
-
-
-def _validate_regex(label: str, value: str) -> None:
-    import re
-
-    try:
-        re.compile(value)
-    except re.error as exc:
-        raise ValueError(f"{label} invalid regex: {exc}") from exc
-
-
-def _validate_email_address(label: str, value: str) -> None:
-    if "@" not in value or value.startswith("@") or value.endswith("@"):
-        raise ValueError(f"{label} must be a valid email address")
-    local, _, domain = value.partition("@")
-    if not local or not domain or "." not in domain:
-        raise ValueError(f"{label} must be a valid email address")
 
 
 def load_config(path: str) -> AppConfig:

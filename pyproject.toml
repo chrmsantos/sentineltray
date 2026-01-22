@@ -11,6 +11,11 @@ license = { text = "GPL-3.0-only" }
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+addopts = [
+    "--cov=sentineltray",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
 norecursedirs = [
 	".venv",
 	"runtime",
@@ -20,3 +25,11 @@ norecursedirs = [
 	"runtime/python/Lib/site-packages",
 	"**/site-packages",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["src/sentineltray"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false

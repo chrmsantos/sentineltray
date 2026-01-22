@@ -6,7 +6,7 @@ import pytest
 
 from sentineltray.app import Notifier
 from sentineltray import app as app_module
-from sentineltray.config import AppConfig, EmailConfig, get_user_log_dir
+from sentineltray.config import AppConfig, EmailConfig, get_user_data_dir, get_user_log_dir
 from sentineltray.detector import WindowUnavailableError
 from sentineltray.status import StatusStore
 
@@ -15,14 +15,7 @@ def test_run_loop_skips_window_unavailable(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    base = (
-        tmp_path
-        / "AppData"
-        / "Local"
-        / "AxonZ"
-        / "SentinelTray"
-        / "UserData"
-    )
+    base = get_user_data_dir()
     log_root = get_user_log_dir()
     config = AppConfig(
         window_title_regex="APP",

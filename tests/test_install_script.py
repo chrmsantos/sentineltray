@@ -16,3 +16,4 @@ def test_install_script_has_logging_and_retention() -> None:
     assert "validate_hash" in content
     assert "rollback" in content
     assert "create_shortcut.ps1" in content
+    assert ":log_context" in content

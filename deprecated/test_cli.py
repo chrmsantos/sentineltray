@@ -1,4 +1,6 @@
-from sentineltray.cli import _parse_command
+import pytest
+
+pytest.skip("CLI deprecated; GUI is the primary interface", allow_module_level=True)
 
 
 def test_parse_command_basic() -> None:
