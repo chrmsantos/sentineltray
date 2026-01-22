@@ -191,24 +191,6 @@ def run_tray(config: AppConfig) -> None:
         finally:
             request_exit()
 
-    def request_update() -> None:
-        root_dir = get_project_root()
-        install_cmd = root_dir / "install.cmd"
-        if not install_cmd.exists():
-            messagebox.showerror(
-                "Atualização",
-                "Script de atualização não encontrado.",
-            )
-            return
-        subprocess.Popen(
-            ["cmd", "/c", str(install_cmd), "/update"],
-            cwd=str(root_dir),
-        )
-        messagebox.showinfo(
-            "Atualização",
-            "Atualização iniciada em segundo plano.",
-        )
-
     def toggle_pause() -> None:
         if pause_event.is_set():
             pause_event.clear()
@@ -487,7 +469,6 @@ def run_tray(config: AppConfig) -> None:
         menu = tk.Menu(status_window, font=menu_font)
 
         file_menu = tk.Menu(menu, tearoff=0, font=item_font)
-        file_menu.add_command(label="Atualizar", command=request_update)
         file_menu.add_command(label="Reiniciar", command=request_restart)
         file_menu.add_command(label="Sair", command=request_exit)
         menu.add_cascade(label="Arquivo", menu=file_menu)

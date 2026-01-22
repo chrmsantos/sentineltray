@@ -8,7 +8,7 @@ O instalador copia templates/local/config.local.yaml para a pasta de dados quand
 ## Como usar
 
 1. Crie o arquivo de configuracao em:
-   %SENTINELTRAY_DATA_DIR%\config.local.yaml (quando definido; run.cmd usa a pasta de instalacao)
+   %SENTINELTRAY_DATA_DIR%\config.local.yaml (quando definido)
    ou %LOCALAPPDATA%\AxonZ\SentinelTray\UserData\config.local.yaml
 2. Preencha os campos obrigatorios e reinicie o aplicativo.
 3. state.json é apenas um exemplo do formato de histórico local.

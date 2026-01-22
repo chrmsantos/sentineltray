@@ -20,7 +20,7 @@ Esta aplicação processa dados pessoais apenas para enviar alertas e manter o h
 
 Dados sensiveis necessarios ao funcionamento ficam exclusivamente em:
 
-- %SENTINELTRAY_DATA_DIR% (quando definido; run.cmd usa a pasta de instalacao)
+- %SENTINELTRAY_DATA_DIR% (quando definido)
 - ou %LOCALAPPDATA%\AxonZ\SentinelTray\UserData (fallback padrao)
 
 Isto inclui:
@@ -41,7 +41,7 @@ O repositório contém apenas templates comentados e exemplos fictícios.
 
 ## Execução inicial
 
-Ao iniciar, se %SENTINELTRAY_DATA_DIR%\config.local.yaml não existir, o aplicativo encerra com orientação de correção. O instalador copia um modelo de configuração quando o arquivo não existe. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em %SENTINELTRAY_DATA_DIR%\logs.
+Ao iniciar, se %SENTINELTRAY_DATA_DIR%\config.local.yaml não existir, o aplicativo encerra com orientação de correção. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em %SENTINELTRAY_DATA_DIR%\logs.
 
 ## Segurança e minimização
 

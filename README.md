@@ -9,18 +9,9 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - Windows user session (no admin required).
 - SMTP server access for email delivery.
 
-## Setup (self-contained)
+## Setup
 
-1. Bootstrap the bundled runtime (totalmente offline):
-
-   ```powershell
-   scripts\bootstrap_self_contained.cmd
-   ```
-
-   This validates the embedded CPython and dependencies already bundled in runtime/.
-   Checksums are stored in runtime/checksums.txt and validated on startup.
-
-2. Edit config.local.yaml and set:
+Edite config.local.yaml e defina:
 
 - window_title_regex (prefixo unico do titulo e suficiente)
 - phrase_regex (empty means any visible text)
@@ -56,31 +47,6 @@ The installer copies templates/local/config.local.yaml into the UserData folder
 when the file does not exist.
 
 Local documentation for sample state files lives under templates/local/.
-
-## Instalacao automatica (Windows CMD)
-
-Use o script em install.cmd (arquivo unico/standalone) para baixar o projeto
-do GitHub e instalar o runtime auto-contido (CPython embutido + dependencias já inclusas).
-O instalador gera logs em %TEMP%\sentineltray-install e mantém apenas os 5 mais recentes.
-Durante a instalacao, um atalho SentinelTray.lnk e criado em shortcuts/ e copiado
-para a área de trabalho do usuário.
-Destino de instalacao: %USERPROFILE%\AxonZ\SystemData\sentineltray.
-Os dados locais ficam dentro da pasta de instalacao em UserData\ (modo portable) e
-podem ser movidos definindo SENTINELTRAY_DATA_DIR.
-
-Opcoes:
-
-- /offline /zip arquivo.zip (instalacao offline com zip local)
-- /dir pasta (define diretorio de instalacao)
-- /sha256 hash (valida integridade do zip)
-- /update (atualiza preservando rollback)
-- /uninstall (desinstala)
-- /no-desktop (nao cria atalho na area de trabalho)
-- /no-startmenu (nao cria atalho no Menu Iniciar)
-
-Para desinstalar:
-
-scripts\uninstall.cmd
 
 ## Run
 

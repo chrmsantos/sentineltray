@@ -4,9 +4,6 @@
 
 - Improve visibility timeout handling to reduce false warnings when the target window reports visible/enabled after retries.
 - Stabilize scan preparation by refocusing and clicking the title bar to reduce interference from temporary overlays.
-- Fix installer shortcut creation when create_shortcut.ps1 is missing after copy.
-- Fail fast when the downloaded package lacks the runtime bundle.
-- Ensure installer stops after fatal errors instead of continuing to later steps.
 - Add WhatsApp Desktop delivery channel with dedicated configuration and UI controls.
 - Add manual scan, update/restart options, and startup validation of monitored window and WhatsApp availability.
 - Add automated security checks (CodeQL, pip-audit, bandit), SBOM, and SLSA provenance for releases.
@@ -31,7 +28,6 @@
 - Redact sensitive data from logs, status exports, and telemetry while preserving diagnostic utility.
 - Add status report emails every 7 scan iterations and surface last_report_send in exports/UI.
 - Set default scan interval to 3 minutes in templates.
-- Add self-contained runtime bootstrap with locked dependencies and offline wheelhouse.
 - Show the UI by default on first initialization (start_minimized disabled in templates).
 - Add runtime checksum validation, stricter log path validation, and Windows mutex for single-instance stability.
 - Improve window detection retries and expand log redaction for tokens/phones.
@@ -53,7 +49,6 @@
 
 ## 2026-01-19 (0.2.0-beta.3)
 
-- Harden Windows installer with structured logging, retention, and stricter error handling.
 - Ensure error notifications always attempt immediate email delivery.
 
 ## 2026-01-19 (0.2.0-beta.2)
@@ -95,7 +90,6 @@
 - Add config error prompt with edit or exit option.
 - Open status on left-click and refresh tray UI in PT-BR.
 - Add Gmail SMTP example to local template.
-- Add single-instance guard and installer script.
 - Add email subject, retries, regex validation, and status export.
 - Use eye icon and auto-open status window on startup.
 - Add status shortcuts for config and repo, and switch eye color to light blue.
