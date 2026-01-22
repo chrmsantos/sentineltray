@@ -225,13 +225,76 @@ class Notifier:
             text = item.get("text")
             sent_at = item.get("sent_at")
             item_monitor = item.get("monitor")
+            if not isinstance(text, str) or not isinstance(sent_at, str):
+                continue
+            if monitor_key and item_monitor not in (None, monitor_key):
+                continue
+            try:
+                timestamp = datetime.fromisoformat(sent_at)
+            except ValueError:
+                continue
+            last_sent[text] = timestamp
+        return last_sent
+
+    def _build_monitors(self) -> list[MonitorRuntime]:
+        monitors = self.config.monitors
+        if not monitors:
+            monitors = [
+                MonitorConfig(
+                    window_title_regex=self.config.window_title_regex,
+                    phrase_regex=self.config.phrase_regex,
+                    email=self.config.email,
+                )
+            ]
+
+        runtimes: list[MonitorRuntime] = []
+        monitor_count = len(monitors)
+        for monitor in monitors:
+            key = f"{monitor.window_title_regex}|{monitor.phrase_regex}"
+            runtimes.append(
+                MonitorRuntime(
+                    key=key,
+                    config=monitor,
+                    detector=WindowTextDetector(
+                        monitor.window_title_regex,
+                        allow_window_restore=self.config.allow_window_restore,
+                        log_throttle_seconds=self.config.log_throttle_seconds,
+                    ),
+                    sender=build_sender(
+                        monitor.email,
+                        queue_path=self._queue_path_for_monitor(key, monitor_count),
+                        queue_max_items=self.config.email_queue_max_items,
+                        queue_max_age_seconds=self.config.email_queue_max_age_seconds,
+                        queue_max_attempts=self.config.email_queue_max_attempts,
+                        queue_retry_base_seconds=self.config.email_queue_retry_base_seconds,
+                    ),
+                )
+            )
+        return runtimes
+
+    def _queue_path_for_monitor(self, monitor_key: str, monitor_count: int) -> Path:
+        base = Path(self.config.email_queue_file)
+        if monitor_count <= 1:
+            return base
+        suffix = base.suffix or ".json"
+        stem = base.stem
+        digest = hashlib.sha256(monitor_key.encode("utf-8")).hexdigest()[:8]
+        return base.with_name(f"{stem}-{digest}{suffix}")
+
+    def _send_message(
+        self,
+        monitor: "MonitorRuntime",
+        message: str,
+        *,
+        category: str,
+        force_send: bool = False,
+    ) -> bool:
         if self.config.log_only_mode and not force_send:
             LOGGER.info(
                 "Log-only mode active, skipping send",
                 extra={"category": category},
             )
             return False
-
         sent_any = False
 
         if monitor.email_disabled:
@@ -255,8 +318,8 @@ class Notifier:
                     _safe_status_text(f"error: smtp auth failed: {exc}")
                 )
                 LOGGER.error(
-                    "Email auth failed; disabling email sends",
-                    extra={"category": "send"},
+                    "SMTP authentication failed; disabling email notifications",
+                    extra={"category": category},
                 )
             except Exception as exc:
                 LOGGER.warning(
@@ -288,63 +351,6 @@ class Notifier:
                 )
 
         return sent_any
-                        queue_max_items=self.config.email_queue_max_items,
-                        queue_max_age_seconds=self.config.email_queue_max_age_seconds,
-                        queue_max_attempts=self.config.email_queue_max_attempts,
-                        queue_retry_base_seconds=self.config.email_queue_retry_base_seconds,
-                    ),
-                )
-            )
-        return runtimes
-
-    def _queue_path_for_monitor(self, monitor_key: str, monitor_count: int) -> Path:
-        base = Path(self.config.email_queue_file)
-        if monitor_count <= 1:
-            return base
-        suffix = base.suffix or ".json"
-        stem = base.stem
-        digest = hashlib.sha256(monitor_key.encode("utf-8")).hexdigest()[:8]
-        return base.with_name(f"{stem}-{digest}{suffix}")
-
-    def _send_message(
-        self,
-        monitor: "MonitorRuntime",
-        message: str,
-        *,
-        category: str,
-        force_send: bool = False,
-    ) -> bool:
-        if monitor.email_disabled:
-            LOGGER.warning(
-                "Email disabled after authentication failure; skipping send",
-                extra={"category": category},
-            )
-            return False
-        if self.config.log_only_mode and not force_send:
-            LOGGER.info(
-                "Log-only mode active, skipping send",
-                extra={"category": category},
-            )
-            return False
-        sender = self._sender or monitor.sender
-        try:
-            monitor.last_send_queued = False
-            sender.send(message)
-            return True
-        except EmailQueued:
-            monitor.last_send_queued = True
-            LOGGER.info("Message queued for retry", extra={"category": category})
-            return True
-        except EmailAuthError as exc:
-            monitor.email_disabled = True
-            self.status.set_last_error(
-                _safe_status_text(f"error: smtp auth failed: {exc}")
-            )
-            LOGGER.error(
-                "SMTP authentication failed; disabling email notifications",
-                extra={"category": category},
-            )
-            return False
 
     def _compute_monitor_backoff_seconds(self, failure_count: int) -> int:
         if failure_count <= 0:

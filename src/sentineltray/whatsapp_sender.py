@@ -195,6 +195,12 @@ class WhatsAppSender:
                     raise
                 if backoff:
                     time.sleep(backoff * (2**attempt))
+            except Exception as exc:
+                self._log_throttled(logging.ERROR, "unexpected", "%s", exc)
+                if attempt >= attempts:
+                    raise WhatsAppSendError("Unexpected WhatsApp failure") from exc
+                if backoff:
+                    time.sleep(backoff * (2**attempt))
 
     def check_ready(self) -> None:
         if not self.config.enabled:
@@ -204,12 +210,6 @@ class WhatsAppSender:
         window = self._get_window()
         self._ensure_foreground(window)
         self._check_logged_in(window)
-            except Exception as exc:
-                self._log_throttled(logging.ERROR, "unexpected", "%s", exc)
-                if attempt >= attempts:
-                    raise WhatsAppSendError("Unexpected WhatsApp failure") from exc
-                if backoff:
-                    time.sleep(backoff * (2**attempt))
 
 
 def build_message_template(template: str, *, message: str, window: str) -> str:

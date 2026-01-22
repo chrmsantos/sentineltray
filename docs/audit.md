@@ -14,6 +14,7 @@ Este documento consolida os controles técnicos usados para apoiar auditorias de
 - CodeQL em push/PR.
 - Dependabot semanal.
 - OpenSSF Scorecard semanal.
+- mypy para verificação de tipagem.
 
 ## Logs e minimização
 

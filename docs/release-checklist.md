@@ -11,6 +11,7 @@
 - [ ] CodeQL passou
 - [ ] pip-audit passou
 - [ ] bandit passou
+- [ ] mypy passou
 - [ ] Scorecard sem falhas críticas
 
 ## Release artifacts
