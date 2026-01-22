@@ -191,5 +191,6 @@ monitors:
 - Sensitive data is always stored under %SENTINELTRAY_DATA_DIR%; operational logs stay in %SENTINELTRAY_DATA_DIR%\logs.
 - Política de privacidade em PRIVACY.md.
 - Política de segurança em SECURITY.md.
+- Licenças e terceiros em docs/licenses.md.
 - Releases incluem SBOM, relatórios de auditoria automática e provenance (SLSA).
 - WhatsApp Desktop pode ser usado como canal adicional de alerta (configurável).
