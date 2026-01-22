@@ -59,6 +59,7 @@ do GitHub e instalar o runtime auto-contido (CPython embutido + dependencias já
 O instalador gera logs em %TEMP%\sentineltray-install e mantém apenas os 5 mais recentes.
 Durante a instalacao, um atalho SentinelTray.lnk e criado em shortcuts/ e copiado
 para a área de trabalho do usuário.
+Destino de instalacao: %USERPROFILE%\AxonZ\SystemData\sentineltray.
 
 Opcoes:
 

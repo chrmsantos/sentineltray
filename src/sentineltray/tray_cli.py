@@ -72,7 +72,7 @@ def run_tray_cli(config: AppConfig) -> int:
     icon = pystray.Icon(
         "sentineltray",
         _build_icon_image(),
-        "SentinelTray: Monitorando",
+        "SentinelTray",
     )
 
     exit_code: dict[str, int] = {"code": 0}
