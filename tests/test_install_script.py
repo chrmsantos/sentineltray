@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def test_install_script_has_logging_and_retention() -> None:
-    script = Path(__file__).resolve().parents[1] / "scripts" / "install.cmd"
+    script = Path(__file__).resolve().parents[1] / "install.cmd"
     content = script.read_text(encoding="utf-8")
     assert "LOG_DIR" in content
     assert "install_" in content

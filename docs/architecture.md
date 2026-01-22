@@ -45,7 +45,7 @@ Versao beta: 1.0.0-beta.1 (21-01-2026)
 - Watchdog detects long scans and can reset components.
 - Sensitive data paths are enforced under %SENTINELTRAY_DATA_DIR%; operational logs remain in %SENTINELTRAY_DATA_DIR%\logs.
 - Politica de privacidade detalhada em PRIVACY.md.
-- Instalacao automatica disponivel via scripts/install.cmd (suporta /dir para destino customizado).
+- Instalacao automatica disponivel via install.cmd (suporta /dir para destino customizado).
 - Destino de instalacao padrao: %USERPROFILE%\AxonZ\SystemData\sentineltray.
 - Dados locais residem em %SENTINELTRAY_DATA_DIR% (portable), com fallback para %LOCALAPPDATA%.
 - Config is loaded exclusively from %SENTINELTRAY_DATA_DIR%\config.local.yaml.
