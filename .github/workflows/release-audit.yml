@@ -1,0 +1,49 @@
+name: Release Audit
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  security-events: write
+
+jobs:
+  audit:
+    name: Release Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pip-audit bandit
+
+      - name: pip-audit report
+        run: |
+          pip-audit -r requirements.txt --format json -o pip-audit.json
+
+      - name: bandit report
+        run: |
+          bandit -r src -f json -o bandit.json
+
+      - name: Generate SBOM (SPDX)
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b ./
+          ./syft . -o spdx-json=sbom.spdx.json
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            pip-audit.json
+            bandit.json
+            sbom.spdx.json

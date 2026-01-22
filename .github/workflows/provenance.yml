@@ -1,0 +1,21 @@
+name: SLSA Provenance
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  actions: read
+  id-token: write
+  contents: write
+
+jobs:
+  provenance:
+    name: Generate provenance
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    permissions:
+      actions: read
+      id-token: write
+      contents: write
+    with:
+      upload-assets: true

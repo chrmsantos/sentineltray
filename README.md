@@ -42,6 +42,8 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - email_queue_file, email_queue_max_items, email_queue_max_age_seconds
 - email_queue_max_attempts, email_queue_retry_base_seconds
 - log_throttle_seconds
+- whatsapp.enabled, whatsapp.contact_name, whatsapp.message_template
+- whatsapp.window_title_regex, whatsapp.retry_attempts, whatsapp.retry_backoff_seconds
 
 The application always reads the local config file. Default location is driven by
 `SENTINELTRAY_DATA_DIR` when set (run.cmd sets it to the install folder for a
@@ -187,3 +189,6 @@ monitors:
 - Scans run only after 2+ minutes of user inactivity.
 - Sensitive data is always stored under %SENTINELTRAY_DATA_DIR%; operational logs stay in %SENTINELTRAY_DATA_DIR%\logs.
 - Política de privacidade em PRIVACY.md.
+- Política de segurança em SECURITY.md.
+- Releases incluem SBOM, relatórios de auditoria automática e provenance (SLSA).
+- WhatsApp Desktop pode ser usado como canal adicional de alerta (configurável).

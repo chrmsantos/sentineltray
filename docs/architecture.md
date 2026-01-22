@@ -31,6 +31,8 @@ Versao beta: 1.0.0-beta.1 (21-01-2026)
 - Tray abre automaticamente o status na inicializacao e usa icone em formato de olho.
 - Status inclui atalhos para abrir configuracoes e o repositorio.
 - Interface exibe o nome e a descricao resumida do projeto no topo.
+- WhatsApp Desktop pode ser usado como canal adicional de alerta (opcional).
+- Releases publicam SBOM e relatórios automáticos de segurança.
 - Status inclui menu de comandos com pausar/continuar, encerrar e atalhos operacionais, com texto ampliado e amigavel, e janela ajustada ao conteudo.
 - Escaneamento ocorre apenas após 2+ minutos sem interação do usuário.
 - Assunto do e-mail sempre inclui SentinelTray, e o corpo começa com título SentinelTray em PT-BR.
