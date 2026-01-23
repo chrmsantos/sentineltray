@@ -36,4 +36,3 @@ Cada item deve ter um bloco `email` completo.
 
 - Não inclua credenciais reais em arquivos de exemplo.
 - Parâmetros adicionais de robustez disponíveis: min_repeat_seconds; error_notification_cooldown_seconds; window_error_backoff_base_seconds / window_error_backoff_max_seconds; window_error_circuit_threshold / window_error_circuit_seconds; email_queue_file / email_queue_max_items / email_queue_max_age_seconds; email_queue_max_attempts / email_queue_retry_base_seconds; log_throttle_seconds.
-- WhatsApp: enabled, contact_name, message_template, window_title_regex, retry_attempts, retry_backoff_seconds.

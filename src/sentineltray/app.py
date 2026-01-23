@@ -20,11 +20,6 @@ from .logging_setup import sanitize_text, setup_logging
 from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, build_sender
-from .whatsapp_sender import (
-    WhatsAppError,
-    WhatsAppSender,
-    build_message_template,
-)
 from .telemetry import JsonWriter, atomic_write_text
 from . import __release_date__, __version_label__
 
@@ -190,12 +185,6 @@ class Notifier:
             "oldest_age_seconds": 0,
         }
         self._sender = None
-        self._whatsapp_sender: WhatsAppSender | None = None
-        if self.config.whatsapp.enabled:
-            self._whatsapp_sender = WhatsAppSender(
-                config=self.config.whatsapp,
-                log_throttle_seconds=self.config.log_throttle_seconds,
-            )
         self._update_config_checksum()
 
     def _reset_components(self) -> None:
@@ -326,28 +315,6 @@ class Notifier:
                     "Failed to send notification: %s",
                     exc,
                     extra={"category": category},
-                )
-
-        if self._whatsapp_sender:
-            try:
-                whatsapp_message = build_message_template(
-                    self.config.whatsapp.message_template,
-                    message=message,
-                    window=monitor.config.window_title_regex,
-                )
-                self._whatsapp_sender.send(whatsapp_message)
-                sent_any = True
-            except WhatsAppError as exc:
-                LOGGER.warning(
-                    "WhatsApp send failed: %s",
-                    exc,
-                    extra={"category": "whatsapp"},
-                )
-            except Exception as exc:
-                LOGGER.warning(
-                    "Unexpected WhatsApp error: %s",
-                    exc,
-                    extra={"category": "whatsapp"},
                 )
 
         return sent_any

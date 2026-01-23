@@ -33,8 +33,6 @@ Edite config.local.yaml e defina:
 - email_queue_file, email_queue_max_items, email_queue_max_age_seconds
 - email_queue_max_attempts, email_queue_retry_base_seconds
 - log_throttle_seconds
-- whatsapp.enabled, whatsapp.contact_name, whatsapp.message_template
-- whatsapp.window_title_regex, whatsapp.retry_attempts, whatsapp.retry_backoff_seconds
 
 The application always reads the local config file. Default location is driven by
 `SENTINELTRAY_DATA_DIR` when set. Otherwise it falls back to:
@@ -156,4 +154,3 @@ monitors:
 - Política de segurança em SECURITY.md.
 - Licenças e terceiros em docs/licenses.md.
 - Releases incluem SBOM, relatórios de auditoria automática e provenance (SLSA).
-- WhatsApp Desktop pode ser usado como canal adicional de alerta (configurável).

@@ -2,12 +2,13 @@
 
 ## Unreleased
 
+- Remove legacy alternate delivery channel and related UI/config/test coverage.
+
 ## 2026-01-22 (1.0.0-beta.2)
 
 - Improve visibility timeout handling to reduce false warnings when the target window reports visible/enabled after retries.
 - Stabilize scan preparation by refocusing and clicking the title bar to reduce interference from temporary overlays.
-- Add WhatsApp Desktop delivery channel with dedicated configuration and UI controls.
-- Add manual scan, update/restart options, and startup validation of monitored window and WhatsApp availability.
+- Add manual scan, update/restart options, and startup validation of monitored window availability.
 - Add automated security checks (CodeQL, pip-audit, bandit), SBOM, and SLSA provenance for releases.
 - Add security and audit documentation, plus issue/PR templates and release checklist.
 - Add mypy type checking configuration and CI step.
@@ -83,7 +84,6 @@
 - Add local telemetry file for diagnostics.
 - Add silent mode for error popup suppression.
 - Detect email delivery failures.
-- Replace WhatsApp delivery with SMTP email.
 - Validate configuration values at startup.
 - Add watchdog for long scan stalls.
 - Auto-create local override config on startup when missing.

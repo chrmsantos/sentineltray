@@ -9,7 +9,6 @@ Esta aplicação processa dados pessoais apenas para enviar alertas e manter o h
 - Endereços de e-mail de envio e recebimento.
 - Credenciais SMTP (usuário e senha de app, quando aplicável).
 - Conteúdo das mensagens de alerta que podem conter dados visíveis na janela monitorada.
-- Nome do contato ou grupo configurado para envio via WhatsApp (quando habilitado).
 
 ## Base legal e finalidade
 
@@ -46,7 +45,7 @@ Ao iniciar, se %SENTINELTRAY_DATA_DIR%\config.local.yaml não existir, o aplicat
 ## Segurança e minimização
 
 - Os dados são usados apenas para alertas e diagnóstico local.
-- Não há envio para terceiros além do provedor SMTP configurado e/ou WhatsApp Desktop local.
+- Não há envio para terceiros além do provedor SMTP configurado.
 - Campos sensíveis são mantidos fora do repositório e ignorados pelo controle de versão.
 - Logs e exportações aplicam mascaramento de dados sensíveis (e-mails, telefones e caminhos locais).
 
@@ -67,7 +66,6 @@ Em caso de dúvidas sobre o tratamento, consulte o responsável pelo ambiente on
 ## Operadores e terceiros
 
 - SMTP: depende do provedor configurado pelo usuário.
-- WhatsApp: envio ocorre via aplicativo WhatsApp Desktop já instalado e logado.
 
 ## Segurança adicional
 
