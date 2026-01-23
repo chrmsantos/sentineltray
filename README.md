@@ -201,6 +201,8 @@ monitors:
 - Phrase matching ignores accents, is case-insensitive, and matches partial text occurrences.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
+- Messages identical to the immediately previous scan are skipped.
+- Messages with a lower leading number than the previous scan are skipped.
 - send_repeated_matches still respects min_repeat_seconds if configured.
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.
