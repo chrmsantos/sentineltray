@@ -21,7 +21,6 @@ from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, build_sender
 from .telemetry import JsonWriter, atomic_write_text
-from .cli_control import drain_commands
 from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
@@ -125,32 +124,6 @@ def _safe_status_text(text: str) -> str:
         return ""
     return sanitize_text(_to_ascii(text))
 
-
-def _process_cli_commands(
-    stop_event: Event,
-    pause_event: Event | None,
-    manual_scan_event: Event | None,
-) -> None:
-    commands = drain_commands()
-    if not commands:
-        return
-    for command in commands:
-        name = command.command.lower()
-        if name == "pause":
-            if pause_event is not None:
-                pause_event.set()
-            LOGGER.info("CLI requested pause", extra={"category": "control"})
-        elif name == "resume":
-            if pause_event is not None:
-                pause_event.clear()
-            LOGGER.info("CLI requested resume", extra={"category": "control"})
-        elif name == "scan":
-            if manual_scan_event is not None:
-                manual_scan_event.set()
-            LOGGER.info("CLI requested manual scan", extra={"category": "control"})
-        elif name == "exit":
-            stop_event.set()
-            LOGGER.info("CLI requested exit", extra={"category": "control"})
 
 
 def _get_version() -> str:
@@ -842,7 +815,6 @@ class Notifier:
         was_paused = False
         while not stop_event.is_set():
             loop_started = time.perf_counter()
-            _process_cli_commands(stop_event, pause_event, manual_scan_event)
             if pause_event is not None and pause_event.is_set():
                 if not was_paused:
                     LOGGER.info("Execution paused", extra={"category": "control"})

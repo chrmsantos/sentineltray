@@ -39,6 +39,13 @@
 - Store operational logs, telemetry, and status exports under the project logs/ folder; sensitive data remains in %SENTINELTRAY_DATA_DIR%.
 - Allow running main.py directly by bootstrapping src/ onto the import path.
 
+## 2026-01-23 (1.0.0-beta.3)
+
+- Add tray config editor with auto-encryption after editing.
+- Remove CLI and expose only Config/Exit from the tray icon.
+- Rename UserData folder to config across defaults and docs.
+- Add per-user startup registration via scripts/run.cmd.
+
 ## 2026-01-23 (0.2.0-beta.6)
 
 - Add tray icon with CLI launcher (left-click opens CLI, right-click shows Open/Exit).

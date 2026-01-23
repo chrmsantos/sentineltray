@@ -10,7 +10,8 @@ from PIL import Image, ImageDraw
 import pystray
 
 from .app import Notifier
-from .config import AppConfig, get_project_root
+from .config import AppConfig, get_encrypted_config_path, get_user_data_dir, load_config
+from .security_utils import decrypt_text_dpapi, encrypt_text_dpapi, parse_payload, serialize_payload
 from .status import StatusStore
 
 LOGGER = logging.getLogger(__name__)
@@ -40,28 +41,6 @@ def _start_notifier(
 	return thread
 
 
-def _open_cli_terminal() -> None:
-	try:
-		root = get_project_root()
-		cli_entry = root / "cli.py"
-		command = f"{sys.executable} {cli_entry}"
-		env = os.environ.copy()
-		env.setdefault("SENTINELTRAY_ROOT", str(root))
-		subprocess.Popen(
-			[
-				"cmd",
-				"/c",
-				"start",
-				"",
-				str(sys.executable),
-				str(cli_entry),
-			],
-			env=env,
-		)
-	except Exception as exc:
-		LOGGER.warning("Failed to open CLI terminal: %s", exc)
-
-
 def run_tray(config: AppConfig) -> None:
 	status = StatusStore()
 	stop_event = Event()
@@ -71,6 +50,8 @@ def run_tray(config: AppConfig) -> None:
 		config, status, stop_event, pause_event, manual_scan_event
 	)
 
+	edit_process: subprocess.Popen[str] | None = None
+
 	icon = pystray.Icon(
 		"sentineltray",
 		_build_tray_image(),
@@ -78,20 +59,75 @@ def run_tray(config: AppConfig) -> None:
 	)
 
 	def on_open(_: pystray.Icon, __: pystray.MenuItem) -> None:
-		_open_cli_terminal()
+		nonlocal edit_process
+		if edit_process is not None and edit_process.poll() is None:
+			return
+		try:
+			data_dir = get_user_data_dir()
+			config_path = data_dir / "config.local.yaml"
+			encrypted_path = get_encrypted_config_path(config_path)
+			temp_path = data_dir / "config.local.yaml.edit"
+
+			if encrypted_path.exists():
+				payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
+				plaintext = decrypt_text_dpapi(payload)
+				temp_path.write_text(plaintext, encoding="utf-8")
+			elif config_path.exists():
+				temp_path.write_text(
+					config_path.read_text(encoding="utf-8"),
+					encoding="utf-8",
+				)
+			else:
+				LOGGER.warning("Config file not found to edit")
+				return
+
+			edit_process = subprocess.Popen(["notepad.exe", str(temp_path)])
+		except Exception as exc:
+			LOGGER.warning("Failed to open config editor: %s", exc)
+
+	def finalize_config_edit() -> None:
+		nonlocal edit_process
+		if edit_process is None:
+			return
+		if edit_process.poll() is None:
+			return
+		edit_process = None
+		try:
+			data_dir = get_user_data_dir()
+			config_path = data_dir / "config.local.yaml"
+			encrypted_path = get_encrypted_config_path(config_path)
+			temp_path = data_dir / "config.local.yaml.edit"
+			if not temp_path.exists():
+				return
+			try:
+				load_config(str(temp_path))
+			except Exception as exc:
+				LOGGER.warning("Config validation failed after edit: %s", exc)
+				temp_path.unlink(missing_ok=True)
+				return
+
+			plaintext = temp_path.read_text(encoding="utf-8")
+			payload = encrypt_text_dpapi(plaintext)
+			encrypted_path.write_text(serialize_payload(payload), encoding="utf-8")
+			if config_path.exists():
+				config_path.unlink()
+			temp_path.unlink(missing_ok=True)
+		except Exception as exc:
+			LOGGER.warning("Failed to finalize config edit: %s", exc)
 
 	def on_exit(_: pystray.Icon, __: pystray.MenuItem) -> None:
 		stop_event.set()
 		icon.stop()
 
 	icon.menu = pystray.Menu(
-		pystray.MenuItem("Open", on_open, default=True),
+		pystray.MenuItem("Config", on_open, default=True),
 		pystray.MenuItem("Exit", on_exit),
 	)
 	try:
 		icon.run_detached()
 		while not stop_event.is_set():
 			stop_event.wait(0.5)
+			finalize_config_edit()
 	except Exception as exc:
 		LOGGER.error("Tray icon failed: %s", exc)
 	finally:

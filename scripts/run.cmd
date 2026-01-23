@@ -3,6 +3,8 @@ setlocal enableextensions enabledelayedexpansion
 
 set "ROOT=%~dp0.."
 for %%I in ("%ROOT%") do set "ROOT=%%~fI"
+set "STARTUP_KEY=HKCU\Software\Microsoft\Windows\CurrentVersion\Run"
+set "STARTUP_NAME=SentinelTray"
 set "PYTHON_RUNTIME=%ROOT%\runtime\python\python.exe"
 set "CHECKSUMS=%ROOT%\runtime\checksums.txt"
 set "PYTHON_VENV=%ROOT%\.venv\Scripts\python.exe"
@@ -15,6 +17,10 @@ for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss
 set "LOG_FILE=%LOG_DIR%\run_%LOG_TS%.log"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
 powershell -NoProfile -Command "Get-ChildItem -Path '%LOG_DIR%\run_*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -Skip 5 | Remove-Item -Force -ErrorAction SilentlyContinue" >nul 2>nul
+
+if /I "%~1"=="/install-startup" goto install_startup
+if /I "%~1"=="/remove-startup" goto remove_startup
+if /I "%~1"=="/startup-status" goto startup_status
 
 call :log "INFO" "Starting run.cmd"
 set "PYTHON="
@@ -72,6 +78,40 @@ if "%USE_POWERSHELL%"=="1" (
 set "EXIT_CODE=%ERRORLEVEL%"
 call :log "INFO" "Process finished with exit code !EXIT_CODE!"
 exit /b !EXIT_CODE!
+
+:install_startup
+call :log "INFO" "Installing startup entry"
+set "STARTUP_CMD=\"%ROOT%\scripts\run.cmd\""
+reg add "%STARTUP_KEY%" /v "%STARTUP_NAME%" /t REG_SZ /d "%STARTUP_CMD%" /f >nul 2>nul
+if errorlevel 1 (
+  call :log "ERROR" "Failed to install startup entry"
+  echo Failed to install startup entry.
+  exit /b 1
+)
+call :log "INFO" "Startup entry installed"
+echo Startup entry installed.
+exit /b 0
+
+:remove_startup
+call :log "INFO" "Removing startup entry"
+reg delete "%STARTUP_KEY%" /v "%STARTUP_NAME%" /f >nul 2>nul
+if errorlevel 1 (
+  call :log "WARN" "Startup entry not found or could not be removed"
+  echo Startup entry not found or could not be removed.
+  exit /b 1
+)
+call :log "INFO" "Startup entry removed"
+echo Startup entry removed.
+exit /b 0
+
+:startup_status
+reg query "%STARTUP_KEY%" /v "%STARTUP_NAME%" >nul 2>nul
+if errorlevel 1 (
+  echo Startup entry not installed.
+  exit /b 1
+)
+echo Startup entry installed.
+exit /b 0
 
 :log
 set "LEVEL=%~1"
