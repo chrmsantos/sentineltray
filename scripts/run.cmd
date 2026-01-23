@@ -59,10 +59,15 @@ set "USE_POWERSHELL=0"
 if /I "%SENTINELTRAY_PORTABLE%"=="1" (
   if not exist "%PYTHON_RUNTIME%" (
     call :log "ERROR" "Portable mode requires runtime\python."
-    call :log "ERROR" "Run scripts\prepare_portable_runtime.cmd or use /nonportable for system Python."
-    echo Portable mode requires runtime\python.
-    echo Run scripts\prepare_portable_runtime.cmd or use /nonportable for system Python.
-    exit /b 1
+    call :log "WARN" "Attempting automatic runtime preparation."
+    call :prepare_runtime
+    if not exist "%PYTHON_RUNTIME%" (
+      call :log "ERROR" "Runtime preparation failed; portable mode still missing runtime\python."
+      call :log "ERROR" "Use /nonportable or set SENTINELTRAY_PORTABLE=0 to use system Python."
+      echo Portable mode requires runtime\python.
+      echo Use /nonportable or set SENTINELTRAY_PORTABLE=0 to use system Python.
+      exit /b 1
+    )
   )
 )
 
@@ -143,6 +148,20 @@ if errorlevel 1 (
   exit /b 1
 )
 call :log "INFO" "Dependency bootstrap complete"
+exit /b 0
+
+:prepare_runtime
+if not exist "%ROOT%\scripts\prepare_portable_runtime.cmd" (
+  call :log "ERROR" "prepare_portable_runtime.cmd not found."
+  exit /b 1
+)
+call :log "INFO" "Preparing portable runtime"
+call "%ROOT%\scripts\prepare_portable_runtime.cmd"
+if errorlevel 1 (
+  call :log "ERROR" "Portable runtime preparation failed"
+  exit /b 1
+)
+call :log "INFO" "Portable runtime prepared"
 exit /b 0
 
 :install_startup

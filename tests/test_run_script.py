@@ -11,3 +11,4 @@ def test_run_script_has_logging() -> None:
     assert ":log" in content
     assert ":log_context" in content
     assert "/nonportable" in content
+    assert ":prepare_runtime" in content
