@@ -106,13 +106,10 @@ class AppConfig:
     telemetry_file: str
     status_export_file: str
     status_export_csv: str
-    status_refresh_seconds: int
     allow_window_restore: bool
-    start_minimized: bool
     log_only_mode: bool
     config_checksum_file: str
     min_free_disk_mb: int
-    show_error_window: bool
     watchdog_timeout_seconds: int
     watchdog_restart: bool
     send_repeated_matches: bool
@@ -258,13 +255,10 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         telemetry_file=str(_get_required(data, "telemetry_file")),
         status_export_file=str(_get_required(data, "status_export_file")),
         status_export_csv=str(_get_required(data, "status_export_csv")),
-        status_refresh_seconds=int(_get_required(data, "status_refresh_seconds")),
         allow_window_restore=bool(_get_required(data, "allow_window_restore")),
-        start_minimized=bool(_get_required(data, "start_minimized")),
         log_only_mode=bool(_get_required(data, "log_only_mode")),
         config_checksum_file=str(_get_required(data, "config_checksum_file")),
         min_free_disk_mb=int(_get_required(data, "min_free_disk_mb")),
-        show_error_window=bool(_get_required(data, "show_error_window")),
         watchdog_timeout_seconds=int(
             _get_required(data, "watchdog_timeout_seconds")
         ),
@@ -359,8 +353,6 @@ def _validate_config(config: AppConfig) -> None:
     ensure_under_root(log_root, config.status_export_csv, "status_export_csv")
     ensure_under_root(log_root, config.config_checksum_file, "config_checksum_file")
     ensure_under_root(log_root, config.email_queue_file, "email_queue_file")
-    if config.status_refresh_seconds < 1:
-        raise ValueError("status_refresh_seconds must be >= 1")
     if config.min_free_disk_mb < 1:
         raise ValueError("min_free_disk_mb must be >= 1")
     if config.error_notification_cooldown_seconds < 0:
