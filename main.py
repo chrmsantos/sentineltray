@@ -82,17 +82,18 @@ def _ensure_single_instance() -> None:
 def _ensure_local_override(path: Path) -> None:
     if not path.exists():
         raise SystemExit(
-            "Config local ausente. Crie o arquivo em: "
-            f"{path}\n"
-            "Preencha todos os campos obrigatorios e reinicie o programa."
+            "Configuração local não encontrada.\n"
+            f"Arquivo esperado: {path}\n"
+            "Crie o arquivo a partir de templates/local/config.local.yaml, "
+            "preencha os campos obrigatórios e execute novamente."
         )
 
     content = path.read_text(encoding="utf-8").strip()
     if not content:
         raise SystemExit(
-            "Config local vazio. Preencha o arquivo em: "
-            f"{path}\n"
-            "Salve as alteracoes e reinicie o programa."
+            "Configuração local vazia.\n"
+            f"Arquivo: {path}\n"
+            "Preencha os campos obrigatórios, salve e execute novamente."
         )
 
 
@@ -100,18 +101,28 @@ def _handle_config_error(path: Path, exc: Exception) -> None:
     reason = str(exc)
     filename = path.name
     message = (
-        "Erro nas configuracoes.\n\n"
+        "Erro nas configurações.\n\n"
         f"Arquivo: {filename}\n"
         f"Detalhe: {reason}\n\n"
-        "Corrija o arquivo e reinicie o programa.\n"
-        "O SentinelTray sera encerrado para permitir as correcoes."
+        "Revise a formatação YAML e os campos obrigatórios.\n"
+        "Após corrigir, execute novamente."
     )
     raise SystemExit(message) from exc
+
+
+def _reject_extra_args(args: list[str]) -> None:
+    if not args:
+        return
+    raise SystemExit(
+        "Uso: execute o SentinelTray sem argumentos.\n"
+        f"Argumentos recebidos: {' '.join(args)}"
+    )
 
 
 def main() -> int:
     _ensure_single_instance()
     args = [arg for arg in sys.argv[1:] if arg]
+    _reject_extra_args(args)
 
     try:
         local_path = get_user_data_dir() / "config.local.yaml"
