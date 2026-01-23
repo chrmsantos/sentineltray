@@ -35,14 +35,18 @@ if "%PYTHON%"=="%PYTHON_VENV%" (
 call :log_context
 
 if not exist "%LOCAL_CONFIG%" (
-  call :log "ERROR" "Config local ausente: %LOCAL_CONFIG%"
-  echo Config local ausente. Crie o arquivo em: %LOCAL_CONFIG%
+  call :log "ERROR" "Configuração local não encontrada: %LOCAL_CONFIG%"
+  echo Configuração local não encontrada.
+  echo Arquivo esperado: %LOCAL_CONFIG%
+  echo Crie o arquivo a partir de templates\local\config.local.yaml e tente novamente.
   exit /b 1
 )
 for %%I in ("%LOCAL_CONFIG%") do set "CFG_SIZE=%%~zI"
 if "%CFG_SIZE%"=="0" (
-  call :log "ERROR" "Config local vazio: %LOCAL_CONFIG%"
-  echo Config local vazio. Preencha o arquivo em: %LOCAL_CONFIG%
+  call :log "ERROR" "Configuração local vazia: %LOCAL_CONFIG%"
+  echo Configuração local vazia.
+  echo Arquivo: %LOCAL_CONFIG%
+  echo Preencha os campos obrigatórios e tente novamente.
   exit /b 1
 )
 
