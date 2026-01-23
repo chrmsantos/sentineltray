@@ -60,6 +60,10 @@ scripts\run.cmd /foreground
 When a venv is present, foreground mode opens PowerShell, activates it automatically,
 and keeps the window open after execution.
 
+Manual venv activation from CMD:
+
+scripts\activate_venv.cmd
+
 Background (explicit):
 
 scripts\run.cmd /background
