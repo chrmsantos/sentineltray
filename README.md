@@ -48,6 +48,14 @@ Local documentation for sample state files lives under templates/local/.
 
 scripts\run.cmd
 
+Foreground (with console output):
+
+scripts\run.cmd /foreground
+
+Background (explicit):
+
+scripts\run.cmd /background
+
 ## Startup (per-user)
 
 Install on login:
