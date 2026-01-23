@@ -98,9 +98,10 @@ def _ensure_local_override(path: Path) -> None:
 
 def _handle_config_error(path: Path, exc: Exception) -> None:
     reason = str(exc)
+    filename = path.name
     message = (
         "Erro nas configuracoes.\n\n"
-        f"Arquivo: {path}\n"
+        f"Arquivo: {filename}\n"
         f"Detalhe: {reason}\n\n"
         "Corrija o arquivo e reinicie o programa.\n"
         "O SentinelTray sera encerrado para permitir as correcoes."

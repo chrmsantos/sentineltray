@@ -8,6 +8,7 @@ set "CHECKSUMS=%ROOT%\runtime\checksums.txt"
 set "PYTHON_VENV=%ROOT%\.venv\Scripts\python.exe"
 set "SENTINELTRAY_ROOT=%ROOT%"
 set "SENTINELTRAY_DATA_DIR=%ROOT%\UserData"
+set "LOCAL_CONFIG=%SENTINELTRAY_DATA_DIR%\config.local.yaml"
 set "LOG_DIR=%SENTINELTRAY_DATA_DIR%\logs\scripts"
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "LOG_TS=%%I"
 set "LOG_FILE=%LOG_DIR%\run_%LOG_TS%.log"
@@ -32,6 +33,18 @@ if "%PYTHON%"=="%PYTHON_VENV%" (
   if not errorlevel 1 set "USE_POWERSHELL=1"
 )
 call :log_context
+
+if not exist "%LOCAL_CONFIG%" (
+  call :log "ERROR" "Config local ausente: %LOCAL_CONFIG%"
+  echo Config local ausente. Crie o arquivo em: %LOCAL_CONFIG%
+  exit /b 1
+)
+for %%I in ("%LOCAL_CONFIG%") do set "CFG_SIZE=%%~zI"
+if "%CFG_SIZE%"=="0" (
+  call :log "ERROR" "Config local vazio: %LOCAL_CONFIG%"
+  echo Config local vazio. Preencha o arquivo em: %LOCAL_CONFIG%
+  exit /b 1
+)
 
 if "%USERPROFILE%"=="" (
   rem USERPROFILE nao e necessario em modo portable.
