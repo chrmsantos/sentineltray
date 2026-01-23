@@ -69,7 +69,11 @@ class SentinelTrayShell(cmd.Cmd):
         except Exception as exc:
             self.stdout.write("Config validation failed. Changes not saved.\n")
             self.stdout.write(f"Details: {exc}\n")
-            self.stdout.write(f"Fix the file at: {temp_path}\n")
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    self.stdout.write("Warning: failed to remove temporary file.\n")
             return
 
         try:
@@ -81,7 +85,11 @@ class SentinelTrayShell(cmd.Cmd):
             temp_path.unlink(missing_ok=True)
         except Exception as exc:
             self.stdout.write(f"Failed to encrypt config: {exc}\n")
-            self.stdout.write(f"Temporary file kept at: {temp_path}\n")
+            if temp_path.exists():
+                try:
+                    temp_path.unlink()
+                except Exception:
+                    self.stdout.write("Warning: failed to remove temporary file.\n")
             return
 
         self.stdout.write("Config updated and encrypted.\n")

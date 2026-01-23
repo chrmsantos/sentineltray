@@ -38,7 +38,7 @@ Edit config.local.yaml and set:
 The application always reads the local config file. Default location is driven by
 `SENTINELTRAY_DATA_DIR` when set. Otherwise it falls back to:
 
-- %LOCALAPPDATA%\AxonZ\SentinelTray\UserData\config.local.yaml
+- %LOCALAPPDATA%\AxonZ\SentinelTray\config\config.local.yaml
 
 If config.local.yaml is missing or invalid, the app exits with guidance.
 
@@ -151,8 +151,8 @@ monitors:
 - License: GPL-3.0-only.
 - Logs include a structured category field.
 - Local telemetry file captures last activity for quick diagnostics and lives in %SENTINELTRAY_DATA_DIR%\logs.
-- Status export JSON available at status_export_file (UserData\logs by default).
-- Status export CSV available at status_export_csv (UserData\logs by default).
+- Status export JSON available at status_export_file (config\logs by default).
+- Status export CSV available at status_export_csv (config\logs by default).
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
 - Email subject always includes SentinelTray, and the body starts with a SentinelTray title in English.

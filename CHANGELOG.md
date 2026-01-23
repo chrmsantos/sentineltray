@@ -26,7 +26,7 @@
 
 ## 2026-01-20 (0.2.0-beta.7)
 
-- Move sensitive user data and operational logs/status to %SENTINELTRAY_DATA_DIR% (portable) with fallback to %LOCALAPPDATA%\AxonZ\SentinelTray\UserData.
+- Move sensitive user data and operational logs/status to %SENTINELTRAY_DATA_DIR% (portable) with fallback to %LOCALAPPDATA%\AxonZ\SentinelTray\config.
 - Redact sensitive data from logs, status exports, and telemetry while preserving diagnostic utility.
 - Add status report emails every 7 scan iterations and surface last_report_send in exports/UI.
 - Set default scan interval to 3 minutes in templates.

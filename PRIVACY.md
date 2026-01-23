@@ -20,7 +20,7 @@ This application processes personal data only to send alerts and maintain the te
 Sensitive data required for operation is stored exclusively in:
 
 - %SENTINELTRAY_DATA_DIR% (when defined)
-- or %LOCALAPPDATA%\AxonZ\SentinelTray\UserData (default fallback)
+- or %LOCALAPPDATA%\AxonZ\SentinelTray\config (default fallback)
 
 This includes:
 
