@@ -23,7 +23,7 @@ Edite config.local.yaml e defina:
 - email.retry_attempts
 - email.retry_backoff_seconds
 - email.dry_run = false when ready to send
-- status_export_csv, status_refresh_seconds, allow_window_restore, start_minimized, send_repeated_matches
+- status_export_csv, allow_window_restore, send_repeated_matches
 - log_only_mode, config_checksum_file, min_free_disk_mb
 - log_level, log_console_level, log_console_enabled
 - log_max_bytes, log_backup_count, log_run_files_keep
@@ -49,12 +49,7 @@ scripts\run.cmd
 
 If you run main.py directly, it automatically adds src/ to the import path.
 
-SentinelTray inicia em segundo plano com um ícone na bandeja do sistema.
-Clique com o botão esquerdo para abrir o painel de status.
-Clique com o botão direito para Abrir ou Sair.
-
-O painel exibe o status completo do sistema e atualiza a cada 10 segundos.
-Use a barra de menus para ações e atalhos (configurações, logs, dados e site).
+SentinelTray executa em modo headless e registra status nos exports configurados.
 
 ## Regex (curingas) e exemplos
 
@@ -125,7 +120,7 @@ monitors:
 - Logs, telemetry, and status exports redact sensitive strings (emails and local paths) and store match summaries as hashes.
 - Runtime artifacts are integrity-checked via runtime/checksums.txt.
 - state.json stores the last sent messages to avoid duplicates.
-- Errors detected in each polling iteration are reported on screen and via email immediately.
+- Errors detected in each polling iteration are reported via email immediately.
 - When the target window is unavailable or disabled, an alert is sent and the scan is skipped.
 - Monitor failures use a per-monitor circuit breaker and local backoff to avoid alert storms.
 - Email delivery failures are queued locally and retried with exponential backoff.

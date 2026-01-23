@@ -13,8 +13,6 @@ Consulte as licenças nas páginas oficiais dos projetos:
 - PyYAML
 - pytest
 - pytest-cov
-- pystray
-- Pillow
 - mypy
 
 ## Ferramentas e serviços

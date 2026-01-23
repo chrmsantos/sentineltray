@@ -96,13 +96,10 @@ def test_load_config_with_monitors(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
                 "telemetry_file: 'logs/telemetry.json'",
                 "status_export_file: 'logs/status.json'",
                 "status_export_csv: 'logs/status.csv'",
-                "status_refresh_seconds: 1",
                 "allow_window_restore: true",
-                "start_minimized: true",
                 "log_only_mode: false",
                 "config_checksum_file: 'logs/config.checksum'",
                 "min_free_disk_mb: 100",
-                "show_error_window: true",
                 "watchdog_timeout_seconds: 60",
                 "watchdog_restart: true",
             ]
