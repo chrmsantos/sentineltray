@@ -55,23 +55,12 @@ with the interactive CLI prompt. Right-click shows Open and Exit.
 
 ## CLI
 
-The CLI supports interactive commands and one-shot operations:
+The CLI supports interactive editing of the config:
 
 - Interactive: `python cli.py`
-- Status: `python cli.py status`
-- Pause: `python cli.py pause`
-- Resume: `python cli.py resume`
-- Scan now: `python cli.py scan`
-- Exit: `python cli.py exit`
-- Edit config: `python cli.py edit`
+- Edit config: `python cli.py edit_config`
 
 ## Config protection
-
-You can encrypt the local config using Windows DPAPI (per-user):
-
-- Encrypt and remove plaintext: `python cli.py encrypt`
-- Encrypt but keep plaintext: `python cli.py encrypt --keep-plain`
-- Decrypt back to plaintext: `python cli.py decrypt`
 
 When config.local.yaml.enc is present, SentinelTray loads it automatically.
 If only config.local.yaml exists, SentinelTray attempts to encrypt it on startup.
