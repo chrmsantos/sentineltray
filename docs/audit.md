@@ -1,3 +1,0 @@
-# Legacy file
-
-Content removed.
