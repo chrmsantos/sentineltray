@@ -649,7 +649,7 @@ class Notifier:
             phrase_regex=self.config.phrase_regex,
             poll_interval_seconds=self.config.poll_interval_seconds,
         )
-        message = f"info: {status_text}"
+        message = f"info: Em execução\n{status_text}"
         safe_message = _safe_status_text(message)
         try:
             sent_any = False
