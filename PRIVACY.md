@@ -28,7 +28,7 @@ This includes:
 - state.json (local history)
 
 Encrypted configs (config.local.yaml.enc) are supported via Windows DPAPI to protect sensitive data at rest. On startup, the app attempts to encrypt plaintext configs.
-The CLI editor uses a temporary plaintext file in the local data directory and removes it after re-encrypting.
+The tray config editor uses a temporary plaintext file in the local data directory and removes it after re-encrypting.
 
 Operational data (diagnostics and status) is stored in:
 

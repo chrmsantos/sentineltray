@@ -1,6 +1,6 @@
 # SentinelTray
 
-Beta version: 1.0.0-beta.2 (01-22-2026)
+Beta version: 1.0.0-beta.3 (01-23-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
@@ -48,23 +48,33 @@ Local documentation for sample state files lives under templates/local/.
 
 scripts\run.cmd
 
+## Startup (per-user)
+
+Install on login:
+
+scripts\run.cmd /install-startup
+
+Remove from login:
+
+scripts\run.cmd /remove-startup
+
+Check status:
+
+scripts\run.cmd /startup-status
+
 If you run main.py directly, it automatically adds src/ to the import path.
+SentinelTray starts in the background with a green tray icon. Left-click or right-click shows
+Config and Exit.
 
-SentinelTray starts in the background with a green tray icon. Left-click (or Open) launches a terminal
-with the interactive CLI prompt. Right-click shows Open and Exit.
+## Config editing
 
-## CLI
-
-The CLI supports interactive editing of the config:
-
-- Interactive: `python cli.py`
-- Edit config: `python cli.py edit_config`
+Use the tray menu Config option to edit settings. It decrypts in memory, opens a temporary file
+for editing, validates it, and re-encrypts on save.
 
 ## Config protection
 
 When config.local.yaml.enc is present, SentinelTray loads it automatically.
 If only config.local.yaml exists, SentinelTray attempts to encrypt it on startup.
-The CLI editor decrypts in memory, opens a temporary file for editing, validates it, and re-encrypts on save.
 
 ## Regex (wildcards) and examples
 

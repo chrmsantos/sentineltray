@@ -1,6 +1,6 @@
 # Architecture
 
-Beta version: 1.0.0-beta.2 (01-22-2026)
+Beta version: 1.0.0-beta.3 (01-23-2026)
 
 ## Overview
 
@@ -26,8 +26,8 @@ Beta version: 1.0.0-beta.2 (01-22-2026)
 - Status export JSON supports local integrations.
 - Status export CSV supports local integrations.
 - Releases publish provenance (SLSA).
-- Status updates are available via log files, status exports, and the CLI.
-- Tray icon uses a green dot to indicate running state and opens the CLI on left-click.
+- Status updates are available via log files and status exports.
+- Tray icon uses a green dot to indicate running state and opens the config editor on click.
 - Scanning runs only after 2+ minutes of user inactivity.
 - Email subject always includes SentinelTray, and the body starts with a SentinelTray title in English.
 - Phrase matching ignores accents, is case-insensitive, and matches partial text inside larger strings.
