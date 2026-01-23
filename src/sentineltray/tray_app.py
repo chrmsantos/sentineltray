@@ -25,7 +25,6 @@ from .detector import WindowTextDetector, WindowUnavailableError
 from .email_sender import build_sender
 from .status import StatusStore, format_status
 from . import __release_date__, __version_label__
-from .whatsapp_sender import WhatsAppError, WhatsAppSender
 
 LOGGER = logging.getLogger(__name__)
 
@@ -109,7 +108,7 @@ def run_tray(config: AppConfig) -> None:
         messagebox.showinfo(
             "Preparação",
             "Antes de continuar, mantenha a janela a ser monitorada aberta "
-            "(pode estar minimizada) e o WhatsApp Desktop aberto e logado.",
+            "(pode estar minimizada).",
         )
         try:
             detector = WindowTextDetector(
@@ -125,19 +124,6 @@ def run_tray(config: AppConfig) -> None:
             _notify_startup_error(f"Falha ao validar janela monitorada: {exc}")
             return False
 
-        if config.whatsapp.enabled:
-            try:
-                whatsapp = WhatsAppSender(
-                    config=config.whatsapp,
-                    log_throttle_seconds=config.log_throttle_seconds,
-                )
-                whatsapp.check_ready()
-            except WhatsAppError as exc:
-                _notify_startup_error(f"WhatsApp indisponível: {exc}")
-                return False
-            except Exception as exc:
-                _notify_startup_error(f"Falha ao validar WhatsApp: {exc}")
-                return False
         return True
 
     if not _run_startup_validation():
@@ -273,8 +259,6 @@ def run_tray(config: AppConfig) -> None:
             *,
             window_title_regex: str | None = None,
             phrase_regex: str | None = None,
-            whatsapp_contact_name: str | None = None,
-            whatsapp_message_template: str | None = None,
         ) -> bool:
             nonlocal config
             if not config_path.exists():
@@ -297,17 +281,6 @@ def run_tray(config: AppConfig) -> None:
                 data["window_title_regex"] = window_title_regex
             if phrase_regex is not None:
                 data["phrase_regex"] = phrase_regex
-
-            if whatsapp_contact_name is not None or whatsapp_message_template is not None:
-                whatsapp = data.get("whatsapp")
-                if not isinstance(whatsapp, dict):
-                    whatsapp = {}
-                    data["whatsapp"] = whatsapp
-                if whatsapp_contact_name is not None:
-                    whatsapp["contact_name"] = whatsapp_contact_name
-                if whatsapp_message_template is not None:
-                    whatsapp["message_template"] = whatsapp_message_template
-                whatsapp["enabled"] = True
 
             monitors = data.get("monitors")
             if isinstance(monitors, list) and monitors:
@@ -338,16 +311,6 @@ def run_tray(config: AppConfig) -> None:
                 config = replace(config, window_title_regex=window_title_regex)
             if phrase_regex is not None:
                 config = replace(config, phrase_regex=phrase_regex)
-            if whatsapp_contact_name is not None or whatsapp_message_template is not None:
-                whatsapp = config.whatsapp
-                if whatsapp_contact_name is not None:
-                    whatsapp = replace(whatsapp, contact_name=whatsapp_contact_name)
-                if whatsapp_message_template is not None:
-                    whatsapp = replace(
-                        whatsapp, message_template=whatsapp_message_template
-                    )
-                whatsapp = replace(whatsapp, enabled=True)
-                config = replace(config, whatsapp=whatsapp)
             return True
 
         def open_config() -> None:
@@ -430,39 +393,6 @@ def run_tray(config: AppConfig) -> None:
                 )
                 refresh_now()
 
-        def update_whatsapp_contact() -> None:
-            value = simpledialog.askstring(
-                "Atualizar destinatário WhatsApp",
-                "Informe o nome do contato ou grupo:",
-                initialvalue=config.whatsapp.contact_name,
-                parent=status_window,
-            )
-            if value is None:
-                return
-            if save_config_update(whatsapp_contact_name=value):
-                messagebox.showinfo(
-                    "WhatsApp",
-                    "Destinatário atualizado no config.local.yaml."
-                    "\nReinicie o aplicativo para aplicar na execução.",
-                )
-                refresh_now()
-
-        def update_whatsapp_message() -> None:
-            value = simpledialog.askstring(
-                "Atualizar mensagem WhatsApp",
-                "Informe o texto da mensagem WhatsApp:",
-                initialvalue=config.whatsapp.message_template,
-                parent=status_window,
-            )
-            if value is None:
-                return
-            if save_config_update(whatsapp_message_template=value):
-                messagebox.showinfo(
-                    "WhatsApp",
-                    "Mensagem atualizada no config.local.yaml."
-                    "\nReinicie o aplicativo para aplicar na execução.",
-                )
-                refresh_now()
 
         menu_font = tkfont.Font(family="Segoe UI", size=11, weight="bold")
         item_font = tkfont.Font(family="Segoe UI", size=11, weight="normal")
@@ -487,13 +417,6 @@ def run_tray(config: AppConfig) -> None:
         )
         actions_menu.add_command(
             label="Atualizar texto monitorado", command=update_phrase_from_input
-        )
-        actions_menu.add_separator()
-        actions_menu.add_command(
-            label="Atualizar destinatário WhatsApp", command=update_whatsapp_contact
-        )
-        actions_menu.add_command(
-            label="Atualizar mensagem WhatsApp", command=update_whatsapp_message
         )
         actions_menu.add_separator()
         actions_menu.add_command(label="Abrir configurações", command=open_config)

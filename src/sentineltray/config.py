@@ -83,15 +83,6 @@ class MonitorConfig:
     window_title_regex: str
     phrase_regex: str
     email: EmailConfig
-    
-@dataclass(frozen=True)
-class WhatsAppConfig:
-    enabled: bool = False
-    contact_name: str = ""
-    message_template: str = "SentinelTray: {message}"
-    window_title_regex: str = "WhatsApp"
-    retry_attempts: int = 1
-    retry_backoff_seconds: int = 2
 
 
 @dataclass(frozen=True)
@@ -126,7 +117,6 @@ class AppConfig:
     watchdog_restart: bool
     send_repeated_matches: bool
     email: EmailConfig
-    whatsapp: WhatsAppConfig = field(default_factory=WhatsAppConfig)
     min_repeat_seconds: int = 0
     error_notification_cooldown_seconds: int = 300
     window_error_backoff_base_seconds: int = 5
@@ -159,21 +149,6 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
     merged = dict(base)
-    def _build_whatsapp_config(data: dict[str, Any]) -> WhatsAppConfig:
-        enabled = bool(data.get("enabled", False))
-        contact_name = str(data.get("contact_name", ""))
-        message_template = str(data.get("message_template", "SentinelTray: {message}"))
-        window_title_regex = str(data.get("window_title_regex", "WhatsApp"))
-        retry_attempts = int(data.get("retry_attempts", 1))
-        retry_backoff_seconds = int(data.get("retry_backoff_seconds", 2))
-        return WhatsAppConfig(
-            enabled=enabled,
-            contact_name=contact_name,
-            message_template=message_template,
-            window_title_regex=window_title_regex,
-            retry_attempts=retry_attempts,
-            retry_backoff_seconds=retry_backoff_seconds,
-        )
     for key, value in override.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
             merged[key] = _merge_dicts(merged[key], value)
@@ -450,17 +425,6 @@ def _validate_config(config: AppConfig) -> None:
                     validate_email_address("monitors.email.to_addresses", address)
     if config.watchdog_timeout_seconds < 1:
         raise ValueError("watchdog_timeout_seconds must be >= 1")
-    if config.whatsapp.enabled:
-        if not config.whatsapp.contact_name:
-            raise ValueError("whatsapp.contact_name is required when enabled")
-        if not config.whatsapp.message_template:
-            raise ValueError("whatsapp.message_template is required when enabled")
-        if config.whatsapp.window_title_regex:
-            validate_regex("whatsapp.window_title_regex", config.whatsapp.window_title_regex)
-        if config.whatsapp.retry_attempts < 0:
-            raise ValueError("whatsapp.retry_attempts must be >= 0")
-        if config.whatsapp.retry_backoff_seconds < 0:
-            raise ValueError("whatsapp.retry_backoff_seconds must be >= 0")
 
 
 def load_config(path: str) -> AppConfig:
