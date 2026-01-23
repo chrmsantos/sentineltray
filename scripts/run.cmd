@@ -9,13 +9,14 @@ set "PYTHON_VENV=%ROOT%\.venv\Scripts\python.exe"
 set "SENTINELTRAY_ROOT=%ROOT%"
 set "SENTINELTRAY_DATA_DIR=%ROOT%\UserData"
 set "LOCAL_CONFIG=%SENTINELTRAY_DATA_DIR%\config.local.yaml"
+set "LOCAL_CONFIG_ENC=%SENTINELTRAY_DATA_DIR%\config.local.yaml.enc"
 set "LOG_DIR=%SENTINELTRAY_DATA_DIR%\logs\scripts"
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "LOG_TS=%%I"
 set "LOG_FILE=%LOG_DIR%\run_%LOG_TS%.log"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
 powershell -NoProfile -Command "Get-ChildItem -Path '%LOG_DIR%\run_*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -Skip 5 | Remove-Item -Force -ErrorAction SilentlyContinue" >nul 2>nul
 
-call :log "INFO" "Iniciando run.cmd"
+call :log "INFO" "Starting run.cmd"
 set "PYTHON="
 if exist "%PYTHON_RUNTIME%" if exist "%CHECKSUMS%" set "PYTHON=%PYTHON_RUNTIME%"
 if "%PYTHON%"=="" if exist "%PYTHON_VENV%" set "PYTHON=%PYTHON_VENV%"
@@ -23,10 +24,10 @@ if "%PYTHON%"=="" set "PYTHON=python"
 set "USE_POWERSHELL=0"
 
 if "%PYTHON%"=="%PYTHON_RUNTIME%" (
-  rem usando runtime empacotado
+  rem using bundled runtime
 ) else (
-  if not exist "%PYTHON_RUNTIME%" call :log "WARN" "Runtime nao encontrado; usando Python alternativo."
-  if exist "%PYTHON_RUNTIME%" if not exist "%CHECKSUMS%" call :log "WARN" "Checksums ausente; usando Python alternativo."
+  if not exist "%PYTHON_RUNTIME%" call :log "WARN" "Runtime not found; using alternate Python."
+  if exist "%PYTHON_RUNTIME%" if not exist "%CHECKSUMS%" call :log "WARN" "Checksums missing; using alternate Python."
 )
 if "%PYTHON%"=="%PYTHON_VENV%" (
   where powershell >nul 2>nul
@@ -34,34 +35,42 @@ if "%PYTHON%"=="%PYTHON_VENV%" (
 )
 call :log_context
 
-if not exist "%LOCAL_CONFIG%" (
-  call :log "ERROR" "Configuração local não encontrada: %LOCAL_CONFIG%"
-  echo Configuração local não encontrada.
-  echo Arquivo esperado: %LOCAL_CONFIG%
-  echo Crie o arquivo a partir de templates\local\config.local.yaml e tente novamente.
+if not exist "%LOCAL_CONFIG%" if not exist "%LOCAL_CONFIG_ENC%" (
+  call :log "ERROR" "Local configuration not found: %LOCAL_CONFIG%"
+  echo Local configuration not found.
+  echo Expected file: %LOCAL_CONFIG%
+  echo Or encrypted file: %LOCAL_CONFIG_ENC%
+  echo Create it from templates\local\config.local.yaml and try again.
   exit /b 1
 )
-for %%I in ("%LOCAL_CONFIG%") do set "CFG_SIZE=%%~zI"
-if "%CFG_SIZE%"=="0" (
-  call :log "ERROR" "Configuração local vazia: %LOCAL_CONFIG%"
-  echo Configuração local vazia.
-  echo Arquivo: %LOCAL_CONFIG%
-  echo Preencha os campos obrigatórios e tente novamente.
-  exit /b 1
+set "CFG_SIZE=0"
+if exist "%LOCAL_CONFIG%" for %%I in ("%LOCAL_CONFIG%") do set "CFG_SIZE=%%~zI"
+if exist "%LOCAL_CONFIG%" (
+  if "%CFG_SIZE%"=="0" (
+    call :log "ERROR" "Local configuration is empty: %LOCAL_CONFIG%"
+    echo Local configuration is empty.
+    echo File: %LOCAL_CONFIG%
+    echo Fill the required fields and try again.
+    exit /b 1
+  )
 )
 
 if "%USERPROFILE%"=="" (
-  rem USERPROFILE nao e necessario em modo portable.
+  rem USERPROFILE is not required in portable mode.
 )
 
 if "%USE_POWERSHELL%"=="1" (
-  call :log "INFO" "Ativando venv via PowerShell"
+  call :log "INFO" "Activating venv via PowerShell"
+  call :log "INFO" "Application running (continuous mode). Use Ctrl+C to stop."
+  echo SentinelTray is running. Use Ctrl+C to stop.
   powershell -NoProfile -ExecutionPolicy Bypass -Command "& '%ROOT%\.venv\Scripts\Activate.ps1'; python '%ROOT%\main.py' %*"
 ) else (
+  call :log "INFO" "Application running (continuous mode). Use Ctrl+C to stop."
+  echo SentinelTray is running. Use Ctrl+C to stop.
   "%PYTHON%" "%ROOT%\main.py" %*
 )
 set "EXIT_CODE=%ERRORLEVEL%"
-call :log "INFO" "Processo finalizado com exit code !EXIT_CODE!"
+call :log "INFO" "Process finished with exit code !EXIT_CODE!"
 exit /b !EXIT_CODE!
 
 :log

@@ -8,6 +8,8 @@ from typing import Any
 
 import yaml
 
+from .security_utils import decrypt_text_dpapi, encrypt_text_dpapi, parse_payload, serialize_payload
+
 from .path_utils import ensure_under_root, resolve_log_path, resolve_sensitive_path
 from .validation_utils import validate_email_address, validate_regex
 
@@ -143,6 +145,41 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError("Config must be a mapping")
     return data
+
+
+def _load_yaml_text(text: str) -> dict[str, Any]:
+    data = yaml.safe_load(text) or {}
+    if not isinstance(data, dict):
+        raise ValueError("Config must be a mapping")
+    return data
+
+
+def get_encrypted_config_path(path: Path) -> Path:
+    return path.with_name(f"{path.name}.enc")
+
+
+def encrypt_config_file(path: str, *, remove_plain: bool = True) -> Path:
+    plain_path = Path(path)
+    if not plain_path.exists():
+        raise FileNotFoundError(f"Config file not found: {plain_path}")
+    encrypted_path = get_encrypted_config_path(plain_path)
+    plaintext = plain_path.read_text(encoding="utf-8")
+    payload = encrypt_text_dpapi(plaintext)
+    encrypted_path.write_text(serialize_payload(payload), encoding="utf-8")
+    if remove_plain:
+        plain_path.unlink()
+    return encrypted_path
+
+
+def decrypt_config_file(path: str) -> Path:
+    plain_path = Path(path)
+    encrypted_path = get_encrypted_config_path(plain_path)
+    if not encrypted_path.exists():
+        raise FileNotFoundError(f"Encrypted config file not found: {encrypted_path}")
+    payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
+    plaintext = decrypt_text_dpapi(payload)
+    plain_path.write_text(plaintext, encoding="utf-8")
+    return plain_path
 
 
 def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -425,6 +462,18 @@ def _validate_config(config: AppConfig) -> None:
 
 def load_config(path: str) -> AppConfig:
     data = _load_yaml(Path(path))
+    return _build_config(data)
+
+
+def load_config_secure(path: str) -> AppConfig:
+    plain_path = Path(path)
+    encrypted_path = get_encrypted_config_path(plain_path)
+    if encrypted_path.exists():
+        payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
+        plaintext = decrypt_text_dpapi(payload)
+        data = _load_yaml_text(plaintext)
+        return _build_config(data)
+    data = _load_yaml(plain_path)
     return _build_config(data)
 
 

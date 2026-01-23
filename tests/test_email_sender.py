@@ -129,7 +129,7 @@ def test_email_sender_subject_and_body(monkeypatch) -> None:
         to_addresses=["ops@example.com"],
         use_tls=True,
         timeout_seconds=30,
-        subject="Notificação",
+        subject="Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
         dry_run=False,
@@ -159,11 +159,11 @@ def test_email_sender_subject_and_body(monkeypatch) -> None:
     monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
 
     sender = SmtpEmailSender(config=config)
-    sender.send("info: teste de envio")
+    sender.send("info: test send")
 
     msg = captured["message"]
     assert msg is not None
-    assert msg["Subject"] == "SentinelTray Notificação - Informação"
+    assert msg["Subject"] == "SentinelTray Notification - Info"
     content = msg.get_content()
     assert content.startswith("SentinelTray")
-    assert "Informação" in content
+    assert "Info" in content

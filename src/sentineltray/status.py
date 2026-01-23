@@ -117,27 +117,27 @@ def format_status(
     phrase_regex: str = "",
     poll_interval_seconds: int | None = None,
 ) -> str:
-    running = "sim" if snapshot.running else "nao"
-    paused = "sim" if snapshot.paused else "nao"
-    phrase_label = phrase_regex or "<qualquer texto>"
-    window_label = window_title_regex or "<janela configurada>"
+    running = "yes" if snapshot.running else "no"
+    paused = "yes" if snapshot.paused else "no"
+    phrase_label = phrase_regex or "<any text>"
+    window_label = window_title_regex or "<configured window>"
     last_scan = _format_timestamp(snapshot.last_scan)
     next_check = _format_next_check(snapshot.last_scan, poll_interval_seconds)
     last_identification = _format_timestamp(snapshot.last_match) or snapshot.last_match
     last_match_at = _format_timestamp(snapshot.last_match_at)
     lines = [
-        f"Em execução: {running}",
-        f"Pausado: {paused}",
-        f"janela monitorada: {window_label}",
-        f"texto monitorado: {phrase_label}",
-        f"Última verificação: {last_scan}",
-        f"próxima verificação: {next_check}",
-        f"Última identificação: {last_identification}",
-        f"Último match (momento): {last_match_at}",
-        f"Último envio de alerta: {_format_timestamp(snapshot.last_send)}",
-        f"Último erro registrado: {_format_timestamp(snapshot.last_error)}",
-        f"Último resumo de saúde: {_format_timestamp(snapshot.last_healthcheck)}",
-        f"Tempo ativo (segundos): {snapshot.uptime_seconds}",
-        f"Total de erros: {snapshot.error_count}",
+        f"Running: {running}",
+        f"Paused: {paused}",
+        f"Monitored window: {window_label}",
+        f"Monitored text: {phrase_label}",
+        f"Last check: {last_scan}",
+        f"Next check: {next_check}",
+        f"Last detection: {last_identification}",
+        f"Last match timestamp: {last_match_at}",
+        f"Last alert sent: {_format_timestamp(snapshot.last_send)}",
+        f"Last error recorded: {_format_timestamp(snapshot.last_error)}",
+        f"Last health summary: {_format_timestamp(snapshot.last_healthcheck)}",
+        f"Uptime (seconds): {snapshot.uptime_seconds}",
+        f"Total errors: {snapshot.error_count}",
     ]
     return "\n".join(lines)

@@ -41,26 +41,26 @@ def _build_subject(subject: str, category: str) -> str:
 
 def _build_body(message: str) -> tuple[str, str]:
     text = (message or "").strip()
-    category = "Alerta"
+    category = "Alert"
     details = text
     if text.lower().startswith("error:"):
-        category = "Erro"
-        details = text.split(":", 1)[1].strip() or "Ocorreu um erro."
+        category = "Error"
+        details = text.split(":", 1)[1].strip() or "An error occurred."
     elif text.lower().startswith("info:"):
-        category = "Informação"
-        details = text.split(":", 1)[1].strip() or "Atualização do sistema."
+        category = "Info"
+        details = text.split(":", 1)[1].strip() or "System update."
 
     if not details:
-        details = "Sem detalhes adicionais."
+        details = "No additional details."
 
-    if category == "Alerta" and details == text:
-        details = "Encontrado o seguinte texto na tela:\n" + details
+    if category == "Alert" and details == text:
+        details = "The following text was found on screen:\n" + details
 
     body = (
         "SentinelTray\n\n"
         f"{category}:\n"
         f"{details}\n\n"
-        "Esta é uma mensagem automática do SentinelTray."
+        "This is an automated message from SentinelTray."
     )
     return category, body
 

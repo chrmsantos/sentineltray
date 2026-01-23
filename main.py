@@ -20,8 +20,13 @@ def _ensure_src_on_path() -> None:
 
 _ensure_src_on_path()
 
-from sentineltray.config import get_user_data_dir, load_config
-from sentineltray.app import run
+from sentineltray.config import (
+    encrypt_config_file,
+    get_encrypted_config_path,
+    get_user_data_dir,
+    load_config_secure,
+)
+from sentineltray.tray_app import run_tray
 
 
 def _pid_file_path() -> Path:
@@ -80,32 +85,35 @@ def _ensure_single_instance() -> None:
 
 
 def _ensure_local_override(path: Path) -> None:
-    if not path.exists():
+    encrypted_path = get_encrypted_config_path(path)
+    if not path.exists() and not encrypted_path.exists():
         raise SystemExit(
-            "Configuração local não encontrada.\n"
-            f"Arquivo esperado: {path}\n"
-            "Crie o arquivo a partir de templates/local/config.local.yaml, "
-            "preencha os campos obrigatórios e execute novamente."
+            "Local configuration not found.\n"
+            f"Expected file: {path}\n"
+            f"Or encrypted file: {encrypted_path}\n"
+            "Create it from templates/local/config.local.yaml, "
+            "fill the required fields, and run again."
         )
 
-    content = path.read_text(encoding="utf-8").strip()
-    if not content:
-        raise SystemExit(
-            "Configuração local vazia.\n"
-            f"Arquivo: {path}\n"
-            "Preencha os campos obrigatórios, salve e execute novamente."
-        )
+    if path.exists():
+        content = path.read_text(encoding="utf-8").strip()
+        if not content:
+            raise SystemExit(
+                "Local configuration is empty.\n"
+                f"File: {path}\n"
+                "Fill the required fields, save, and run again."
+            )
 
 
 def _handle_config_error(path: Path, exc: Exception) -> None:
     reason = str(exc)
     filename = path.name
     message = (
-        "Erro nas configurações.\n\n"
-        f"Arquivo: {filename}\n"
-        f"Detalhe: {reason}\n\n"
-        "Revise a formatação YAML e os campos obrigatórios.\n"
-        "Após corrigir, execute novamente."
+        "Configuration error.\n\n"
+        f"File: {filename}\n"
+        f"Details: {reason}\n\n"
+        "Review the YAML formatting and required fields.\n"
+        "After fixing, run again."
     )
     raise SystemExit(message) from exc
 
@@ -114,8 +122,8 @@ def _reject_extra_args(args: list[str]) -> None:
     if not args:
         return
     raise SystemExit(
-        "Uso: execute o SentinelTray sem argumentos.\n"
-        f"Argumentos recebidos: {' '.join(args)}"
+        "Usage: run SentinelTray without arguments.\n"
+        f"Arguments received: {' '.join(args)}"
     )
 
 
@@ -127,10 +135,18 @@ def main() -> int:
     try:
         local_path = get_user_data_dir() / "config.local.yaml"
         _ensure_local_override(local_path)
-        config = load_config(str(local_path))
+        config = load_config_secure(str(local_path))
+        encrypted_path = get_encrypted_config_path(local_path)
+        if local_path.exists() and not encrypted_path.exists():
+            try:
+                encrypt_config_file(str(local_path), remove_plain=True)
+            except Exception as exc:
+                sys.stderr.write(
+                    f"Warning: failed to encrypt config file: {exc}\n"
+                )
     except Exception as exc:
         _handle_config_error(local_path, exc)
-    run(config)
+    run_tray(config)
     return 0
 
 

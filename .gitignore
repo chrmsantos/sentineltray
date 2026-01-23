@@ -12,6 +12,8 @@ logs/telemetry.json
 logs/status.json
 logs/status.csv
 logs/config.checksum
+cli_commands.jsonl
+config.local.yaml.edit
 config.local.yaml
 *.local.yaml
 runtime/
