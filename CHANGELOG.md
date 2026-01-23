@@ -11,6 +11,7 @@
 - Add prepare_portable_runtime script to download embeddable Python and wheels.
 - Auto-run portable runtime preparation from run.cmd when runtime is missing.
 - Harden portable runtime preparation when pip or wheel download fails.
+- Make bootstrap runtime install pip when missing.
 
 ## 2026-01-22 (1.0.0-beta.2)
 
