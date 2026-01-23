@@ -33,6 +33,10 @@ class EmailQueued(RuntimeError):
 
 
 def _build_subject(subject: str, category: str) -> str:
+    if category == "Alert":
+        return "SentinelTray Match Alert"
+    if category == "Error":
+        return "SentinelTray Error Alert"
     base = (subject or "").strip()
     if base:
         cleaned = base
