@@ -14,6 +14,7 @@
 - Make bootstrap runtime install pip when missing.
 - Use Scripts\\pip.exe fallback when embedded Python cannot import pip.
 - Ensure embedded runtime ._pth enables site-packages for pip bootstrap.
+- Auto-download missing wheels when wheelhouse is incomplete.
 
 ## 2026-01-22 (1.0.0-beta.2)
 

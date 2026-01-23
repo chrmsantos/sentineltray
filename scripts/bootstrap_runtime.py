@@ -88,17 +88,27 @@ def main() -> int:
     pip_command = [sys.executable, "-m", "pip"]
     if _run([sys.executable, "-m", "pip", "--version"]) != 0 and scripts_pip.exists():
         pip_command = [str(scripts_pip)]
-    code = _run(
-        pip_command
-        + [
-            "install",
-            "--no-index",
-            "--find-links",
+    install_args = [
+        "install",
+        "--no-index",
+        "--find-links",
+        str(wheel_dir),
+        "-r",
+        str(requirements),
+    ]
+    code = _run(pip_command + install_args)
+    if code != 0:
+        print("Wheelhouse missing packages; attempting to download.")
+        download_args = [
+            "download",
+            "--only-binary=:all:",
+            "--dest",
             str(wheel_dir),
             "-r",
             str(requirements),
         ]
-    )
+        if _run(pip_command + download_args) == 0:
+            code = _run(pip_command + install_args)
     if code != 0:
         print("Dependency installation failed.", file=sys.stderr)
         return code
