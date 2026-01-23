@@ -212,7 +212,7 @@ monitors:
 - Status export CSV available at status_export_csv (config\logs by default).
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
-- Email subject always includes SentinelTray, and the body starts with a SentinelTray title in English.
+- Match alert emails use subject "SentinelTray Match Alert"; error alerts use "SentinelTray Error Alert".
 - Portable encryption stores a local key file; keep it with the config folder for portability.
 - DPAPI-encrypted configs cannot be decrypted on other machines/users.
 - Config validation rejects invalid intervals and paths at startup.

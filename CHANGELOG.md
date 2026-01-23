@@ -18,6 +18,7 @@
 - Add portable packaging script and proxy-aware wheel downloads.
 - Log portable mode, encryption method, and add SMTP healthcheck warning.
 - Skip alerts identical to the immediately previous scan or with lower leading numbers.
+- Enforce exact email subjects for match and error alerts.
 
 ## 2026-01-22 (1.0.0-beta.2)
 
