@@ -80,6 +80,7 @@ Notes:
 - run.cmd enables portable mode by default via SENTINELTRAY_PORTABLE=1.
 - Use /nonportable or SENTINELTRAY_PORTABLE=0 to allow system Python/venv.
 - The first run installs dependencies from runtime\wheels and writes runtime\.deps_ready.
+- If pip is missing in a manually added runtime, the bootstrap step downloads get-pip.py once.
 - If runtime\python or runtime\wheels are missing, run.cmd fails with a logged error.
 - If runtime\python is missing in portable mode, run.cmd attempts to prepare it automatically.
 

@@ -3,12 +3,30 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+from urllib.request import urlretrieve
 
 
 def _run(command: list[str]) -> int:
     result = subprocess.run(command, check=False)
     return result.returncode
+
+
+def _ensure_pip(python_exe: str) -> bool:
+    if _run([python_exe, "-m", "pip", "--version"]) == 0:
+        return True
+    if _run([python_exe, "-m", "ensurepip", "--upgrade"]) == 0:
+        return _run([python_exe, "-m", "pip", "--version"]) == 0
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            get_pip = Path(temp_dir) / "get-pip.py"
+            urlretrieve("https://bootstrap.pypa.io/get-pip.py", get_pip)
+            if _run([python_exe, str(get_pip)]) != 0:
+                return False
+        return _run([python_exe, "-m", "pip", "--version"]) == 0
+    except Exception:
+        return False
 
 
 def main() -> int:
@@ -33,8 +51,12 @@ def main() -> int:
         return 1
 
     print("Ensuring pip is available...")
-    if _run([sys.executable, "-m", "pip", "--version"]) != 0:
-        _run([sys.executable, "-m", "ensurepip", "--upgrade"])
+    if not _ensure_pip(sys.executable):
+        print(
+            "pip installation failed. Check internet access or use prepare_portable_runtime.cmd.",
+            file=sys.stderr,
+        )
+        return 1
 
     print("Installing dependencies from wheelhouse...")
     code = _run(
