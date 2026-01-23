@@ -13,3 +13,4 @@ def test_run_script_has_logging() -> None:
     assert "/nonportable" in content
     assert ":prepare_runtime" in content
     assert "prepare_portable_runtime.cmd" in content
+    assert "-NoExit" in content

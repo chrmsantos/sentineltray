@@ -121,10 +121,11 @@ if "%USERPROFILE%"=="" (
 
 if "%RUN_FOREGROUND%"=="1" (
   if "%USE_POWERSHELL%"=="1" (
-    call :log "INFO" "Activating venv via PowerShell"
-    call :log "INFO" "Application running (foreground mode). Use Ctrl+C to stop."
-    echo SentinelTray is running. Use Ctrl+C to stop.
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "& '%ROOT%\.venv\Scripts\Activate.ps1'; python '%ROOT%\main.py' %*"
+    call :log "INFO" "Opening PowerShell and activating venv"
+    call :log "INFO" "Application running (foreground mode). Close PowerShell window to stop."
+    echo SentinelTray is running. Close the PowerShell window to stop.
+    powershell -NoProfile -ExecutionPolicy Bypass -NoExit -Command "& '%ROOT%\.venv\Scripts\Activate.ps1'; python '%ROOT%\main.py' %*"
+    exit /b 0
   ) else (
     call :log "INFO" "Application running (foreground mode). Use Ctrl+C to stop."
     echo SentinelTray is running. Use Ctrl+C to stop.

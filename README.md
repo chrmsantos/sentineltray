@@ -57,6 +57,9 @@ Foreground (with console output):
 
 scripts\run.cmd /foreground
 
+When a venv is present, foreground mode opens PowerShell, activates it automatically,
+and keeps the window open after execution.
+
 Background (explicit):
 
 scripts\run.cmd /background
