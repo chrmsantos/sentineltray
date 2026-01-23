@@ -24,7 +24,12 @@ def _ensure_pip(python_exe: str) -> bool:
             urlretrieve("https://bootstrap.pypa.io/get-pip.py", get_pip)
             if _run([python_exe, str(get_pip)]) != 0:
                 return False
-        return _run([python_exe, "-m", "pip", "--version"]) == 0
+        if _run([python_exe, "-m", "pip", "--version"]) == 0:
+            return True
+        scripts_dir = Path(python_exe).parent / "Scripts" / "pip.exe"
+        if scripts_dir.exists():
+            return _run([str(scripts_dir), "--version"]) == 0
+        return False
     except Exception:
         return False
 
@@ -38,6 +43,7 @@ def main() -> int:
         os.environ.get("SENTINELTRAY_DEPS_MARKER", str(root / "runtime" / ".deps_ready"))
     )
     requirements = root / "requirements.lock"
+    scripts_pip = Path(sys.executable).parent / "Scripts" / "pip.exe"
 
     if marker.exists():
         print("Runtime dependencies already bootstrapped.")
@@ -59,11 +65,12 @@ def main() -> int:
         return 1
 
     print("Installing dependencies from wheelhouse...")
+    pip_command = [sys.executable, "-m", "pip"]
+    if _run([sys.executable, "-m", "pip", "--version"]) != 0 and scripts_pip.exists():
+        pip_command = [str(scripts_pip)]
     code = _run(
-        [
-            sys.executable,
-            "-m",
-            "pip",
+        pip_command
+        + [
             "install",
             "--no-index",
             "--find-links",
