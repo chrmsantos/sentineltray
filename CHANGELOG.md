@@ -17,6 +17,7 @@
 - Auto-download missing wheels when wheelhouse is incomplete.
 - Add portable packaging script and proxy-aware wheel downloads.
 - Log portable mode, encryption method, and add SMTP healthcheck warning.
+- Skip alerts identical to the immediately previous scan or with lower leading numbers.
 
 ## 2026-01-22 (1.0.0-beta.2)
 

@@ -8,6 +8,7 @@ import importlib.metadata
 import json
 import logging
 import socket
+import re
 import shutil
 import time
 from dataclasses import dataclass, field
@@ -45,6 +46,8 @@ class MonitorRuntime:
     last_window_error_at: str = ""
     last_error_notification_at: float = 0.0
     last_send_queued: bool = False
+    last_scan_text: str = ""
+    last_scan_number: int | None = None
 
 
 def _get_idle_seconds() -> float:
@@ -124,6 +127,18 @@ def _safe_status_text(text: str) -> str:
     if not text:
         return ""
     return sanitize_text(_to_ascii(text))
+
+
+def _leading_number(text: str) -> int | None:
+    if not text:
+        return None
+    match = re.match(r"\s*(\d+)", text)
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
 
 
 
@@ -491,6 +506,33 @@ class Notifier:
                         extra={"category": "send"},
                     )
 
+            if send_items:
+                previous_text = monitor.last_scan_text
+                previous_number = monitor.last_scan_number
+                filtered_items: list[str] = []
+                for text in send_items:
+                    if previous_text and text == previous_text:
+                        LOGGER.info(
+                            "Skipping match identical to previous scan",
+                            extra={"category": "send"},
+                        )
+                        continue
+                    current_number = _leading_number(text)
+                    if (
+                        previous_text
+                        and text != previous_text
+                        and previous_number is not None
+                        and current_number is not None
+                        and current_number < previous_number
+                    ):
+                        LOGGER.info(
+                            "Skipping match with lower leading number than previous scan",
+                            extra={"category": "send"},
+                        )
+                        continue
+                    filtered_items.append(text)
+                send_items = filtered_items
+
             if normalized:
                 any_match = True
                 self.status.set_last_match(_summarize_text(normalized[0]))
@@ -508,6 +550,12 @@ class Notifier:
                         {"text": text, "sent_at": sent_at, "monitor": monitor.key}
                     )
                     monitor.last_sent[text] = datetime.fromisoformat(sent_at)
+            if normalized:
+                monitor.last_scan_text = normalized[0]
+                monitor.last_scan_number = _leading_number(normalized[0])
+            else:
+                monitor.last_scan_text = ""
+                monitor.last_scan_number = None
 
         if len(self._history) > self.config.max_history:
             self._history = self._history[-self.config.max_history :]
