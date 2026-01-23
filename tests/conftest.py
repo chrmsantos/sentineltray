@@ -9,7 +9,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _isolate_runtime_dirs(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Isolate tests from user-specific directories and keep logs/data in temp."""
-    data_dir = tmp_path / "UserData"
+    data_dir = tmp_path / "config"
     root_dir = tmp_path / "Root"
     data_dir.mkdir(parents=True, exist_ok=True)
     root_dir.mkdir(parents=True, exist_ok=True)

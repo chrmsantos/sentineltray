@@ -30,7 +30,7 @@ def _get_data_root_override() -> Path | None:
 def _get_default_user_data_dir() -> Path:
     local_appdata = os.environ.get("LOCALAPPDATA")
     if local_appdata:
-        return Path(local_appdata) / "AxonZ" / "SentinelTray" / "UserData"
+        return Path(local_appdata) / "AxonZ" / "SentinelTray" / "config"
 
     user_root = os.environ.get("USERPROFILE")
     if user_root:
@@ -40,10 +40,10 @@ def _get_default_user_data_dir() -> Path:
             / "Local"
             / "AxonZ"
             / "SentinelTray"
-            / "UserData"
+            / "config"
         )
 
-    return get_project_root() / "UserData"
+    return get_project_root() / "config"
 
 
 def get_user_data_dir() -> Path:

@@ -17,8 +17,8 @@ config.local.yaml.edit
 config.local.yaml
 *.local.yaml
 runtime/
-UserData/
-tmp/AppData/Local/AxonZ/SentinelTray/UserData/
-tmp/AppData/Local/AxonZ/SentinelTray/UserData/logs/
-tmp/UserData/
-tmp/UserData/logs/
+config/
+tmp/AppData/Local/AxonZ/SentinelTray/config/
+tmp/AppData/Local/AxonZ/SentinelTray/config/logs/
+tmp/config/
+tmp/config/logs/
