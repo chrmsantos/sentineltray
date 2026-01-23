@@ -4,7 +4,6 @@ import logging
 import os
 import subprocess
 import sys
-import ctypes
 from threading import Event, Thread
 
 from PIL import Image, ImageDraw
@@ -124,23 +123,8 @@ def run_tray(config: AppConfig) -> None:
 			LOGGER.warning("Failed to finalize config edit: %s", exc)
 
 	def on_exit(_: pystray.Icon, __: pystray.MenuItem) -> None:
-		if not _confirm_exit():
-			return
 		stop_event.set()
 		icon.stop()
-
-	def _confirm_exit() -> bool:
-		try:
-			result = ctypes.windll.user32.MessageBoxW(
-				None,
-				"Encerrar o SentinelTray?",
-				"SentinelTray",
-				0x00000004 | 0x00000020,
-			)
-			return result == 6
-		except Exception as exc:
-			LOGGER.warning("Failed to show exit confirmation: %s", exc)
-			return True
 
 	icon.menu = pystray.Menu(
 		pystray.MenuItem("Config", on_open),

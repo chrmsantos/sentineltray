@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- None.
+
+## 2026-01-23 (1.0.0-beta.4)
+
 - Remove legacy security automation workflows and documentation.
 - Remove legacy alternate delivery channel and related UI/config/test coverage.
 - Remove GUI/tray interface and related configuration/tests.
@@ -21,6 +25,8 @@
 - Enforce exact email subjects for match and error alerts.
 - Open PowerShell with venv activation automatically in foreground mode.
 - Add activate_venv.cmd wrapper for CMD users.
+- Remove tray exit confirmation prompt.
+- Improve config template comments.
 
 ## 2026-01-22 (1.0.0-beta.2)
 
