@@ -58,6 +58,9 @@ Write-Log "INFO" "Extracting runtime to $pythonDir"
 Expand-Archive -Path $zipPath -DestinationPath $pythonDir -Force
 
 $pthFile = Get-ChildItem -Path $pythonDir -Filter "*.pth" | Select-Object -First 1
+if (-not $pthFile) {
+    $pthFile = Get-ChildItem -Path $pythonDir -Filter "*._pth" | Select-Object -First 1
+}
 if ($pthFile) {
     $pthText = Get-Content -Path $pthFile.FullName -Raw
     if ($pthText -match "#import site") {
@@ -94,11 +97,22 @@ if (-not $pipOk) {
     & $pythonExe $getPip
 }
 
+try {
+    & $pythonExe -m pip --version | Out-Null
+} catch {
+    Write-Log "ERROR" "pip installation failed; portable runtime cannot download wheels."
+    exit 1
+}
+
 Write-Log "INFO" "Downloading wheels to $wheelDir"
 if (-not (Test-Path $wheelDir)) {
     New-Item -ItemType Directory -Path $wheelDir | Out-Null
 }
 & $pythonExe -m pip download --only-binary=:all: --dest $wheelDir -r $requirements
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR" "Wheel download failed. Check internet access or proxy settings."
+    exit 1
+}
 
 Write-Log "INFO" "Writing checksums to $checksumsPath"
 if (-not (Test-Path $runtimeRoot)) {
