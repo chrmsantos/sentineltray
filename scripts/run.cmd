@@ -8,8 +8,14 @@ set "STARTUP_NAME=SentinelTray"
 set "PYTHON_RUNTIME=%ROOT%\runtime\python\python.exe"
 set "CHECKSUMS=%ROOT%\runtime\checksums.txt"
 set "PYTHON_VENV=%ROOT%\.venv\Scripts\python.exe"
+set "RUNTIME_WHEELS=%ROOT%\runtime\wheels"
+set "DEPS_MARKER=%ROOT%\runtime\.deps_ready"
+if "%SENTINELTRAY_WHEEL_DIR%"=="" set "SENTINELTRAY_WHEEL_DIR=%RUNTIME_WHEELS%"
+if "%SENTINELTRAY_DEPS_MARKER%"=="" set "SENTINELTRAY_DEPS_MARKER=%DEPS_MARKER%"
 set "SENTINELTRAY_ROOT=%ROOT%"
 set "SENTINELTRAY_DATA_DIR=%ROOT%\config"
+if "%SENTINELTRAY_PORTABLE%"=="" set "SENTINELTRAY_PORTABLE=1"
+if "%SENTINELTRAY_CONFIG_ENCRYPTION%"=="" set "SENTINELTRAY_CONFIG_ENCRYPTION=portable"
 set "LOCAL_CONFIG=%SENTINELTRAY_DATA_DIR%\config.local.yaml"
 set "LOCAL_CONFIG_ENC=%SENTINELTRAY_DATA_DIR%\config.local.yaml.enc"
 set "LOG_DIR=%SENTINELTRAY_DATA_DIR%\logs\scripts"
@@ -39,9 +45,21 @@ if "%PYTHON%"=="" if exist "%PYTHON_VENV%" set "PYTHON=%PYTHON_VENV%"
 if "%PYTHON%"=="" set "PYTHON=python"
 set "USE_POWERSHELL=0"
 
+if /I "%SENTINELTRAY_PORTABLE%"=="1" (
+  if not exist "%PYTHON_RUNTIME%" (
+    call :log "ERROR" "Portable mode requires runtime\python."
+    echo Portable mode requires runtime\python.
+    exit /b 1
+  )
+)
+
 if "%PYTHON%"=="%PYTHON_RUNTIME%" (
   rem using bundled runtime
   if exist "%ROOT%\runtime\python\pythonw.exe" set "PYTHONW=%ROOT%\runtime\python\pythonw.exe"
+  if not exist "%DEPS_MARKER%" (
+    call :bootstrap_deps
+    if errorlevel 1 exit /b 1
+  )
 ) else (
   if not exist "%PYTHON_RUNTIME%" call :log "WARN" "Runtime not found; using alternate Python."
   if exist "%PYTHON_RUNTIME%" if not exist "%CHECKSUMS%" call :log "WARN" "Checksums missing; using alternate Python."
@@ -97,6 +115,21 @@ if "%RUN_FOREGROUND%"=="1" (
 
 call :log "INFO" "Launching background process"
 start "" "%PYTHONW%" "%ROOT%\main.py" %*
+exit /b 0
+
+:bootstrap_deps
+if not exist "%RUNTIME_WHEELS%" (
+  call :log "ERROR" "Wheel directory missing: %RUNTIME_WHEELS%"
+  echo Missing wheels in %RUNTIME_WHEELS%.
+  exit /b 1
+)
+call :log "INFO" "Bootstrapping runtime dependencies"
+"%PYTHON%" "%ROOT%\scripts\bootstrap_runtime.py"
+if errorlevel 1 (
+  call :log "ERROR" "Dependency bootstrap failed"
+  exit /b 1
+)
+call :log "INFO" "Dependency bootstrap complete"
 exit /b 0
 
 :install_startup

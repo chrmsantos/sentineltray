@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import atexit
 import ctypes
+import logging
 import os
 import subprocess
 import sys
@@ -24,9 +25,14 @@ from sentineltray.config import (
     encrypt_config_file,
     get_encrypted_config_path,
     get_user_data_dir,
+    get_user_log_dir,
     load_config_secure,
 )
+from sentineltray.logging_setup import setup_logging
 from sentineltray.tray_app import run_tray
+from sentineltray import __release_date__, __version_label__
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _pid_file_path() -> Path:
@@ -115,6 +121,7 @@ def _handle_config_error(path: Path, exc: Exception) -> None:
         "Review the YAML formatting and required fields.\n"
         "After fixing, run again."
     )
+    LOGGER.error("Config error: %s", reason, extra={"category": "config"})
     raise SystemExit(message) from exc
 
 
@@ -127,6 +134,37 @@ def _reject_extra_args(args: list[str]) -> None:
     )
 
 
+def _setup_boot_logging() -> None:
+    if logging.getLogger().handlers:
+        return
+    log_root = get_user_log_dir()
+    log_root.mkdir(parents=True, exist_ok=True)
+    boot_log = log_root / "sentineltray_boot.log"
+    setup_logging(
+        str(boot_log),
+        log_level="INFO",
+        log_console_level="INFO",
+        log_console_enabled=True,
+        log_max_bytes=1_000_000,
+        log_backup_count=5,
+        log_run_files_keep=5,
+        app_version=__version_label__,
+        release_date=__release_date__,
+        commit_hash="",
+    )
+
+
+def _ensure_windows() -> None:
+    if sys.platform == "win32":
+        return
+    LOGGER.error(
+        "Unsupported platform: %s (SentinelTray requires Windows)",
+        sys.platform,
+        extra={"category": "startup"},
+    )
+    raise SystemExit("SentinelTray requires Windows.")
+
+
 def main() -> int:
     _ensure_single_instance()
     args = [arg for arg in sys.argv[1:] if arg]
@@ -135,6 +173,8 @@ def main() -> int:
     try:
         local_path = get_user_data_dir() / "config.local.yaml"
         _ensure_local_override(local_path)
+        _setup_boot_logging()
+        _ensure_windows()
         config = load_config_secure(str(local_path))
         encrypted_path = get_encrypted_config_path(local_path)
         if local_path.exists() and not encrypted_path.exists():

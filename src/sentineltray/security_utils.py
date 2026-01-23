@@ -3,6 +3,13 @@ from __future__ import annotations
 import base64
 import ctypes
 from dataclasses import dataclass
+from pathlib import Path
+
+try:
+    from cryptography.fernet import Fernet, InvalidToken
+except Exception:  # pragma: no cover - optional dependency
+    Fernet = None
+    InvalidToken = Exception
 
 
 class _DATA_BLOB(ctypes.Structure):
@@ -20,6 +27,10 @@ _DPPAPI_ENTROPY = b"sentineltray-config-v1"
 
 class DataProtectionError(RuntimeError):
     """Raised when encryption or decryption fails."""
+
+
+def get_portable_key_path(config_path: Path) -> Path:
+    return config_path.with_suffix(".key")
 
 
 def _blob_from_bytes(data: bytes) -> tuple[_DATA_BLOB, ctypes.Array[ctypes.c_char]]:
@@ -141,16 +152,59 @@ def decrypt_text_dpapi(payload: EncryptedPayload) -> str:
     return decrypted.decode("utf-8")
 
 
+def _load_portable_key(path: Path, *, create: bool) -> bytes:
+    if path.exists():
+        key_text = path.read_text(encoding="utf-8").strip()
+        if not key_text:
+            raise DataProtectionError(f"Portable key file is empty: {path}")
+        return key_text.encode("ascii")
+    if not create:
+        raise DataProtectionError(f"Portable key file not found: {path}")
+    if Fernet is None:
+        raise DataProtectionError("cryptography package is required for portable encryption")
+    key = Fernet.generate_key()
+    path.write_text(key.decode("ascii"), encoding="utf-8")
+    return key
+
+
+def encrypt_text_portable(text: str, *, key_path: Path) -> EncryptedPayload:
+    if Fernet is None:
+        raise DataProtectionError("cryptography package is required for portable encryption")
+    raw = text.encode("utf-8")
+    key = _load_portable_key(key_path, create=True)
+    token = Fernet(key).encrypt(raw)
+    return EncryptedPayload(method="portable", data=token)
+
+
+def decrypt_text_portable(payload: EncryptedPayload, *, key_path: Path) -> str:
+    if payload.method != "portable":
+        raise DataProtectionError(f"Unsupported encryption method: {payload.method}")
+    if Fernet is None:
+        raise DataProtectionError("cryptography package is required for portable decryption")
+    key = _load_portable_key(key_path, create=False)
+    try:
+        raw = Fernet(key).decrypt(payload.data)
+    except InvalidToken as exc:
+        raise DataProtectionError("Portable key is invalid or does not match payload") from exc
+    return raw.decode("utf-8")
+
+
 def serialize_payload(payload: EncryptedPayload) -> str:
     encoded = base64.b64encode(payload.data).decode("ascii")
-    return f"dpapi:{encoded}"
+    method = payload.method.strip().lower()
+    if method not in {"dpapi", "portable"}:
+        raise DataProtectionError(f"Unsupported encrypted payload format: {payload.method}")
+    return f"{method}:{encoded}"
 
 
 def parse_payload(text: str) -> EncryptedPayload:
     text = text.strip()
     if not text:
         raise DataProtectionError("Encrypted payload is empty")
-    if not text.startswith("dpapi:"):
+    if ":" not in text:
         raise DataProtectionError("Unsupported encrypted payload format")
-    encoded = text.split(":", 1)[1]
-    return EncryptedPayload(method="dpapi", data=base64.b64decode(encoded))
+    method, encoded = text.split(":", 1)
+    method = method.strip().lower()
+    if method not in {"dpapi", "portable"}:
+        raise DataProtectionError("Unsupported encrypted payload format")
+    return EncryptedPayload(method=method, data=base64.b64decode(encoded))

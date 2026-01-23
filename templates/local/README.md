@@ -13,6 +13,7 @@ The installer copies templates/local/config.local.yaml to the data folder when t
 2. Fill the required fields and restart the application.
 3. state.json is only an example of the local history format.
 4. SentinelTray can auto-encrypt config.local.yaml on startup; use the tray menu to open the editor.
+5. Portable mode generates config.local.key next to the encrypted config.
 
 ## Regex (wildcards)
 
@@ -36,4 +37,6 @@ Each item must include a full `email` block.
 ## Notes
 
 - Do not include real credentials in sample files.
+- config.local.key must be kept alongside config.local.yaml.enc for portable setups.
+- Set SENTINELTRAY_CONFIG_ENCRYPTION=dpapi to force DPAPI on a single machine.
 - Additional robustness parameters available: min_repeat_seconds; error_notification_cooldown_seconds; window_error_backoff_base_seconds / window_error_backoff_max_seconds; window_error_circuit_threshold / window_error_circuit_seconds; email_queue_file / email_queue_max_items / email_queue_max_age_seconds; email_queue_max_attempts / email_queue_retry_base_seconds; log_throttle_seconds.

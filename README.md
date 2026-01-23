@@ -8,6 +8,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 - Windows user session (no admin required).
 - SMTP server access for email delivery.
+- Portable mode requires a bundled runtime and offline wheels (see Portable mode).
 
 ## Setup
 
@@ -56,6 +57,20 @@ Background (explicit):
 
 scripts\run.cmd /background
 
+## Portable mode (self-contained)
+
+Portable mode assumes everything lives inside the project folder. For a fully portable setup:
+
+1. Place a Python runtime at runtime\python\python.exe.
+2. Place offline wheels at runtime\wheels (matching requirements.lock).
+3. Run scripts\run.cmd (it bootstraps dependencies once).
+
+Notes:
+
+- run.cmd enables portable mode by default via SENTINELTRAY_PORTABLE=1.
+- The first run installs dependencies from runtime\wheels and writes runtime\.deps_ready.
+- If runtime\python or runtime\wheels are missing, run.cmd fails with a logged error.
+
 ## Startup (per-user)
 
 Install on login:
@@ -83,6 +98,9 @@ for editing, validates it, and re-encrypts on save.
 
 When config.local.yaml.enc is present, SentinelTray loads it automatically.
 If only config.local.yaml exists, SentinelTray attempts to encrypt it on startup.
+Portable mode uses a local key file (config.local.key) stored alongside the config.
+DPAPI encryption remains available but is not portable across machines/users.
+Use SENTINELTRAY_CONFIG_ENCRYPTION=dpapi to force DPAPI when needed.
 
 ## Regex (wildcards) and examples
 
@@ -174,6 +192,8 @@ monitors:
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
 - Email subject always includes SentinelTray, and the body starts with a SentinelTray title in English.
+- Portable encryption stores a local key file; keep it with the config folder for portability.
+- DPAPI-encrypted configs cannot be decrypted on other machines/users.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.
