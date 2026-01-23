@@ -69,4 +69,4 @@ Em caso de dúvidas sobre o tratamento, consulte o responsável pelo ambiente on
 
 ## Segurança adicional
 
-Relatórios automáticos de segurança e SBOM são gerados por release para apoiar auditorias, sem incluir dados pessoais.
+Relatórios internos não incluem dados pessoais.

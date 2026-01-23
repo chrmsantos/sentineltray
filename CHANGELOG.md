@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Remove legacy security automation workflows and documentation.
 - Remove legacy alternate delivery channel and related UI/config/test coverage.
 
 ## 2026-01-22 (1.0.0-beta.2)
@@ -9,8 +10,7 @@
 - Improve visibility timeout handling to reduce false warnings when the target window reports visible/enabled after retries.
 - Stabilize scan preparation by refocusing and clicking the title bar to reduce interference from temporary overlays.
 - Add manual scan, update/restart options, and startup validation of monitored window availability.
-- Add automated security checks (CodeQL, pip-audit, bandit), SBOM, and SLSA provenance for releases.
-- Add security and audit documentation, plus issue/PR templates and release checklist.
+- Add security documentation, issue/PR templates, release checklist, and SLSA provenance for releases.
 - Add mypy type checking configuration and CI step.
 
 ## 2026-01-21 (1.0.0-beta.1)

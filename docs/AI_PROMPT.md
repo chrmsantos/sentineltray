@@ -36,7 +36,7 @@ Adote a filosofia do Kernel Linux: **simplicidade, transparência, segurança e 
 
 ## Conformidade
 
-- Priorize **auditoria, rastreabilidade e privacidade** quando aplicável.
+- Priorize **rastreabilidade e privacidade** quando aplicável.
 
 ## Mecanismos para não esquecer as diretrizes
 

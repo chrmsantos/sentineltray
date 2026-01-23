@@ -1,31 +1,12 @@
-name: OpenSSF Scorecard
+name: Legacy workflow (disabled)
 
 on:
-  schedule:
-    - cron: "0 2 * * 1"
   workflow_dispatch:
 
-permissions:
-  security-events: write
-  id-token: write
-  contents: read
-
 jobs:
-  analysis:
-    name: Scorecard analysis
+  noop:
+    name: Disabled
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - name: Scorecard
-        uses: ossf/scorecard-action@v2.3.3
-        with:
-          results_format: sarif
-          results_file: results.sarif
-          publish_results: true
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: results.sarif
+      - name: Notice
+        run: echo "Legacy workflow removed."

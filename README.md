@@ -153,4 +153,4 @@ monitors:
 - Política de privacidade em PRIVACY.md.
 - Política de segurança em SECURITY.md.
 - Licenças e terceiros em docs/licenses.md.
-- Releases incluem SBOM, relatórios de auditoria automática e provenance (SLSA).
+- Releases incluem provenance (SLSA).
