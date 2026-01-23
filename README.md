@@ -49,6 +49,10 @@ Local documentation for sample state files lives under templates/local/.
 
 scripts\run.cmd
 
+Disable portable mode (use system Python/venv):
+
+scripts\run.cmd /nonportable
+
 Foreground (with console output):
 
 scripts\run.cmd /foreground
@@ -68,6 +72,7 @@ Portable mode assumes everything lives inside the project folder. For a fully po
 Notes:
 
 - run.cmd enables portable mode by default via SENTINELTRAY_PORTABLE=1.
+- Use /nonportable or SENTINELTRAY_PORTABLE=0 to allow system Python/venv.
 - The first run installs dependencies from runtime\wheels and writes runtime\.deps_ready.
 - If runtime\python or runtime\wheels are missing, run.cmd fails with a logged error.
 
