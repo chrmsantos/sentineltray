@@ -14,8 +14,19 @@ if "%SENTINELTRAY_WHEEL_DIR%"=="" set "SENTINELTRAY_WHEEL_DIR=%RUNTIME_WHEELS%"
 if "%SENTINELTRAY_DEPS_MARKER%"=="" set "SENTINELTRAY_DEPS_MARKER=%DEPS_MARKER%"
 set "SENTINELTRAY_ROOT=%ROOT%"
 set "SENTINELTRAY_DATA_DIR=%ROOT%\config"
+if /I "%~1"=="/nonportable" (
+  set "SENTINELTRAY_PORTABLE=0"
+  shift
+)
+if /I "%~1"=="/portable" (
+  set "SENTINELTRAY_PORTABLE=1"
+  shift
+)
 if "%SENTINELTRAY_PORTABLE%"=="" set "SENTINELTRAY_PORTABLE=1"
-if "%SENTINELTRAY_CONFIG_ENCRYPTION%"=="" set "SENTINELTRAY_CONFIG_ENCRYPTION=portable"
+if "%SENTINELTRAY_CONFIG_ENCRYPTION%"=="" (
+  if /I "%SENTINELTRAY_PORTABLE%"=="1" set "SENTINELTRAY_CONFIG_ENCRYPTION=portable"
+  if /I "%SENTINELTRAY_PORTABLE%"=="0" set "SENTINELTRAY_CONFIG_ENCRYPTION=dpapi"
+)
 set "LOCAL_CONFIG=%SENTINELTRAY_DATA_DIR%\config.local.yaml"
 set "LOCAL_CONFIG_ENC=%SENTINELTRAY_DATA_DIR%\config.local.yaml.enc"
 set "LOG_DIR=%SENTINELTRAY_DATA_DIR%\logs\scripts"
@@ -48,7 +59,9 @@ set "USE_POWERSHELL=0"
 if /I "%SENTINELTRAY_PORTABLE%"=="1" (
   if not exist "%PYTHON_RUNTIME%" (
     call :log "ERROR" "Portable mode requires runtime\python."
+    call :log "ERROR" "Use /nonportable or set SENTINELTRAY_PORTABLE=0 to use system Python."
     echo Portable mode requires runtime\python.
+    echo Use /nonportable or set SENTINELTRAY_PORTABLE=0 to use system Python.
     exit /b 1
   )
 )

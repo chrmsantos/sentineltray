@@ -7,6 +7,7 @@
 - Remove GUI/tray interface and related configuration/tests.
 - Add portable encryption with local key support and offline dependency bootstrap for bundled runtime.
 - Improve logging for platform limits and SMTP failures.
+- Add /nonportable switch to allow system Python when portable runtime is unavailable.
 
 ## 2026-01-22 (1.0.0-beta.2)
 
