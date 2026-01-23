@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import pytest
 
 from sentineltray.app import Notifier
 from sentineltray.config import AppConfig, EmailConfig
 from sentineltray.detector import WindowTextDetector
+from sentineltray.email_sender import EmailSender
 from sentineltray.status import StatusStore
 
 
@@ -65,76 +66,89 @@ def _config() -> AppConfig:
     )
 
 
-def test_skips_identical_to_previous_scan(monkeypatch) -> None:
+class _TestNotifier(Notifier):
+    __test__ = False
+    def set_sender_for_tests(self, sender: EmailSender) -> None:
+        for monitor in self._monitors:
+            monitor.sender = sender
+
+
+class FakeSender(EmailSender):
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+
+    def send(self, message: str) -> None:
+        self.sent.append(message)
+
+
+def test_skips_identical_to_previous_scan(monkeypatch: pytest.MonkeyPatch) -> None:
     config = _config()
     status = StatusStore()
-    notifier = Notifier(config=config, status=status)
-
-    class FakeSender:
-        def __init__(self) -> None:
-            self.sent: list[str] = []
-
-        def send(self, message: str) -> None:
-            self.sent.append(message)
+    notifier = _TestNotifier(config=config, status=status)
 
     sender = FakeSender()
-    notifier._sender = sender
+    notifier.set_sender_for_tests(sender)
 
     matches = ["100 ABC", "100 ABC"]
-    monkeypatch.setattr(WindowTextDetector, "find_matches", lambda _self, _pattern: matches)
+
+    def _first_matches(_self: WindowTextDetector, _pattern: str) -> list[str]:
+        return matches
+
+    monkeypatch.setattr(WindowTextDetector, "find_matches", _first_matches)
     notifier.scan_once()
 
     # Second scan with identical first match should be skipped.
-    monkeypatch.setattr(WindowTextDetector, "find_matches", lambda _self, _pattern: ["100 ABC"])
+    def _second_matches(_self: WindowTextDetector, _pattern: str) -> list[str]:
+        return ["100 ABC"]
+
+    monkeypatch.setattr(WindowTextDetector, "find_matches", _second_matches)
     notifier.scan_once()
 
     assert sender.sent == ["100 ABC"]
 
 
-def test_skips_lower_leading_number(monkeypatch) -> None:
+def test_skips_lower_leading_number(monkeypatch: pytest.MonkeyPatch) -> None:
     config = _config()
     status = StatusStore()
-    notifier = Notifier(config=config, status=status)
-
-    class FakeSender:
-        def __init__(self) -> None:
-            self.sent: list[str] = []
-
-        def send(self, message: str) -> None:
-            self.sent.append(message)
+    notifier = _TestNotifier(config=config, status=status)
 
     sender = FakeSender()
-    notifier._sender = sender
+    notifier.set_sender_for_tests(sender)
 
-    monkeypatch.setattr(WindowTextDetector, "find_matches", lambda _self, _pattern: ["200 ALERT"])
+    def _first_matches(_self: WindowTextDetector, _pattern: str) -> list[str]:
+        return ["200 ALERT"]
+
+    monkeypatch.setattr(WindowTextDetector, "find_matches", _first_matches)
     notifier.scan_once()
 
-    monkeypatch.setattr(WindowTextDetector, "find_matches", lambda _self, _pattern: ["150 ALERT"])
+    def _second_matches(_self: WindowTextDetector, _pattern: str) -> list[str]:
+        return ["150 ALERT"]
+
+    monkeypatch.setattr(WindowTextDetector, "find_matches", _second_matches)
     notifier.scan_once()
 
     # Lower leading number should be skipped.
     assert sender.sent == ["200 ALERT"]
 
 
-def test_allows_higher_leading_number(monkeypatch) -> None:
+def test_allows_higher_leading_number(monkeypatch: pytest.MonkeyPatch) -> None:
     config = _config()
     status = StatusStore()
-    notifier = Notifier(config=config, status=status)
-
-    class FakeSender:
-        def __init__(self) -> None:
-            self.sent: list[str] = []
-
-        def send(self, message: str) -> None:
-            self.sent.append(message)
+    notifier = _TestNotifier(config=config, status=status)
 
     sender = FakeSender()
-    notifier._sender = sender
+    notifier.set_sender_for_tests(sender)
 
-    monkeypatch.setattr(WindowTextDetector, "find_matches", lambda _self, _pattern: ["100 ALERT"])
+    def _first_matches(_self: WindowTextDetector, _pattern: str) -> list[str]:
+        return ["100 ALERT"]
+
+    monkeypatch.setattr(WindowTextDetector, "find_matches", _first_matches)
     notifier.scan_once()
 
-    monkeypatch.setattr(WindowTextDetector, "find_matches", lambda _self, _pattern: ["101 ALERT"])
+    def _second_matches(_self: WindowTextDetector, _pattern: str) -> list[str]:
+        return ["101 ALERT"]
+
+    monkeypatch.setattr(WindowTextDetector, "find_matches", _second_matches)
     notifier.scan_once()
 
     assert sender.sent == ["100 ALERT", "101 ALERT"]
