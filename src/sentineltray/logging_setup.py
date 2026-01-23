@@ -203,6 +203,13 @@ def setup_logging(
     release_date: str | None = None,
     commit_hash: str | None = None,
 ) -> None:
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
+        for handler in list(root_logger.handlers):
+            try:
+                handler.close()
+            finally:
+                root_logger.removeHandler(handler)
     base_path = Path(log_file)
     if not base_path.suffix:
         base_path = base_path.with_suffix(".log")

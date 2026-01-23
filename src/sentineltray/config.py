@@ -8,12 +8,23 @@ from typing import Any
 
 import yaml
 
-from .security_utils import decrypt_text_dpapi, encrypt_text_dpapi, parse_payload, serialize_payload
+from .security_utils import (
+    DataProtectionError,
+    decrypt_text_dpapi,
+    decrypt_text_portable,
+    encrypt_text_dpapi,
+    encrypt_text_portable,
+    get_portable_key_path,
+    parse_payload,
+    serialize_payload,
+)
 
 from .path_utils import ensure_under_root, resolve_log_path, resolve_sensitive_path
 from .validation_utils import validate_email_address, validate_regex
 
 MAX_LOG_FILES = 5
+
+SUPPORTED_ENCRYPTION_METHODS = {"dpapi", "portable"}
 
 
 def _get_project_root_from_file() -> Path:
@@ -158,14 +169,78 @@ def get_encrypted_config_path(path: Path) -> Path:
     return path.with_name(f"{path.name}.enc")
 
 
-def encrypt_config_file(path: str, *, remove_plain: bool = True) -> Path:
+def _normalize_encryption_method(method: str | None) -> str | None:
+    if method is None:
+        return None
+    normalized = str(method).strip().lower()
+    if normalized in {"dpapi", "portable"}:
+        return normalized
+    raise ValueError(f"Unsupported encryption method: {method}")
+
+
+def _is_portable_mode(data_dir: Path | None = None) -> bool:
+    flag = os.environ.get("SENTINELTRAY_PORTABLE")
+    if flag and flag.strip().lower() in {"1", "true", "yes"}:
+        return True
+    root = get_project_root().resolve()
+    base = (data_dir or get_user_data_dir()).resolve()
+    try:
+        return base.is_relative_to(root)
+    except ValueError:
+        return False
+
+
+def select_encryption_method(config_path: Path, *, prefer: str | None = None) -> str:
+    explicit = _normalize_encryption_method(prefer)
+    if explicit:
+        return explicit
+    env_choice = _normalize_encryption_method(os.environ.get("SENTINELTRAY_CONFIG_ENCRYPTION"))
+    if env_choice:
+        return env_choice
+    encrypted_path = get_encrypted_config_path(config_path)
+    if encrypted_path.exists():
+        payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
+        if payload.method in SUPPORTED_ENCRYPTION_METHODS:
+            return payload.method
+    if _is_portable_mode(config_path.parent):
+        return "portable"
+    return "dpapi"
+
+
+def _decrypt_payload(payload, *, config_path: Path) -> str:
+    if payload.method == "portable":
+        key_path = get_portable_key_path(config_path)
+        return decrypt_text_portable(payload, key_path=key_path)
+    return decrypt_text_dpapi(payload)
+
+
+def encrypt_config_text(text: str, *, config_path: Path, method: str | None = None) -> str:
+    chosen = select_encryption_method(config_path, prefer=method)
+    if chosen == "portable":
+        key_path = get_portable_key_path(config_path)
+        payload = encrypt_text_portable(text, key_path=key_path)
+    else:
+        payload = encrypt_text_dpapi(text)
+    return serialize_payload(payload)
+
+
+def decrypt_config_payload(payload, *, config_path: Path) -> str:
+    return _decrypt_payload(payload, config_path=config_path)
+
+
+def encrypt_config_file(
+    path: str,
+    *,
+    remove_plain: bool = True,
+    method: str | None = None,
+) -> Path:
     plain_path = Path(path)
     if not plain_path.exists():
         raise FileNotFoundError(f"Config file not found: {plain_path}")
     encrypted_path = get_encrypted_config_path(plain_path)
     plaintext = plain_path.read_text(encoding="utf-8")
-    payload = encrypt_text_dpapi(plaintext)
-    encrypted_path.write_text(serialize_payload(payload), encoding="utf-8")
+    encoded = encrypt_config_text(plaintext, config_path=plain_path, method=method)
+    encrypted_path.write_text(encoded, encoding="utf-8")
     if remove_plain:
         plain_path.unlink()
     return encrypted_path
@@ -177,7 +252,7 @@ def decrypt_config_file(path: str) -> Path:
     if not encrypted_path.exists():
         raise FileNotFoundError(f"Encrypted config file not found: {encrypted_path}")
     payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
-    plaintext = decrypt_text_dpapi(payload)
+    plaintext = _decrypt_payload(payload, config_path=plain_path)
     plain_path.write_text(plaintext, encoding="utf-8")
     return plain_path
 
@@ -469,8 +544,32 @@ def load_config_secure(path: str) -> AppConfig:
     plain_path = Path(path)
     encrypted_path = get_encrypted_config_path(plain_path)
     if encrypted_path.exists():
-        payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
-        plaintext = decrypt_text_dpapi(payload)
+        logger = logging.getLogger(__name__)
+        try:
+            payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.error(
+                "Failed to parse encrypted config payload: %s",
+                exc,
+                extra={"category": "config"},
+            )
+            raise
+        try:
+            plaintext = _decrypt_payload(payload, config_path=plain_path)
+        except DataProtectionError as exc:
+            if payload.method == "dpapi":
+                logger.error(
+                    "DPAPI config decrypt failed (not portable across machines/users): %s",
+                    exc,
+                    extra={"category": "config"},
+                )
+            else:
+                logger.error(
+                    "Portable config decrypt failed (missing or invalid key): %s",
+                    exc,
+                    extra={"category": "config"},
+                )
+            raise
         data = _load_yaml_text(plaintext)
         return _build_config(data)
     data = _load_yaml(plain_path)

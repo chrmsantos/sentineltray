@@ -35,6 +35,14 @@ class EmailQueued(RuntimeError):
 def _build_subject(subject: str, category: str) -> str:
     base = (subject or "").strip()
     if base:
+        cleaned = base
+        while cleaned.lower().startswith("sentineltray"):
+            cleaned = cleaned[len("sentineltray") :].strip()
+            cleaned = cleaned.lstrip("-–—:|/").strip()
+            if not cleaned:
+                break
+        base = cleaned
+    if base:
         return f"SentinelTray {base} - {category}"
     return f"SentinelTray {category}"
 
@@ -125,6 +133,12 @@ class SmtpEmailSender(EmailSender):
                     )
                     raise EmailAuthError("SMTP authentication failed") from exc
                 if attempt >= attempts:
+                    LOGGER.error(
+                        "SMTP failure after %s attempts: %s",
+                        attempts + 1,
+                        exc,
+                        extra={"category": "send"},
+                    )
                     raise
                 LOGGER.warning(
                     "SMTP failure, retrying: %s",

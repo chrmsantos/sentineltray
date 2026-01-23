@@ -10,8 +10,15 @@ from PIL import Image, ImageDraw
 import pystray
 
 from .app import Notifier
-from .config import AppConfig, get_encrypted_config_path, get_user_data_dir, load_config
-from .security_utils import decrypt_text_dpapi, encrypt_text_dpapi, parse_payload, serialize_payload
+from .config import (
+	AppConfig,
+	decrypt_config_payload,
+	encrypt_config_text,
+	get_encrypted_config_path,
+	get_user_data_dir,
+	load_config,
+)
+from .security_utils import parse_payload
 from .status import StatusStore
 
 LOGGER = logging.getLogger(__name__)
@@ -70,7 +77,7 @@ def run_tray(config: AppConfig) -> None:
 
 			if encrypted_path.exists():
 				payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
-				plaintext = decrypt_text_dpapi(payload)
+				plaintext = decrypt_config_payload(payload, config_path=config_path)
 				temp_path.write_text(plaintext, encoding="utf-8")
 			elif config_path.exists():
 				temp_path.write_text(
@@ -107,8 +114,8 @@ def run_tray(config: AppConfig) -> None:
 				return
 
 			plaintext = temp_path.read_text(encoding="utf-8")
-			payload = encrypt_text_dpapi(plaintext)
-			encrypted_path.write_text(serialize_payload(payload), encoding="utf-8")
+			encoded = encrypt_config_text(plaintext, config_path=config_path)
+			encrypted_path.write_text(encoded, encoding="utf-8")
 			if config_path.exists():
 				config_path.unlink()
 			temp_path.unlink(missing_ok=True)
