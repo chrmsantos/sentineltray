@@ -207,6 +207,10 @@ def select_encryption_method(config_path: Path, *, prefer: str | None = None) ->
     return "dpapi"
 
 
+def is_portable_mode(data_dir: Path | None = None) -> bool:
+    return _is_portable_mode(data_dir)
+
+
 def _decrypt_payload(payload, *, config_path: Path) -> str:
     if payload.method == "portable":
         key_path = get_portable_key_path(config_path)

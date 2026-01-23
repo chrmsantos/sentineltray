@@ -7,6 +7,7 @@ import hashlib
 import importlib.metadata
 import json
 import logging
+import socket
 import shutil
 import time
 from dataclasses import dataclass, field
@@ -153,6 +154,24 @@ def _get_commit_hash() -> str:
         return ""
 
 
+def _check_smtp_health(config: AppConfig) -> None:
+    if config.email.dry_run:
+        return
+    host = config.email.smtp_host
+    port = config.email.smtp_port
+    if not host or not port:
+        return
+    try:
+        with socket.create_connection((host, int(port)), timeout=10):
+            return
+    except OSError as exc:
+        LOGGER.warning(
+            "SMTP healthcheck failed: %s",
+            exc,
+            extra={"category": "send"},
+        )
+
+
 @dataclass
 class Notifier:
     config: AppConfig
@@ -187,6 +206,7 @@ class Notifier:
         }
         self._sender = None
         self._update_config_checksum()
+        _check_smtp_health(self.config)
 
     def _reset_components(self) -> None:
         for monitor in self._monitors:
