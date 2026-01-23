@@ -59,9 +59,9 @@ set "USE_POWERSHELL=0"
 if /I "%SENTINELTRAY_PORTABLE%"=="1" (
   if not exist "%PYTHON_RUNTIME%" (
     call :log "ERROR" "Portable mode requires runtime\python."
-    call :log "ERROR" "Use /nonportable or set SENTINELTRAY_PORTABLE=0 to use system Python."
+    call :log "ERROR" "Run scripts\prepare_portable_runtime.cmd or use /nonportable for system Python."
     echo Portable mode requires runtime\python.
-    echo Use /nonportable or set SENTINELTRAY_PORTABLE=0 to use system Python.
+    echo Run scripts\prepare_portable_runtime.cmd or use /nonportable for system Python.
     exit /b 1
   )
 )
