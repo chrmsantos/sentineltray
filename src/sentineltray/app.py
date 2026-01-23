@@ -15,13 +15,14 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Event
+from typing import Any, cast
 
 from .config import AppConfig, MonitorConfig, get_project_root, get_user_data_dir
 from .detector import WindowTextDetector, WindowUnavailableError
 from .logging_setup import sanitize_text, setup_logging
 from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
-from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, build_sender
+from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, EmailSender, build_sender
 from .telemetry import JsonWriter, atomic_write_text
 from . import __release_date__, __version_label__
 
@@ -37,8 +38,8 @@ class MonitorRuntime:
     key: str
     config: MonitorConfig
     detector: WindowTextDetector
-    sender: object
-    last_sent: dict[str, datetime] = field(default_factory=dict)
+    sender: EmailSender
+    last_sent: dict[str, datetime] = field(default_factory=lambda: cast(dict[str, datetime], {}))
     email_disabled: bool = False
     failure_count: int = 0
     breaker_until: float = 0.0
@@ -71,18 +72,20 @@ def _load_state(path: Path) -> list[dict[str, str]]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(data, list):
-            if all(isinstance(item, str) for item in data):
+            items = cast(list[object], data)
+            if all(isinstance(item, str) for item in items):
                 now = _now_iso()
-                return [{"text": str(item), "sent_at": now} for item in data]
-            items: list[dict[str, str]] = []
-            for item in data:
+                return [{"text": str(item), "sent_at": now} for item in items]
+            normalized_items: list[dict[str, str]] = []
+            for item in items:
                 if not isinstance(item, dict):
                     continue
-                text = item.get("text")
-                sent_at = item.get("sent_at")
+                typed_item = cast(dict[str, object], item)
+                text = typed_item.get("text")
+                sent_at = typed_item.get("sent_at")
                 if isinstance(text, str) and isinstance(sent_at, str):
-                    items.append({"text": text, "sent_at": sent_at})
-            return items
+                    normalized_items.append({"text": text, "sent_at": sent_at})
+            return normalized_items
     except Exception:
         return []
     return []
@@ -212,14 +215,14 @@ class Notifier:
         self._state_write_errors = 0
         self._last_scan_error = False
         self._last_error_notification_at = 0.0
-        self._queue_stats = {
+        self._queue_stats: dict[str, int] = {
             "queued": 0,
             "sent": 0,
             "failed": 0,
             "deferred": 0,
             "oldest_age_seconds": 0,
         }
-        self._sender = None
+        self._sender: EmailSender | None = None
         self._update_config_checksum()
         _check_smtp_health(self.config)
 
@@ -687,7 +690,7 @@ class Notifier:
                 match_age_seconds = int((datetime.now(timezone.utc) - last_match_at).total_seconds())
             except ValueError:
                 match_age_seconds = 0
-        monitor_payload = []
+        monitor_payload: list[dict[str, Any]] = []
         for monitor in self._monitors:
             breaker_remaining = max(0.0, monitor.breaker_until - time.monotonic())
             monitor_payload.append(
@@ -701,7 +704,7 @@ class Notifier:
                     "last_window_error": _safe_status_text(monitor.last_window_error_at),
                 }
             )
-        payload = {
+        payload: dict[str, Any] = {
             "updated_at": _now_iso(),
             "app_version": self._app_version,
             "release_date": self._release_date,
@@ -735,7 +738,7 @@ class Notifier:
             self._telemetry_write_errors += 1
             LOGGER.exception("Telemetry write failed: %s", exc, extra={"category": "error"})
 
-        status_payload = {
+        status_payload: dict[str, Any] = {
             "running": snapshot.running,
             "paused": snapshot.paused,
             "last_scan": _safe_status_text(snapshot.last_scan),
