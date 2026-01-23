@@ -73,6 +73,8 @@ Automated setup:
 
 scripts\prepare_portable_runtime.cmd -PythonVersion 3.11.8
 
+Note: the automated setup downloads Python and wheels from the internet.
+
 Notes:
 
 - run.cmd enables portable mode by default via SENTINELTRAY_PORTABLE=1.

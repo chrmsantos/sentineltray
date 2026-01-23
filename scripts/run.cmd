@@ -61,6 +61,10 @@ if /I "%SENTINELTRAY_PORTABLE%"=="1" (
     call :log "ERROR" "Portable mode requires runtime\python."
     call :log "WARN" "Attempting automatic runtime preparation."
     call :prepare_runtime
+    if exist "%PYTHON_RUNTIME%" if exist "%CHECKSUMS%" (
+      set "PYTHON=%PYTHON_RUNTIME%"
+      if exist "%ROOT%\runtime\python\pythonw.exe" set "PYTHONW=%ROOT%\runtime\python\pythonw.exe"
+    )
     if not exist "%PYTHON_RUNTIME%" (
       call :log "ERROR" "Runtime preparation failed; portable mode still missing runtime\python."
       call :log "ERROR" "Use /nonportable or set SENTINELTRAY_PORTABLE=0 to use system Python."
