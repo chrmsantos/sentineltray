@@ -9,3 +9,4 @@ def test_bootstrap_runtime_script_mentions_pip_install() -> None:
     assert "ensurepip" in content
     assert "site-packages" in content
     assert "import site" in content
+    assert "download" in content

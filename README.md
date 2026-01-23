@@ -81,6 +81,7 @@ Notes:
 - Use /nonportable or SENTINELTRAY_PORTABLE=0 to allow system Python/venv.
 - The first run installs dependencies from runtime\wheels and writes runtime\.deps_ready.
 - If pip is missing in a manually added runtime, the bootstrap step downloads get-pip.py once.
+- If wheels are missing, the bootstrap step downloads them automatically (internet required).
 - If runtime\python or runtime\wheels are missing, run.cmd fails with a logged error.
 - If runtime\python is missing in portable mode, run.cmd attempts to prepare it automatically.
 
