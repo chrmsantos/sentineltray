@@ -127,6 +127,7 @@ class AppConfig:
     email_queue_retry_base_seconds: int = 30
     log_throttle_seconds: int = 60
     monitors: list[MonitorConfig] = field(default_factory=list)
+    config_version: int = 1
 
 
 def _get_required(data: dict[str, Any], key: str) -> Any:
@@ -288,6 +289,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         email_queue_retry_base_seconds=int(data.get("email_queue_retry_base_seconds", 30)),
         log_throttle_seconds=int(data.get("log_throttle_seconds", 60)),
         monitors=monitors,
+        config_version=int(data.get("config_version", 1)),
     )
     config = _apply_sensitive_path_policy(config)
     _validate_config(config)
@@ -377,6 +379,8 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("email_queue_retry_base_seconds must be >= 0")
     if config.log_throttle_seconds < 0:
         raise ValueError("log_throttle_seconds must be >= 0")
+    if config.config_version < 1:
+        raise ValueError("config_version must be >= 1")
     if config.email.timeout_seconds < 1:
         raise ValueError("email.timeout_seconds must be >= 1")
     if config.email.smtp_port < 1:

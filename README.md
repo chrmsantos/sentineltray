@@ -33,6 +33,7 @@ Edite config.local.yaml e defina:
 - email_queue_file, email_queue_max_items, email_queue_max_age_seconds
 - email_queue_max_attempts, email_queue_retry_base_seconds
 - log_throttle_seconds
+- config_version (opcional, default 1)
 
 The application always reads the local config file. Default location is driven by
 `SENTINELTRAY_DATA_DIR` when set. Otherwise it falls back to:
@@ -49,7 +50,7 @@ scripts\run.cmd
 
 If you run main.py directly, it automatically adds src/ to the import path.
 
-SentinelTray executa em modo headless e registra status nos exports configurados.
+SentinelTray executa em modo headless (sem interface gráfica) e registra status nos exports configurados.
 
 ## Regex (curingas) e exemplos
 

@@ -26,6 +26,7 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.log_backup_count == 5
     assert config.log_run_files_keep == 5
     assert config.telemetry_file == str(log_root / "telemetry.json")
+    assert config.config_version == 1
 
 
 def test_log_retention_is_capped(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
