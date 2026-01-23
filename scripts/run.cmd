@@ -3,36 +3,46 @@ setlocal enableextensions enabledelayedexpansion
 
 set "ROOT=%~dp0.."
 for %%I in ("%ROOT%") do set "ROOT=%%~fI"
-set "PYTHON=%ROOT%\runtime\python\python.exe"
+set "PYTHON_RUNTIME=%ROOT%\runtime\python\python.exe"
 set "CHECKSUMS=%ROOT%\runtime\checksums.txt"
+set "PYTHON_VENV=%ROOT%\.venv\Scripts\python.exe"
 set "SENTINELTRAY_ROOT=%ROOT%"
 set "SENTINELTRAY_DATA_DIR=%ROOT%\UserData"
 set "LOG_DIR=%SENTINELTRAY_DATA_DIR%\logs\scripts"
 for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "LOG_TS=%%I"
 set "LOG_FILE=%LOG_DIR%\run_%LOG_TS%.log"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
-powershell -NoProfile -Command "Get-ChildItem -Path '%LOG_DIR%\run_*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -Skip 10 | Remove-Item -Force -ErrorAction SilentlyContinue" >nul 2>nul
+powershell -NoProfile -Command "Get-ChildItem -Path '%LOG_DIR%\run_*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -Skip 5 | Remove-Item -Force -ErrorAction SilentlyContinue" >nul 2>nul
 
 call :log "INFO" "Iniciando run.cmd"
+set "PYTHON="
+if exist "%PYTHON_RUNTIME%" if exist "%CHECKSUMS%" set "PYTHON=%PYTHON_RUNTIME%"
+if "%PYTHON%"=="" if exist "%PYTHON_VENV%" set "PYTHON=%PYTHON_VENV%"
+if "%PYTHON%"=="" set "PYTHON=python"
+set "USE_POWERSHELL=0"
+
+if "%PYTHON%"=="%PYTHON_RUNTIME%" (
+  rem usando runtime empacotado
+) else (
+  if not exist "%PYTHON_RUNTIME%" call :log "WARN" "Runtime nao encontrado; usando Python alternativo."
+  if exist "%PYTHON_RUNTIME%" if not exist "%CHECKSUMS%" call :log "WARN" "Checksums ausente; usando Python alternativo."
+)
+if "%PYTHON%"=="%PYTHON_VENV%" (
+  where powershell >nul 2>nul
+  if not errorlevel 1 set "USE_POWERSHELL=1"
+)
 call :log_context
-
-if not exist "%PYTHON%" (
-  call :log "ERROR" "Runtime nao encontrado."
-  echo Runtime nao encontrado.
-  exit /b 1
-)
-
-if not exist "%CHECKSUMS%" (
-  call :log "ERROR" "Runtime incompleto."
-  echo Runtime incompleto.
-  exit /b 1
-)
 
 if "%USERPROFILE%"=="" (
   rem USERPROFILE nao e necessario em modo portable.
 )
 
-"%PYTHON%" "%ROOT%\main.py" %*
+if "%USE_POWERSHELL%"=="1" (
+  call :log "INFO" "Ativando venv via PowerShell"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "& '%ROOT%\.venv\Scripts\Activate.ps1'; python '%ROOT%\main.py' %*"
+) else (
+  "%PYTHON%" "%ROOT%\main.py" %*
+)
 set "EXIT_CODE=%ERRORLEVEL%"
 call :log "INFO" "Processo finalizado com exit code !EXIT_CODE!"
 exit /b !EXIT_CODE!
