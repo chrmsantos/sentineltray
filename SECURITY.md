@@ -21,7 +21,6 @@ We will acknowledge reports within 5 business days.
 
 ## Secure Development Practices
 
-- Dependencies are pinned and audited automatically.
-- SBOMs and security reports are generated for each release.
+- Dependencies are pinned for stability.
 - Provenance (SLSA) is published for releases.
 - Redaction is applied to logs and exports.

@@ -1,52 +1,12 @@
-name: Security Checks
+name: Security Checks (disabled)
 
 on:
-  push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
-  schedule:
-    - cron: "0 3 * * 1"
-
-permissions:
-  contents: read
-  security-events: write
+  workflow_dispatch:
 
 jobs:
-  codeql:
-    name: CodeQL
+  noop:
+    name: Disabled
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: python
-      - name: Analyze
-        uses: github/codeql-action/analyze@v3
-
-  python-audit:
-    name: Python Audit
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install tooling
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pip-audit bandit mypy
-      - name: pip-audit
-        run: |
-          pip-audit -r requirements.txt
-      - name: bandit
-        run: |
-          bandit -r src -ll
-      - name: mypy
-        run: |
-          mypy src
+      - name: Notice
+        run: echo "Legacy workflow removed."

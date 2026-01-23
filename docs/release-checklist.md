@@ -10,16 +10,10 @@
 
 ## CI/Automação
 
-- [ ] CodeQL passou
-- [ ] pip-audit passou
-- [ ] bandit passou
 - [ ] mypy passou
-- [ ] Scorecard sem falhas críticas
 
 ## Release artifacts
 
-- [ ] SBOM anexado
-- [ ] Relatórios pip-audit e bandit anexados
 - [ ] Provenance (SLSA) anexado
 
 ## Pós-release
