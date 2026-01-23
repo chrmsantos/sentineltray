@@ -34,6 +34,25 @@ def _ensure_pip(python_exe: str) -> bool:
         return False
 
 
+def _ensure_pth(python_exe: str) -> None:
+    python_dir = Path(python_exe).parent
+    pth_file = next(python_dir.glob("*.pth"), None)
+    if pth_file is None:
+        pth_file = next(python_dir.glob("*._pth"), None)
+    if pth_file is None:
+        return
+    text = pth_file.read_text(encoding="utf-8")
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    desired = ["Lib/site-packages", "Scripts", "import site"]
+    updated = False
+    for entry in desired:
+        if entry not in lines:
+            lines.append(entry)
+            updated = True
+    if updated:
+        pth_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     wheel_dir = Path(
@@ -57,6 +76,7 @@ def main() -> int:
         return 1
 
     print("Ensuring pip is available...")
+    _ensure_pth(sys.executable)
     if not _ensure_pip(sys.executable):
         print(
             "pip installation failed. Check internet access or use prepare_portable_runtime.cmd.",
