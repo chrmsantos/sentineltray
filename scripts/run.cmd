@@ -21,9 +21,19 @@ powershell -NoProfile -Command "Get-ChildItem -Path '%LOG_DIR%\run_*.log' -Error
 if /I "%~1"=="/install-startup" goto install_startup
 if /I "%~1"=="/remove-startup" goto remove_startup
 if /I "%~1"=="/startup-status" goto startup_status
+set "RUN_FOREGROUND=0"
+if /I "%~1"=="/foreground" (
+  set "RUN_FOREGROUND=1"
+  shift
+)
+if /I "%~1"=="/background" (
+  set "RUN_FOREGROUND=0"
+  shift
+)
 
 call :log "INFO" "Starting run.cmd"
 set "PYTHON="
+set "PYTHONW="
 if exist "%PYTHON_RUNTIME%" if exist "%CHECKSUMS%" set "PYTHON=%PYTHON_RUNTIME%"
 if "%PYTHON%"=="" if exist "%PYTHON_VENV%" set "PYTHON=%PYTHON_VENV%"
 if "%PYTHON%"=="" set "PYTHON=python"
@@ -31,6 +41,7 @@ set "USE_POWERSHELL=0"
 
 if "%PYTHON%"=="%PYTHON_RUNTIME%" (
   rem using bundled runtime
+  if exist "%ROOT%\runtime\python\pythonw.exe" set "PYTHONW=%ROOT%\runtime\python\pythonw.exe"
 ) else (
   if not exist "%PYTHON_RUNTIME%" call :log "WARN" "Runtime not found; using alternate Python."
   if exist "%PYTHON_RUNTIME%" if not exist "%CHECKSUMS%" call :log "WARN" "Checksums missing; using alternate Python."
@@ -38,7 +49,10 @@ if "%PYTHON%"=="%PYTHON_RUNTIME%" (
 if "%PYTHON%"=="%PYTHON_VENV%" (
   where powershell >nul 2>nul
   if not errorlevel 1 set "USE_POWERSHELL=1"
+  if exist "%ROOT%\.venv\Scripts\pythonw.exe" set "PYTHONW=%ROOT%\.venv\Scripts\pythonw.exe"
 )
+if "%PYTHONW%"=="" if not "%PYTHON%"=="python" set "PYTHONW=%PYTHON%"
+if "%PYTHONW%"=="" set "PYTHONW=pythonw"
 call :log_context
 
 if not exist "%LOCAL_CONFIG%" if not exist "%LOCAL_CONFIG_ENC%" (
@@ -65,23 +79,29 @@ if "%USERPROFILE%"=="" (
   rem USERPROFILE is not required in portable mode.
 )
 
-if "%USE_POWERSHELL%"=="1" (
-  call :log "INFO" "Activating venv via PowerShell"
-  call :log "INFO" "Application running (continuous mode). Use Ctrl+C to stop."
-  echo SentinelTray is running. Use Ctrl+C to stop.
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "& '%ROOT%\.venv\Scripts\Activate.ps1'; python '%ROOT%\main.py' %*"
-) else (
-  call :log "INFO" "Application running (continuous mode). Use Ctrl+C to stop."
-  echo SentinelTray is running. Use Ctrl+C to stop.
-  "%PYTHON%" "%ROOT%\main.py" %*
+if "%RUN_FOREGROUND%"=="1" (
+  if "%USE_POWERSHELL%"=="1" (
+    call :log "INFO" "Activating venv via PowerShell"
+    call :log "INFO" "Application running (foreground mode). Use Ctrl+C to stop."
+    echo SentinelTray is running. Use Ctrl+C to stop.
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "& '%ROOT%\.venv\Scripts\Activate.ps1'; python '%ROOT%\main.py' %*"
+  ) else (
+    call :log "INFO" "Application running (foreground mode). Use Ctrl+C to stop."
+    echo SentinelTray is running. Use Ctrl+C to stop.
+    "%PYTHON%" "%ROOT%\main.py" %*
+  )
+  set "EXIT_CODE=%ERRORLEVEL%"
+  call :log "INFO" "Process finished with exit code !EXIT_CODE!"
+  exit /b !EXIT_CODE!
 )
-set "EXIT_CODE=%ERRORLEVEL%"
-call :log "INFO" "Process finished with exit code !EXIT_CODE!"
-exit /b !EXIT_CODE!
+
+call :log "INFO" "Launching background process"
+start "" "%PYTHONW%" "%ROOT%\main.py" %*
+exit /b 0
 
 :install_startup
 call :log "INFO" "Installing startup entry"
-set "STARTUP_CMD=\"%ROOT%\scripts\run.cmd\""
+set "STARTUP_CMD=\"%ROOT%\scripts\run.cmd\" /background"
 reg add "%STARTUP_KEY%" /v "%STARTUP_NAME%" /t REG_SZ /d "%STARTUP_CMD%" /f >nul 2>nul
 if errorlevel 1 (
   call :log "ERROR" "Failed to install startup entry"
