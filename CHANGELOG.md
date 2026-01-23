@@ -12,6 +12,7 @@
 - Auto-run portable runtime preparation from run.cmd when runtime is missing.
 - Harden portable runtime preparation when pip or wheel download fails.
 - Make bootstrap runtime install pip when missing.
+- Use Scripts\\pip.exe fallback when embedded Python cannot import pip.
 
 ## 2026-01-22 (1.0.0-beta.2)
 
