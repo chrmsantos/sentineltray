@@ -14,6 +14,7 @@ logs/status.csv
 logs/config.checksum
 config.local.yaml.edit
 config.local.yaml
+config.local.key
 *.local.yaml
 runtime/
 config/
