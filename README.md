@@ -69,6 +69,10 @@ Portable mode assumes everything lives inside the project folder. For a fully po
 2. Place offline wheels at runtime\wheels (matching requirements.lock).
 3. Run scripts\run.cmd (it bootstraps dependencies once).
 
+Automated setup:
+
+scripts\prepare_portable_runtime.cmd -PythonVersion 3.11.8
+
 Notes:
 
 - run.cmd enables portable mode by default via SENTINELTRAY_PORTABLE=1.
