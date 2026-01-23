@@ -20,6 +20,7 @@
 - Skip alerts identical to the immediately previous scan or with lower leading numbers.
 - Enforce exact email subjects for match and error alerts.
 - Open PowerShell with venv activation automatically in foreground mode.
+- Add activate_venv.cmd wrapper for CMD users.
 
 ## 2026-01-22 (1.0.0-beta.2)
 
