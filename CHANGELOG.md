@@ -39,6 +39,12 @@
 - Store operational logs, telemetry, and status exports under the project logs/ folder; sensitive data remains in %SENTINELTRAY_DATA_DIR%.
 - Allow running main.py directly by bootstrapping src/ onto the import path.
 
+## 2026-01-23 (0.2.0-beta.6)
+
+- Add tray icon with CLI launcher (left-click opens CLI, right-click shows Open/Exit).
+- Add interactive CLI with pause/resume/scan/status/exit commands.
+- Protect user config with Windows DPAPI encryption and auto-encrypt plaintext configs.
+
 ## 2026-01-19 (0.2.0-beta.5)
 
 - Disable email sending for the session after SMTP authentication failure to prevent repeated retries.
@@ -61,7 +67,7 @@
 
 - Enforce log retention caps at 5 files, clamping higher configured values.
 - Gate scans to run only after 2+ minutes of user inactivity.
-- Ensure email subjects always include SentinelTray and bodies use friendly PT-BR text.
+- Ensure email subjects always include SentinelTray and bodies use friendly English text.
 - Make phrase matching accent-insensitive with partial text detection.
 - Make phrase matching case-insensitive.
 

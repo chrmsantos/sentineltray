@@ -1,38 +1,39 @@
-# Modelos locais
+# Local templates
 
-## Objetivo
+## Purpose
 
-Use estes arquivos como referência para criar os arquivos locais no computador do usuário.
-O instalador copia templates/local/config.local.yaml para a pasta de dados quando o arquivo não existe.
+Use these files as reference to create local files on the user machine.
+The installer copies templates/local/config.local.yaml to the data folder when the file does not exist.
 
-## Como usar
+## How to use
 
-1. Crie o arquivo de configuracao em:
-   %SENTINELTRAY_DATA_DIR%\config.local.yaml (quando definido)
-   ou %LOCALAPPDATA%\AxonZ\SentinelTray\UserData\config.local.yaml
-2. Preencha os campos obrigatorios e reinicie o aplicativo.
-3. state.json é apenas um exemplo do formato de histórico local.
+1. Create the configuration file at:
+   %SENTINELTRAY_DATA_DIR%\config.local.yaml (when defined)
+   or %LOCALAPPDATA%\AxonZ\SentinelTray\UserData\config.local.yaml
+2. Fill the required fields and restart the application.
+3. state.json is only an example of the local history format.
+4. SentinelTray can auto-encrypt config.local.yaml on startup; the CLI can encrypt/decrypt and open an editor.
 
-## Regex (curingas)
+## Regex (wildcards)
 
-- `.*` corresponde a qualquer sequencia de caracteres.
-- `.` corresponde a um unico caractere.
-- `?` torna o caractere anterior opcional.
-- `[A-Z]` corresponde a um conjunto/intervalo.
-- `\d` para numeros, `\s` para espacos, `^` inicio e `$` fim.
+- `.*` matches any sequence of characters.
+- `.` matches a single character.
+- `?` makes the previous character optional.
+- `[A-Z]` matches a set/range.
+- `\d` for digits, `\s` for spaces, `^` start and `$` end.
 
-Exemplos:
+Examples:
 
 - window_title_regex: '^Sino\\.Siscam\\..*'
-- phrase_regex: 'PROTOCOLOS?\\s+NAO\\s+RECEBIDOS'
-- phrase_regex: 'ALERTA|CRITICO'
+- phrase_regex: 'PROTOCOLS?\\s+NOT\\s+RECEIVED'
+- phrase_regex: 'ALERT|CRITICAL'
 
-## Monitores multiplos
+## Multiple monitors
 
-Use a chave `monitors` para definir varios pares de titulo + texto.
-Cada item deve ter um bloco `email` completo.
+Use the `monitors` key to define multiple title + text pairs.
+Each item must include a full `email` block.
 
-## Observações
+## Notes
 
-- Não inclua credenciais reais em arquivos de exemplo.
-- Parâmetros adicionais de robustez disponíveis: min_repeat_seconds; error_notification_cooldown_seconds; window_error_backoff_base_seconds / window_error_backoff_max_seconds; window_error_circuit_threshold / window_error_circuit_seconds; email_queue_file / email_queue_max_items / email_queue_max_age_seconds; email_queue_max_attempts / email_queue_retry_base_seconds; log_throttle_seconds.
+- Do not include real credentials in sample files.
+- Additional robustness parameters available: min_repeat_seconds; error_notification_cooldown_seconds; window_error_backoff_base_seconds / window_error_backoff_max_seconds; window_error_circuit_threshold / window_error_circuit_seconds; email_queue_file / email_queue_max_items / email_queue_max_age_seconds; email_queue_max_attempts / email_queue_retry_base_seconds; log_throttle_seconds.

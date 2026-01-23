@@ -54,11 +54,11 @@ def test_find_matches_accent_insensitive(monkeypatch) -> None:
     monkeypatch.setattr(
         detector,
         "_iter_texts",
-        lambda: ["Sessão encerrada", "Ação confirmada", "Sem alerta"],
+        lambda: ["Café closed", "Résumé approved", "No alert"],
     )
 
-    assert detector.find_matches("Sessao") == ["Sessão encerrada"]
-    assert detector.find_matches("Acao") == ["Ação confirmada"]
+    assert detector.find_matches("Cafe") == ["Café closed"]
+    assert detector.find_matches("Resume") == ["Résumé approved"]
 
 
 def test_find_matches_partial_text(monkeypatch) -> None:
@@ -66,10 +66,10 @@ def test_find_matches_partial_text(monkeypatch) -> None:
     monkeypatch.setattr(
         detector,
         "_iter_texts",
-        lambda: ["Erro no sistema principal", "Tudo certo"],
+        lambda: ["Primary system error", "All good"],
     )
 
-    assert detector.find_matches("Erro") == ["Erro no sistema principal"]
+    assert detector.find_matches("error") == ["Primary system error"]
 
 
 def test_find_matches_case_insensitive(monkeypatch) -> None:
@@ -77,10 +77,10 @@ def test_find_matches_case_insensitive(monkeypatch) -> None:
     monkeypatch.setattr(
         detector,
         "_iter_texts",
-        lambda: ["Processo concluído", "Alerta crítico"],
+        lambda: ["Process completed", "Critical alert"],
     )
 
-    assert detector.find_matches("alerta") == ["Alerta crítico"]
+    assert detector.find_matches("alert") == ["Critical alert"]
 
 
 def test_get_window_resolves_ambiguous(monkeypatch) -> None:

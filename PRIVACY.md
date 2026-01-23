@@ -1,72 +1,75 @@
-# Política de Privacidade (LGPD)
+# Privacy Policy (LGPD)
 
-## Objetivo
+## Purpose
 
-Esta aplicação processa dados pessoais apenas para enviar alertas e manter o histórico técnico de operação. O tratamento segue os princípios da LGPD, com foco em finalidade, necessidade, transparência e segurança.
+This application processes personal data only to send alerts and maintain the technical operating history. Processing follows LGPD principles with a focus on purpose limitation, necessity, transparency, and security.
 
-## Dados pessoais tratados
+## Personal data processed
 
-- Endereços de e-mail de envio e recebimento.
-- Credenciais SMTP (usuário e senha de app, quando aplicável).
-- Conteúdo das mensagens de alerta que podem conter dados visíveis na janela monitorada.
+- Sender and recipient email addresses.
+- SMTP credentials (username and app password, when applicable).
+- Alert message content, which may include data visible in the monitored window.
 
-## Base legal e finalidade
+## Legal basis and purpose
 
-- Execução de contrato/legítimo interesse: alertas operacionais e diagnóstico local.
-- Finalidade única: notificar eventos detectados na janela monitorada.
+- Contract performance/legitimate interest: operational alerts and local diagnostics.
+- Single purpose: notify events detected in the monitored window.
 
-## Local de armazenamento
+## Storage location
 
-Dados sensiveis necessarios ao funcionamento ficam exclusivamente em:
+Sensitive data required for operation is stored exclusively in:
 
-- %SENTINELTRAY_DATA_DIR% (quando definido)
-- ou %LOCALAPPDATA%\AxonZ\SentinelTray\UserData (fallback padrao)
+- %SENTINELTRAY_DATA_DIR% (when defined)
+- or %LOCALAPPDATA%\AxonZ\SentinelTray\UserData (default fallback)
 
-Isto inclui:
+This includes:
 
-- config.local.yaml (credenciais e enderecos)
-- state.json (histórico local)
+- config.local.yaml (credentials and addresses)
+- state.json (local history)
 
-Dados operacionais (diagnostico e status) ficam em:
+Encrypted configs (config.local.yaml.enc) are supported via Windows DPAPI to protect sensitive data at rest. On startup, the app attempts to encrypt plaintext configs.
+The CLI editor uses a temporary plaintext file in the local data directory and removes it after re-encrypting.
+
+Operational data (diagnostics and status) is stored in:
 
 - %SENTINELTRAY_DATA_DIR%\logs
 
-- *.log (diagnostico)
-- telemetry.json (estado operacional)
-- status.json e status.csv (exportacao de status)
-- config.checksum (integridade de configuracao)
+- *.log (diagnostics)
+- telemetry.json (operational state)
+- status.json and status.csv (status exports)
+- config.checksum (configuration integrity)
 
-O repositório contém apenas templates comentados e exemplos fictícios.
+The repository contains only commented templates and fictitious examples.
 
-## Execução inicial
+## Initial execution
 
-Ao iniciar, se %SENTINELTRAY_DATA_DIR%\config.local.yaml não existir, o aplicativo encerra com orientação de correção. Dados pessoais permanecem apenas nesse diretório; logs operacionais permanecem em %SENTINELTRAY_DATA_DIR%\logs.
+On startup, if %SENTINELTRAY_DATA_DIR%\config.local.yaml does not exist, the application exits with correction guidance. Personal data remains only in that directory; operational logs remain in %SENTINELTRAY_DATA_DIR%\logs.
 
-## Segurança e minimização
+## Security and minimization
 
-- Os dados são usados apenas para alertas e diagnóstico local.
-- Não há envio para terceiros além do provedor SMTP configurado.
-- Campos sensíveis são mantidos fora do repositório e ignorados pelo controle de versão.
-- Logs e exportações aplicam mascaramento de dados sensíveis (e-mails, telefones e caminhos locais).
+- Data is used only for alerts and local diagnostics.
+- There is no sharing with third parties beyond the configured SMTP provider.
+- Sensitive fields are kept out of the repository and ignored by version control.
+- Logs and exports apply masking for sensitive data (emails, phone numbers, and local paths).
 
-## Retenção
+## Retention
 
-- logs são mantidos apenas nas últimas 5 execuções (valores acima são limitados).
-- state.json contém apenas o necessário para evitar duplicidade de envio.
-- Filas locais de envio (quando habilitadas) seguem limites de quantidade e idade configurados.
+- Logs are kept only for the last 5 runs (higher values are capped).
+- state.json contains only what is required to avoid duplicate sends.
+- Local send queues (when enabled) follow the configured quantity and age limits.
 
-## Direitos do titular
+## Data subject rights
 
-O usuário pode remover ou corrigir os dados a qualquer momento editando ou apagando os arquivos em %SENTINELTRAY_DATA_DIR%.
+The user can remove or correct data at any time by editing or deleting files under %SENTINELTRAY_DATA_DIR%.
 
-## Contato
+## Contact
 
-Em caso de dúvidas sobre o tratamento, consulte o responsável pelo ambiente onde a aplicação foi instalada.
+For questions about processing, consult the person responsible for the environment where the application was installed.
 
-## Operadores e terceiros
+## Operators and third parties
 
-- SMTP: depende do provedor configurado pelo usuário.
+- SMTP: depends on the provider configured by the user.
 
-## Segurança adicional
+## Additional security
 
-Relatórios internos não incluem dados pessoais.
+Internal reports do not include personal data.

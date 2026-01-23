@@ -1,25 +1,28 @@
-# Licenças e Terceiros
+# Licenses and Third Parties
 
-## Projeto
+## Project
 
-- Licença do projeto: GPL-3.0-only (ver LICENSE).
+- Project license: GPL-3.0-only (see LICENSE).
 
-## Dependências diretas
+## Direct dependencies
 
-As dependências diretas estão em requirements.txt e requirements.lock.
-Consulte as licenças nas páginas oficiais dos projetos:
+Direct dependencies are listed in requirements.txt and requirements.lock.
+Consult the licenses on the official project pages:
 
 - pywinauto
 - PyYAML
+- Pillow
+- pystray
+- pywin32
 - pytest
 - pytest-cov
 - mypy
 
-## Ferramentas e serviços
+## Tools and services
 
-- GitHub Actions e runners seguem os termos do GitHub.
+- GitHub Actions and runners follow GitHub's terms.
 
-## Observação
+## Note
 
-Este documento lista os componentes; a validação de licenças deve ser feita
-antes de redistribuição, conforme exigências de cada fornecedor.
+This document lists the components; license validation must be performed
+before redistribution, per each vendor's requirements.

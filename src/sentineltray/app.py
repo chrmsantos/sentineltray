@@ -21,6 +21,7 @@ from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, build_sender
 from .telemetry import JsonWriter, atomic_write_text
+from .cli_control import drain_commands
 from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
@@ -109,7 +110,7 @@ def _summarize_text(text: str) -> str:
     if not cleaned:
         return ""
     digest = hashlib.sha256(cleaned.encode("utf-8")).hexdigest()[:12]
-    return f"texto(len={len(cleaned)}, sha={digest})"
+    return f"text(len={len(cleaned)}, sha={digest})"
 
 
 def _hash_value(value: str) -> str:
@@ -123,6 +124,33 @@ def _safe_status_text(text: str) -> str:
     if not text:
         return ""
     return sanitize_text(_to_ascii(text))
+
+
+def _process_cli_commands(
+    stop_event: Event,
+    pause_event: Event | None,
+    manual_scan_event: Event | None,
+) -> None:
+    commands = drain_commands()
+    if not commands:
+        return
+    for command in commands:
+        name = command.command.lower()
+        if name == "pause":
+            if pause_event is not None:
+                pause_event.set()
+            LOGGER.info("CLI requested pause", extra={"category": "control"})
+        elif name == "resume":
+            if pause_event is not None:
+                pause_event.clear()
+            LOGGER.info("CLI requested resume", extra={"category": "control"})
+        elif name == "scan":
+            if manual_scan_event is not None:
+                manual_scan_event.set()
+            LOGGER.info("CLI requested manual scan", extra={"category": "control"})
+        elif name == "exit":
+            stop_event.set()
+            LOGGER.info("CLI requested exit", extra={"category": "control"})
 
 
 def _get_version() -> str:
@@ -361,8 +389,8 @@ class Notifier:
             )
             if breaker_seconds > 0:
                 critical_message = (
-                    "error: monitor em pausa por "
-                    f"{breaker_seconds}s (muitas falhas consecutivas)"
+                    "error: monitor paused for "
+                    f"{breaker_seconds}s (too many consecutive failures)"
                 )
                 for current in self._monitors:
                     if current.key != monitor.key:
@@ -401,7 +429,7 @@ class Notifier:
                 monitor.breaker_until = 0.0
                 monitor.last_window_ok_at = _now_iso()
             except WindowUnavailableError as exc:
-                message = f"error: janela indisponível: {exc}"
+                message = f"error: window unavailable: {exc}"
                 self._handle_monitor_error(monitor, message)
                 self._last_scan_error = True
                 monitor_error = "window_unavailable"
@@ -814,6 +842,7 @@ class Notifier:
         was_paused = False
         while not stop_event.is_set():
             loop_started = time.perf_counter()
+            _process_cli_commands(stop_event, pause_event, manual_scan_event)
             if pause_event is not None and pause_event.is_set():
                 if not was_paused:
                     LOGGER.info("Execution paused", extra={"category": "control"})
@@ -864,7 +893,7 @@ class Notifier:
                         extra={"category": "scan"},
                     )
             except WindowUnavailableError as exc:
-                self._handle_error(f"error: janela indisponível: {exc}")
+                self._handle_error(f"error: window unavailable: {exc}")
                 LOGGER.info(
                     "Skipping scan; %s",
                     exc,

@@ -2,21 +2,21 @@
 
 ## Pre-release
 
-- [ ] Changelog atualizado
-- [ ] Versão/label atualizados
-- [ ] Revisão de privacidade (PRIVACY.md)
-- [ ] Revisão de segurança (SECURITY.md)
-- [ ] Sem segredos no repositório
+- [ ] Changelog updated
+- [ ] Version/label updated
+- [ ] Privacy review (PRIVACY.md)
+- [ ] Security review (SECURITY.md)
+- [ ] No secrets in the repository
 
-## CI/Automação
+## CI/Automation
 
-- [ ] mypy passou
+- [ ] mypy passed
 
 ## Release artifacts
 
 - [ ] Provenance (SLSA) anexado
 
-## Pós-release
+## Post-release
 
-- [ ] Verificar release assets no GitHub
-- [ ] Comunicar mudanças relevantes
+- [ ] Verify release assets on GitHub
+- [ ] Communicate relevant changes

@@ -1,6 +1,6 @@
 # SentinelTray
 
-Versão beta: 1.0.0-beta.2 (22-01-2026)
+Beta version: 1.0.0-beta.2 (01-22-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
@@ -11,9 +11,9 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 ## Setup
 
-Edite config.local.yaml e defina:
+Edit config.local.yaml and set:
 
-- window_title_regex (prefixo unico do titulo e suficiente)
+- window_title_regex (a unique title prefix is enough)
 - phrase_regex (empty means any visible text)
 - use single quotes for regex to avoid YAML escape issues
 - email.smtp_host
@@ -33,7 +33,7 @@ Edite config.local.yaml e defina:
 - email_queue_file, email_queue_max_items, email_queue_max_age_seconds
 - email_queue_max_attempts, email_queue_retry_base_seconds
 - log_throttle_seconds
-- config_version (opcional, default 1)
+- config_version (optional, default 1)
 
 The application always reads the local config file. Default location is driven by
 `SENTINELTRAY_DATA_DIR` when set. Otherwise it falls back to:
@@ -50,37 +50,62 @@ scripts\run.cmd
 
 If you run main.py directly, it automatically adds src/ to the import path.
 
-SentinelTray executa em modo headless (sem interface gráfica) e registra status nos exports configurados.
+SentinelTray starts in the background with a green tray icon. Left-click (or Open) launches a terminal
+with the interactive CLI prompt. Right-click shows Open and Exit.
 
-## Regex (curingas) e exemplos
+## CLI
 
-Use regex nas strings de titulo/nome da janela e no texto a procurar. Dicas:
+The CLI supports interactive commands and one-shot operations:
 
-- `.*` corresponde a qualquer sequencia de caracteres.
-- `.` corresponde a um unico caractere.
-- `?` torna o caractere anterior opcional.
-- `[A-Z]` corresponde a um conjunto/intervalo.
-- `\d` para numeros, `\s` para espacos, `^` inicio e `$` fim.
+- Interactive: `python cli.py`
+- Status: `python cli.py status`
+- Pause: `python cli.py pause`
+- Resume: `python cli.py resume`
+- Scan now: `python cli.py scan`
+- Exit: `python cli.py exit`
+- Edit config: `python cli.py edit`
 
-Exemplos:
+## Config protection
+
+You can encrypt the local config using Windows DPAPI (per-user):
+
+- Encrypt and remove plaintext: `python cli.py encrypt`
+- Encrypt but keep plaintext: `python cli.py encrypt --keep-plain`
+- Decrypt back to plaintext: `python cli.py decrypt`
+
+When config.local.yaml.enc is present, SentinelTray loads it automatically.
+If only config.local.yaml exists, SentinelTray attempts to encrypt it on startup.
+The CLI editor decrypts in memory, opens a temporary file for editing, validates it, and re-encrypts on save.
+
+## Regex (wildcards) and examples
+
+Use regex in window title/name strings and in the text to look for. Tips:
+
+- `.*` matches any sequence of characters.
+- `.` matches a single character.
+- `?` makes the previous character optional.
+- `[A-Z]` matches a set/range.
+- `\d` for digits, `\s` for spaces, `^` start and `$` end.
+
+Examples:
 
 - window_title_regex: 'Siscam.*Desktop'
 - window_title_regex: '^Sino\\.Siscam\\..*'
-- phrase_regex: 'PROTOCOLOS?\\s+NAO\\s+RECEBIDOS'
-- phrase_regex: 'ALERTA|CRITICO'
+- phrase_regex: 'PROTOCOLS?\\s+NOT\\s+RECEIVED'
+- phrase_regex: 'ALERT|CRITICAL'
 
-## Monitores multiplos (titulo + texto + email)
+## Multiple monitors (title + text + email)
 
-Para monitorar mais de um par titulo + texto, use `monitors`.
-Cada item deve ter sua propria configuracao de email.
-Quando `monitors` for usado, o bloco `email` no topo pode ser omitido.
+To monitor more than one title + text pair, use `monitors`.
+Each item must include its own email configuration.
+When `monitors` is used, the top-level `email` block can be omitted.
 
 Exemplo:
 
 ```yaml
 monitors:
    - window_title_regex: 'APP1'
-      phrase_regex: 'ALERTA1'
+      phrase_regex: 'ALERT1'
       email:
          smtp_host: 'smtp.local'
          smtp_port: 587
@@ -95,7 +120,7 @@ monitors:
          retry_backoff_seconds: 0
          dry_run: true
    - window_title_regex: 'APP2'
-      phrase_regex: 'ALERTA2'
+      phrase_regex: 'ALERT2'
       email:
          smtp_host: 'smtp.local'
          smtp_port: 587
@@ -128,7 +153,7 @@ monitors:
 - Error notifications are rate-limited via error_notification_cooldown_seconds.
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
-- Janelas minimizadas sao restauradas para leitura do texto.
+- Minimized windows are restored to read text.
 - Phrase matching ignores accents, is case-insensitive, and matches partial text occurrences.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
@@ -141,12 +166,12 @@ monitors:
 - Status export CSV available at status_export_csv (UserData\logs by default).
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
-- Email subject always includes SentinelTray, and the body starts with a SentinelTray title in PT-BR.
+- Email subject always includes SentinelTray, and the body starts with a SentinelTray title in English.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.
 - Sensitive data is always stored under %SENTINELTRAY_DATA_DIR%; operational logs stay in %SENTINELTRAY_DATA_DIR%\logs.
-- Política de privacidade em PRIVACY.md.
-- Política de segurança em SECURITY.md.
-- Licenças e terceiros em docs/licenses.md.
-- Releases incluem provenance (SLSA).
+- Privacy policy in PRIVACY.md.
+- Security policy in SECURITY.md.
+- Licenses and third parties in docs/licenses.md.
+- Releases include provenance (SLSA).

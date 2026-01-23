@@ -1,3 +1,3 @@
-# Arquivo legado
+# Legacy file
 
-Conteúdo removido.
+Content removed.
