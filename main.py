@@ -26,6 +26,8 @@ from sentineltray.config import (
     get_encrypted_config_path,
     get_user_data_dir,
     get_user_log_dir,
+    is_portable_mode,
+    select_encryption_method,
     load_config_secure,
 )
 from sentineltray.logging_setup import setup_logging
@@ -175,6 +177,16 @@ def main() -> int:
         _ensure_local_override(local_path)
         _setup_boot_logging()
         _ensure_windows()
+        LOGGER.info(
+            "Portable mode: %s",
+            "yes" if is_portable_mode(local_path.parent) else "no",
+            extra={"category": "startup"},
+        )
+        LOGGER.info(
+            "Config encryption: %s",
+            select_encryption_method(local_path),
+            extra={"category": "startup"},
+        )
         config = load_config_secure(str(local_path))
         encrypted_path = get_encrypted_config_path(local_path)
         if local_path.exists() and not encrypted_path.exists():

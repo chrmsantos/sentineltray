@@ -108,7 +108,12 @@ Write-Log "INFO" "Downloading wheels to $wheelDir"
 if (-not (Test-Path $wheelDir)) {
     New-Item -ItemType Directory -Path $wheelDir | Out-Null
 }
-& $pythonExe -m pip download --only-binary=:all: --dest $wheelDir -r $requirements
+$extraArgs = @()
+if ($env:SENTINELTRAY_PIP_INDEX_URL) { $extraArgs += "--index-url"; $extraArgs += $env:SENTINELTRAY_PIP_INDEX_URL }
+if ($env:SENTINELTRAY_PIP_TRUSTED_HOST) { $extraArgs += "--trusted-host"; $extraArgs += $env:SENTINELTRAY_PIP_TRUSTED_HOST }
+if ($env:SENTINELTRAY_PIP_PROXY) { $extraArgs += "--proxy"; $extraArgs += $env:SENTINELTRAY_PIP_PROXY }
+if ($extraArgs.Count -gt 0) { Write-Log "INFO" "Using custom pip settings from environment." }
+& $pythonExe -m pip download --only-binary=:all: --dest $wheelDir -r $requirements @extraArgs
 if ($LASTEXITCODE -ne 0) {
     Write-Log "ERROR" "Wheel download failed. Check internet access or proxy settings."
     exit 1

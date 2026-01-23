@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import base64
 import ctypes
+import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,6 +12,8 @@ try:
 except Exception:  # pragma: no cover - optional dependency
     Fernet = None
     InvalidToken = Exception
+
+LOGGER = logging.getLogger(__name__)
 
 
 class _DATA_BLOB(ctypes.Structure):
@@ -164,6 +168,10 @@ def _load_portable_key(path: Path, *, create: bool) -> bytes:
         raise DataProtectionError("cryptography package is required for portable encryption")
     key = Fernet.generate_key()
     path.write_text(key.decode("ascii"), encoding="utf-8")
+    try:
+        os.chmod(path, 0o600)
+    except OSError as exc:
+        LOGGER.warning("Failed to harden key file permissions: %s", exc)
     return key
 
 

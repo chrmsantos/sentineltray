@@ -75,6 +75,10 @@ scripts\prepare_portable_runtime.cmd -PythonVersion 3.11.8
 
 Note: the automated setup downloads Python and wheels from the internet.
 
+Package generation:
+
+scripts\\package_portable.cmd
+
 Notes:
 
 - run.cmd enables portable mode by default via SENTINELTRAY_PORTABLE=1.
@@ -82,6 +86,7 @@ Notes:
 - The first run installs dependencies from runtime\wheels and writes runtime\.deps_ready.
 - If pip is missing in a manually added runtime, the bootstrap step downloads get-pip.py once.
 - If wheels are missing, the bootstrap step downloads them automatically (internet required).
+- Use SENTINELTRAY_PIP_PROXY, SENTINELTRAY_PIP_INDEX_URL and SENTINELTRAY_PIP_TRUSTED_HOST when behind a proxy.
 - If runtime\python or runtime\wheels are missing, run.cmd fails with a logged error.
 - If runtime\python is missing in portable mode, run.cmd attempts to prepare it automatically.
 

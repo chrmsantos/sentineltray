@@ -53,6 +53,20 @@ def _ensure_pth(python_exe: str) -> None:
         pth_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _pip_extra_args() -> list[str]:
+    extra: list[str] = []
+    index_url = os.environ.get("SENTINELTRAY_PIP_INDEX_URL")
+    trusted_host = os.environ.get("SENTINELTRAY_PIP_TRUSTED_HOST")
+    proxy = os.environ.get("SENTINELTRAY_PIP_PROXY")
+    if index_url:
+        extra += ["--index-url", index_url]
+    if trusted_host:
+        extra += ["--trusted-host", trusted_host]
+    if proxy:
+        extra += ["--proxy", proxy]
+    return extra
+
+
 def main() -> int:
     root = Path(__file__).resolve().parents[1]
     wheel_dir = Path(
@@ -107,7 +121,10 @@ def main() -> int:
             "-r",
             str(requirements),
         ]
-        if _run(pip_command + download_args) == 0:
+        extra_args = _pip_extra_args()
+        if extra_args:
+            print("Using custom pip settings from environment.")
+        if _run(pip_command + download_args + extra_args) == 0:
             code = _run(pip_command + install_args)
     if code != 0:
         print("Dependency installation failed.", file=sys.stderr)

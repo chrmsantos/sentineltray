@@ -15,6 +15,8 @@
 - Use Scripts\\pip.exe fallback when embedded Python cannot import pip.
 - Ensure embedded runtime ._pth enables site-packages for pip bootstrap.
 - Auto-download missing wheels when wheelhouse is incomplete.
+- Add portable packaging script and proxy-aware wheel downloads.
+- Log portable mode, encryption method, and add SMTP healthcheck warning.
 
 ## 2026-01-22 (1.0.0-beta.2)
 
