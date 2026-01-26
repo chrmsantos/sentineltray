@@ -198,7 +198,13 @@ def main() -> int:
                 )
     except Exception as exc:
         _handle_config_error(local_path, exc)
-    run_tray(config)
+    try:
+        run_tray(config)
+    except Exception as exc:
+        LOGGER.error("Failed to start tray: %s", exc, extra={"category": "startup"})
+        raise SystemExit(
+            "Failed to start tray UI. Verify dependencies (pystray/Pillow)."
+        ) from exc
     return 0
 
 

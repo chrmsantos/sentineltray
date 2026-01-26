@@ -1,3 +1,6 @@
+import pytest
+
+pywinauto = pytest.importorskip("pywinauto")
 from pywinauto.findwindows import ElementAmbiguousError
 
 from sentineltray.detector import WindowTextDetector

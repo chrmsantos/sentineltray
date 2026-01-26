@@ -13,11 +13,11 @@ from .status import StatusSnapshot, format_status
 
 def _load_status_payload(path: Path) -> dict[str, Any]:
     if not path.exists():
-        return {}
+        return {"_status_error": "status file not found"}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except Exception:
-        return {}
+        return {"_status_error": "status file unreadable"}
     if isinstance(data, dict):
         return dict(data)
     return {}
@@ -84,10 +84,14 @@ def build_status_display(
     status_csv_errors = payload.get("status_csv_errors", "")
     state_write_errors = payload.get("state_write_errors", "")
     last_update = _format_file_mtime(status_path)
+    status_error = payload.get("_status_error", "")
+    status_label = str(status_path)
+    if status_error:
+        status_label = f"{status_label} ({status_error})"
     header = [
         "SentinelTray - Status (tempo real)",
         f"Contador (s): {counter_seconds}",
-        f"Arquivo de status: {status_path}",
+        f"Arquivo de status: {status_label}",
         f"Última atualização: {last_update}",
         "",
     ]
