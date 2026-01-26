@@ -103,6 +103,16 @@ Config, Status (CLI) and Exit.
 
 For a simple start, use the shortcut at the project root: Executar SentinelTray.cmd.
 
+## Named executable (no admin)
+
+To make the process clearly identifiable in Task Manager as SentinelTray.exe, build a named
+executable locally (no admin privileges required):
+
+scripts\build_named_exe.cmd
+
+This creates dist\SentinelTray.exe. Launch it normally; in Task Manager it will appear as
+SentinelTray.exe instead of python.exe/pythonw.exe.
+
 ## Config editing
 
 Use the tray menu Config option to edit settings. It decrypts in memory, opens a temporary file
