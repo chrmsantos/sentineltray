@@ -6,6 +6,7 @@
 ## Reliability & Safety
 - Single-instance mutex now falls back to per-user scope when global mutex is unavailable.
 - Defensive handling of optional dependencies remains enforced.
+- Tray icon now runs on the Windows main message loop to avoid missing tray registration.
 
 ## Documentation
 - Added explicit portability and no-admin guidance in README.

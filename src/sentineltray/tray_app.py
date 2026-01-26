@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 from threading import Event, Thread
+from typing import Callable
 
 try:
 	from PIL import Image, ImageDraw
@@ -59,6 +60,42 @@ def _start_notifier(
 	return thread
 
 
+def _run_status_loop(
+	icon: "pystray.Icon",
+	status: StatusStore,
+	stop_event: Event,
+	finalize_config_edit: "Callable[[], None]",
+) -> None:
+	while not stop_event.is_set():
+		stop_event.wait(0.5)
+		snapshot = status.snapshot()
+		label = "SentinelTray"
+		if snapshot.paused:
+			label = "SentinelTray (Paused)"
+		elif snapshot.last_error:
+			label = "SentinelTray (Error)"
+		elif snapshot.running:
+			label = "SentinelTray (Running)"
+		if icon.title != label:
+			icon.title = label
+		finalize_config_edit()
+
+
+def _start_status_loop_thread(
+	icon: "pystray.Icon",
+	status: StatusStore,
+	stop_event: Event,
+	finalize_config_edit: "Callable[[], None]",
+) -> Thread:
+	thread = Thread(
+		target=_run_status_loop,
+		args=(icon, status, stop_event, finalize_config_edit),
+		daemon=True,
+	)
+	thread.start()
+	return thread
+
+
 def run_tray(config: AppConfig) -> None:
 	if pystray is None:
 		raise RuntimeError(
@@ -72,6 +109,7 @@ def run_tray(config: AppConfig) -> None:
 	notifier_thread = _start_notifier(
 		config, status, stop_event, pause_event, manual_scan_event
 	)
+	status_thread: Thread | None = None
 
 	edit_process: subprocess.Popen[str] | None = None
 	status_process: subprocess.Popen[str] | None = None
@@ -159,26 +197,37 @@ def run_tray(config: AppConfig) -> None:
 		stop_event.set()
 		icon.stop()
 
+	def start_status_loop() -> None:
+		nonlocal status_thread
+		if status_thread is None or not status_thread.is_alive():
+			status_thread = _start_status_loop_thread(
+				icon,
+				status,
+				stop_event,
+				finalize_config_edit,
+			)
+
 	icon.menu = pystray.Menu(
 		pystray.MenuItem("Config", on_open),
 		pystray.MenuItem("Status (CLI)", on_status),
 		pystray.MenuItem("Exit", on_exit),
 	)
 	try:
-		icon.run_detached()
-		while not stop_event.is_set():
-			stop_event.wait(0.5)
-			snapshot = status.snapshot()
-			label = "SentinelTray"
-			if snapshot.paused:
-				label = "SentinelTray (Paused)"
-			elif snapshot.last_error:
-				label = "SentinelTray (Error)"
-			elif snapshot.running:
-				label = "SentinelTray (Running)"
-			if icon.title != label:
-				icon.title = label
-			finalize_config_edit()
+		if os.name == "nt":
+			LOGGER.info(
+				"Tray loop using blocking run on Windows",
+				extra={"category": "startup"},
+			)
+			icon.run(setup=lambda _icon: start_status_loop())
+		else:
+			LOGGER.info(
+				"Tray loop using detached run",
+				extra={"category": "startup"},
+			)
+			icon.run_detached()
+			start_status_loop()
+			while not stop_event.is_set():
+				stop_event.wait(0.5)
 	except Exception as exc:
 		LOGGER.error("Tray icon failed: %s", exc)
 	finally:
@@ -187,4 +236,6 @@ def run_tray(config: AppConfig) -> None:
 			icon.stop()
 		except Exception:
 			pass
+		if status_thread is not None:
+			status_thread.join(timeout=5)
 		notifier_thread.join(timeout=5)
