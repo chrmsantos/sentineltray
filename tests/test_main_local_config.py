@@ -45,3 +45,20 @@ def test_main_rejects_extra_args(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 
     with pytest.raises(SystemExit):
         main.main()
+
+
+def test_ensure_single_instance_already_running(monkeypatch: pytest.MonkeyPatch) -> None:
+    notice = {"called": False}
+
+    monkeypatch.setattr(main, "_ensure_single_instance_mutex", lambda: False)
+    monkeypatch.setattr(
+        main,
+        "_show_already_running_notice",
+        lambda: notice.__setitem__("called", True),
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        main._ensure_single_instance()
+
+    assert excinfo.value.code == 0
+    assert notice["called"] is True
