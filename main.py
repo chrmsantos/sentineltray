@@ -46,12 +46,21 @@ def _pid_file_path() -> Path:
 def _ensure_single_instance_mutex() -> bool:
     global _MUTEX_HANDLE
     try:
-        mutex = ctypes.windll.kernel32.CreateMutexW(None, False, "Global\\SentinelTrayMutex")
-        _MUTEX_HANDLE = mutex
-        if ctypes.windll.kernel32.GetLastError() == 183:
-            return False
+        kernel32 = ctypes.windll.kernel32
     except Exception:
         return True
+    for name in ("Global\\SentinelTrayMutex", "Local\\SentinelTrayMutex"):
+        try:
+            mutex = kernel32.CreateMutexW(None, False, name)
+            _MUTEX_HANDLE = mutex
+            if kernel32.GetLastError() == 183:
+                return False
+            if mutex:
+                LOGGER.info("Single-instance mutex acquired: %s", name, extra={"category": "startup"})
+                return True
+        except Exception as exc:
+            LOGGER.warning("Failed to create mutex %s: %s", name, exc, extra={"category": "startup"})
+            continue
     return True
 
 
