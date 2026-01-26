@@ -99,7 +99,9 @@ Notes:
 
 If you run main.py directly, it automatically adds src/ to the import path.
 SentinelTray starts in the background with a green tray icon. Left-click or right-click shows
-Config and Exit.
+Config, Status (CLI) and Exit.
+
+For a simple start, use the shortcut at the project root: Executar SentinelTray.cmd.
 
 ## Config editing
 
