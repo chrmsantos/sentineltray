@@ -97,20 +97,6 @@ Notes:
 - If runtime\python or runtime\wheels are missing, run.cmd fails with a logged error.
 - If runtime\python is missing in portable mode, run.cmd attempts to prepare it automatically.
 
-## Startup (per-user)
-
-Install on login:
-
-scripts\run.cmd /install-startup
-
-Remove from login:
-
-scripts\run.cmd /remove-startup
-
-Check status:
-
-scripts\run.cmd /startup-status
-
 If you run main.py directly, it automatically adds src/ to the import path.
 SentinelTray starts in the background with a green tray icon. Left-click or right-click shows
 Config and Exit.
