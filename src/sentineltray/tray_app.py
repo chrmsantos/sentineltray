@@ -58,6 +58,7 @@ def run_tray(config: AppConfig) -> None:
 	)
 
 	edit_process: subprocess.Popen[str] | None = None
+	status_process: subprocess.Popen[str] | None = None
 
 	icon = pystray.Icon(
 		"sentineltray",
@@ -122,12 +123,28 @@ def run_tray(config: AppConfig) -> None:
 		except Exception as exc:
 			LOGGER.warning("Failed to finalize config edit: %s", exc)
 
+	def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:
+		nonlocal status_process
+		if status_process is not None and status_process.poll() is None:
+			return
+		try:
+			creationflags = 0
+			if os.name == "nt":
+				creationflags = subprocess.CREATE_NEW_CONSOLE
+			status_process = subprocess.Popen(
+				[sys.executable, "-m", "sentineltray.status_cli"],
+				creationflags=creationflags,
+			)
+		except Exception as exc:
+			LOGGER.warning("Failed to open status console: %s", exc)
+
 	def on_exit(_: pystray.Icon, __: pystray.MenuItem) -> None:
 		stop_event.set()
 		icon.stop()
 
 	icon.menu = pystray.Menu(
 		pystray.MenuItem("Config", on_open),
+		pystray.MenuItem("Status (CLI)", on_status),
 		pystray.MenuItem("Exit", on_exit),
 	)
 	try:
