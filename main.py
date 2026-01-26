@@ -42,6 +42,22 @@ def _pid_file_path() -> Path:
     return base / "sentineltray.pid"
 
 
+def _show_already_running_notice() -> None:
+    message = (
+        "SentinelTray já está em execução.\n\n"
+        "Use o ícone na bandeja do sistema para abrir Config ou Status."
+    )
+    try:
+        ctypes.windll.user32.MessageBoxW(
+            None,
+            message,
+            "SentinelTray",
+            0x00000040,
+        )
+    except Exception:
+        sys.stderr.write(f"{message}\n")
+
+
 
 def _ensure_single_instance_mutex() -> bool:
     global _MUTEX_HANDLE
@@ -77,17 +93,17 @@ def _terminate_previous(pid: int) -> None:
 
 
 def _ensure_single_instance() -> None:
-    _ensure_single_instance_mutex()
+    if not _ensure_single_instance_mutex():
+        _show_already_running_notice()
+        raise SystemExit(0)
     pid_path = _pid_file_path()
     pid_path.parent.mkdir(parents=True, exist_ok=True)
 
     if pid_path.exists():
         try:
-            existing_pid = int(pid_path.read_text(encoding="utf-8").strip())
+            pid_path.read_text(encoding="utf-8").strip()
         except Exception:
-            existing_pid = 0
-        if existing_pid > 0 and existing_pid != os.getpid():
-            _terminate_previous(existing_pid)
+            pass
 
     pid_path.write_text(str(os.getpid()), encoding="utf-8")
 

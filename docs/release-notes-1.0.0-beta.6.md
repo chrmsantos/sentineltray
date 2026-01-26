@@ -10,6 +10,7 @@
 - Defensive handling of optional dependencies remains enforced.
 - Tray icon now runs on the Windows main message loop to avoid missing tray registration.
 - Configuration failures now open a "Config Error" tray mode with guidance instead of exiting.
+- Launch attempts while already running now show a user notice and exit cleanly.
 
 ## Documentation
 
