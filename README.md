@@ -1,6 +1,6 @@
 # SentinelTray
 
-Beta version: 1.0.0-beta.5 (01-26-2026)
+Beta version: 1.0.0-beta.6 (01-26-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
@@ -9,6 +9,14 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 - Windows user session (no admin required).
 - SMTP server access for email delivery.
 - Portable mode requires a bundled runtime and offline wheels (see Portable mode).
+
+## Portability & no-admin operation
+
+- Runs entirely under the current user profile by default (LOCALAPPDATA).
+- No registry writes, services, or admin privileges required.
+- Single-instance uses per-user mutex when global mutex is unavailable.
+- For a fully self-contained layout, keep config and runtime inside the project folder
+   and run in portable mode.
 
 ## Setup
 

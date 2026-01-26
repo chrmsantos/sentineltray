@@ -58,3 +58,27 @@ def test_mutex_returns_true_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(main, "_MUTEX_HANDLE", None)
     monkeypatch.setattr(main.ctypes, "windll", FakeWindll())
     assert main._ensure_single_instance_mutex() is True
+
+
+def test_mutex_falls_back_to_local_when_global_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    class FakeKernel32:
+        def CreateMutexW(self, *_args):
+            name = _args[2] if len(_args) > 2 else ""
+            calls.append(str(name))
+            if "Global" in str(name):
+                raise RuntimeError("access denied")
+            return 123
+
+        def GetLastError(self) -> int:
+            return 0
+
+    class FakeWindll:
+        kernel32 = FakeKernel32()
+
+    monkeypatch.setattr(main, "_MUTEX_HANDLE", None)
+    monkeypatch.setattr(main.ctypes, "windll", FakeWindll())
+    assert main._ensure_single_instance_mutex() is True
+    assert any("Global" in name for name in calls)
+    assert any("Local" in name for name in calls)
