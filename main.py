@@ -31,7 +31,7 @@ from sentineltray.config import (
     load_config_secure,
 )
 from sentineltray.logging_setup import setup_logging
-from sentineltray.tray_app import run_tray
+from sentineltray.tray_app import run_tray, run_tray_config_error
 from sentineltray import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
@@ -122,18 +122,23 @@ def _ensure_local_override(path: Path) -> None:
             )
 
 
-def _handle_config_error(path: Path, exc: Exception) -> None:
+def _handle_config_error(path: Path, exc: Exception) -> str:
     reason = str(exc)
-    filename = path.name
+    encrypted_path = get_encrypted_config_path(path)
     message = (
         "Configuration error.\n\n"
-        f"File: {filename}\n"
+        f"Config file: {path}\n"
+        f"Encrypted config: {encrypted_path}\n"
         f"Details: {reason}\n\n"
         "Review the YAML formatting and required fields.\n"
-        "After fixing, run again."
+        "After fixing, reopen SentinelTray.\n\n"
+        "Quick actions:\n"
+        "- Use tray menu: Config (opens an editable temporary file).\n"
+        "- Use tray menu: Config error (details) for this message.\n"
+        "- For test mode only, set email.dry_run=true.\n"
     )
     LOGGER.error("Config error: %s", reason, extra={"category": "config"})
-    raise SystemExit(message) from exc
+    return message
 
 
 def _reject_extra_args(args: list[str]) -> None:
@@ -181,8 +186,10 @@ def main() -> int:
     args = [arg for arg in sys.argv[1:] if arg]
     _reject_extra_args(args)
 
+    local_path = get_user_data_dir() / "config.local.yaml"
+    config = None
+    config_error_message = None
     try:
-        local_path = get_user_data_dir() / "config.local.yaml"
         _ensure_local_override(local_path)
         _setup_boot_logging()
         _ensure_windows()
@@ -206,9 +213,13 @@ def main() -> int:
                     f"Warning: failed to encrypt config file: {exc}\n"
                 )
     except Exception as exc:
-        _handle_config_error(local_path, exc)
+        config_error_message = _handle_config_error(local_path, exc)
+
     try:
-        run_tray(config)
+        if config_error_message is not None:
+            run_tray_config_error(config_error_message)
+        else:
+            run_tray(config)
     except Exception as exc:
         LOGGER.error("Failed to start tray: %s", exc, extra={"category": "startup"})
         raise SystemExit(

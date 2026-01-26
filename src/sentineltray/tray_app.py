@@ -4,6 +4,7 @@ import logging
 import os
 import subprocess
 import sys
+from pathlib import Path
 from threading import Event, Thread
 from typing import Callable
 
@@ -24,6 +25,7 @@ from .config import (
 	encrypt_config_text,
 	get_encrypted_config_path,
 	get_user_data_dir,
+	get_user_log_dir,
 	load_config,
 )
 from .security_utils import parse_payload
@@ -60,67 +62,13 @@ def _start_notifier(
 	return thread
 
 
-def _run_status_loop(
-	icon: "pystray.Icon",
-	status: StatusStore,
-	stop_event: Event,
-	finalize_config_edit: "Callable[[], None]",
-) -> None:
-	while not stop_event.is_set():
-		stop_event.wait(0.5)
-		snapshot = status.snapshot()
-		label = "SentinelTray"
-		if snapshot.paused:
-			label = "SentinelTray (Paused)"
-		elif snapshot.last_error:
-			label = "SentinelTray (Error)"
-		elif snapshot.running:
-			label = "SentinelTray (Running)"
-		if icon.title != label:
-			icon.title = label
-		finalize_config_edit()
-
-
-def _start_status_loop_thread(
-	icon: "pystray.Icon",
-	status: StatusStore,
-	stop_event: Event,
-	finalize_config_edit: "Callable[[], None]",
-) -> Thread:
-	thread = Thread(
-		target=_run_status_loop,
-		args=(icon, status, stop_event, finalize_config_edit),
-		daemon=True,
-	)
-	thread.start()
-	return thread
-
-
-def run_tray(config: AppConfig) -> None:
-	if pystray is None:
-		raise RuntimeError(
-			"Tray dependencies missing (pystray/Pillow). Install requirements.txt."
-		) from _TRAY_IMPORT_ERROR
-	LOGGER.info("Tray starting", extra={"category": "startup"})
-	status = StatusStore()
-	stop_event = Event()
-	pause_event = Event()
-	manual_scan_event = Event()
-	notifier_thread = _start_notifier(
-		config, status, stop_event, pause_event, manual_scan_event
-	)
-	status_thread: Thread | None = None
-
+def _create_config_editor() -> tuple[
+	Callable[["pystray.Icon", "pystray.MenuItem"], None],
+	Callable[[], None],
+]:
 	edit_process: subprocess.Popen[str] | None = None
-	status_process: subprocess.Popen[str] | None = None
 
-	icon = pystray.Icon(
-		"sentineltray",
-		_build_tray_image(),
-		"SentinelTray (Running)",
-	)
-
-	def on_open(_: pystray.Icon, __: pystray.MenuItem) -> None:
+	def on_open(_: "pystray.Icon", __: "pystray.MenuItem") -> None:
 		nonlocal edit_process
 		if edit_process is not None and edit_process.poll() is None:
 			return
@@ -176,6 +124,121 @@ def run_tray(config: AppConfig) -> None:
 			temp_path.unlink(missing_ok=True)
 		except Exception as exc:
 			LOGGER.warning("Failed to finalize config edit: %s", exc)
+
+	return on_open, finalize_config_edit
+
+
+def _run_status_loop(
+	icon: "pystray.Icon",
+	status: StatusStore,
+	stop_event: Event,
+	finalize_config_edit: "Callable[[], None]",
+) -> None:
+	while not stop_event.is_set():
+		stop_event.wait(0.5)
+		snapshot = status.snapshot()
+		label = "SentinelTray"
+		if snapshot.paused:
+			label = "SentinelTray (Paused)"
+		elif snapshot.last_error:
+			label = "SentinelTray (Error)"
+		elif snapshot.running:
+			label = "SentinelTray (Running)"
+		if icon.title != label:
+			icon.title = label
+		finalize_config_edit()
+
+
+def _start_status_loop_thread(
+	icon: "pystray.Icon",
+	status: StatusStore,
+	stop_event: Event,
+	finalize_config_edit: "Callable[[], None]",
+) -> Thread:
+	thread = Thread(
+		target=_run_status_loop,
+		args=(icon, status, stop_event, finalize_config_edit),
+		daemon=True,
+	)
+	thread.start()
+	return thread
+
+
+def _run_error_loop(
+	icon: "pystray.Icon",
+	stop_event: Event,
+	finalize_config_edit: "Callable[[], None]",
+) -> None:
+	while not stop_event.is_set():
+		stop_event.wait(0.5)
+		label = "SentinelTray (Config Error)"
+		if icon.title != label:
+			icon.title = label
+		finalize_config_edit()
+
+
+def _start_error_loop_thread(
+	icon: "pystray.Icon",
+	stop_event: Event,
+	finalize_config_edit: "Callable[[], None]",
+) -> Thread:
+	thread = Thread(
+		target=_run_error_loop,
+		args=(icon, stop_event, finalize_config_edit),
+		daemon=True,
+	)
+	thread.start()
+	return thread
+
+
+def _build_error_image() -> Image.Image:
+	if Image is None or ImageDraw is None:
+		raise RuntimeError(
+			"Tray dependencies missing (Pillow). Install requirements.txt."
+		) from _TRAY_IMPORT_ERROR
+	image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+	draw = ImageDraw.Draw(image)
+	draw.ellipse((12, 12, 52, 52), fill=(220, 70, 70), outline=(255, 255, 255), width=3)
+	return image
+
+
+def _write_config_error_details(message: str) -> Path:
+	log_dir = get_user_log_dir()
+	log_dir.mkdir(parents=True, exist_ok=True)
+	path = log_dir / "config_error.txt"
+	path.write_text(message.strip() + "\n", encoding="utf-8")
+	return path
+
+
+def _open_text_file(path: Path) -> None:
+	try:
+		subprocess.Popen(["notepad.exe", str(path)])
+	except Exception as exc:
+		LOGGER.warning("Failed to open details: %s", exc)
+
+
+def run_tray(config: AppConfig) -> None:
+	if pystray is None:
+		raise RuntimeError(
+			"Tray dependencies missing (pystray/Pillow). Install requirements.txt."
+		) from _TRAY_IMPORT_ERROR
+	LOGGER.info("Tray starting", extra={"category": "startup"})
+	status = StatusStore()
+	stop_event = Event()
+	pause_event = Event()
+	manual_scan_event = Event()
+	notifier_thread = _start_notifier(
+		config, status, stop_event, pause_event, manual_scan_event
+	)
+	status_thread: Thread | None = None
+	on_open, finalize_config_edit = _create_config_editor()
+	status_process: subprocess.Popen[str] | None = None
+
+	icon = pystray.Icon(
+		"sentineltray",
+		_build_tray_image(),
+		"SentinelTray (Running)",
+	)
 
 	def on_status(_: pystray.Icon, __: pystray.MenuItem) -> None:
 		nonlocal status_process
@@ -239,3 +302,70 @@ def run_tray(config: AppConfig) -> None:
 		if status_thread is not None:
 			status_thread.join(timeout=5)
 		notifier_thread.join(timeout=5)
+
+
+def run_tray_config_error(error_details: str) -> None:
+	if pystray is None:
+		raise RuntimeError(
+			"Tray dependencies missing (pystray/Pillow). Install requirements.txt."
+		) from _TRAY_IMPORT_ERROR
+	LOGGER.info("Tray starting in config error mode", extra={"category": "startup"})
+	stop_event = Event()
+	status_thread: Thread | None = None
+	on_open, finalize_config_edit = _create_config_editor()
+	details_path = _write_config_error_details(error_details)
+
+	icon = pystray.Icon(
+		"sentineltray",
+		_build_error_image(),
+		"SentinelTray (Config Error)",
+	)
+
+	def on_details(_: "pystray.Icon", __: "pystray.MenuItem") -> None:
+		_open_text_file(details_path)
+
+	def on_exit(_: "pystray.Icon", __: "pystray.MenuItem") -> None:
+		LOGGER.info("Exit requested", extra={"category": "startup"})
+		stop_event.set()
+		icon.stop()
+
+	def start_error_loop() -> None:
+		nonlocal status_thread
+		if status_thread is None or not status_thread.is_alive():
+			status_thread = _start_error_loop_thread(
+				icon,
+				stop_event,
+				finalize_config_edit,
+			)
+
+	icon.menu = pystray.Menu(
+		pystray.MenuItem("Config", on_open),
+		pystray.MenuItem("Config error (details)", on_details),
+		pystray.MenuItem("Exit", on_exit),
+	)
+	try:
+		if os.name == "nt":
+			LOGGER.info(
+				"Tray loop using blocking run on Windows",
+				extra={"category": "startup"},
+			)
+			icon.run(setup=lambda _icon: start_error_loop())
+		else:
+			LOGGER.info(
+				"Tray loop using detached run",
+				extra={"category": "startup"},
+			)
+			icon.run_detached()
+			start_error_loop()
+			while not stop_event.is_set():
+				stop_event.wait(0.5)
+	except Exception as exc:
+		LOGGER.error("Tray icon failed: %s", exc)
+	finally:
+		stop_event.set()
+		try:
+			icon.stop()
+		except Exception:
+			pass
+		if status_thread is not None:
+			status_thread.join(timeout=5)

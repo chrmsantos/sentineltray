@@ -9,6 +9,7 @@
 - Single-instance mutex now falls back to per-user scope when global mutex is unavailable.
 - Defensive handling of optional dependencies remains enforced.
 - Tray icon now runs on the Windows main message loop to avoid missing tray registration.
+- Configuration failures now open a "Config Error" tray mode with guidance instead of exiting.
 
 ## Documentation
 

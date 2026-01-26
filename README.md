@@ -199,6 +199,7 @@ monitors:
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - JSON logs are written alongside text logs in sentineltray.jsonl and per-run sentineltray_*.jsonl.
 - On Windows, the tray icon uses the main message loop for reliability. If it is not visible, check hidden tray icons.
+- If the config is missing or invalid, SentinelTray still starts in "Config Error" mode and exposes the error details in the tray menu.
 - Script logs (install/run/bootstrap) are stored under %SENTINELTRAY_DATA_DIR%\logs\scripts.
 - Third-party debug logs are suppressed to keep logs actionable.
 - Logs, telemetry, and status exports redact sensitive strings (emails and local paths) and store match summaries as hashes.
