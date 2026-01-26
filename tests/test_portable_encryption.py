@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+pytest.importorskip("cryptography")
 
 from sentineltray.config import (
     encrypt_config_file,

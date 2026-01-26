@@ -8,8 +8,17 @@ import time
 import unicodedata
 from typing import Iterable
 
-from pywinauto import Desktop
-from pywinauto.findwindows import ElementAmbiguousError
+try:
+    from pywinauto import Desktop
+    from pywinauto.findwindows import ElementAmbiguousError
+    _PYWINAUTO_IMPORT_ERROR: Exception | None = None
+except Exception as exc:  # pragma: no cover - optional dependency
+    Desktop = None  # type: ignore[assignment]
+
+    class ElementAmbiguousError(RuntimeError):
+        """Fallback error when pywinauto is unavailable."""
+
+    _PYWINAUTO_IMPORT_ERROR = exc
 
 LOGGER = logging.getLogger(__name__)
 
@@ -111,6 +120,11 @@ class WindowTextDetector:
         return selected
 
     def _get_window(self):
+        if Desktop is None:
+            raise RuntimeError(
+                "pywinauto is required for window detection. "
+                "Install dependencies from requirements.txt."
+            ) from _PYWINAUTO_IMPORT_ERROR
         if self._last_window is not None:
             try:
                 if hasattr(self._last_window, "exists"):

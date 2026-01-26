@@ -6,8 +6,15 @@ import subprocess
 import sys
 from threading import Event, Thread
 
-from PIL import Image, ImageDraw
-import pystray
+try:
+	from PIL import Image, ImageDraw
+	import pystray
+	_TRAY_IMPORT_ERROR: Exception | None = None
+except Exception as exc:  # pragma: no cover - optional dependency
+	Image = None  # type: ignore[assignment]
+	ImageDraw = None  # type: ignore[assignment]
+	pystray = None  # type: ignore[assignment]
+	_TRAY_IMPORT_ERROR = exc
 
 from .app import Notifier
 from .config import (
@@ -25,6 +32,10 @@ LOGGER = logging.getLogger(__name__)
 
 
 def _build_tray_image() -> Image.Image:
+	if Image is None or ImageDraw is None:
+		raise RuntimeError(
+			"Tray dependencies missing (Pillow). Install requirements.txt."
+		) from _TRAY_IMPORT_ERROR
 	image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
 	draw = ImageDraw.Draw(image)
 	draw.ellipse((12, 12, 52, 52), fill=(60, 200, 80), outline=(255, 255, 255), width=3)
@@ -49,6 +60,11 @@ def _start_notifier(
 
 
 def run_tray(config: AppConfig) -> None:
+	if pystray is None:
+		raise RuntimeError(
+			"Tray dependencies missing (pystray/Pillow). Install requirements.txt."
+		) from _TRAY_IMPORT_ERROR
+	LOGGER.info("Tray starting", extra={"category": "startup"})
 	status = StatusStore()
 	stop_event = Event()
 	pause_event = Event()
@@ -139,6 +155,7 @@ def run_tray(config: AppConfig) -> None:
 			LOGGER.warning("Failed to open status console: %s", exc)
 
 	def on_exit(_: pystray.Icon, __: pystray.MenuItem) -> None:
+		LOGGER.info("Exit requested", extra={"category": "startup"})
 		stop_event.set()
 		icon.stop()
 
