@@ -119,3 +119,57 @@ def test_run_tray_non_windows_uses_detached(monkeypatch) -> None:
 	assert icon.run_called is False
 	assert icon.run_detached_called is True
 	assert status_started["called"] is True
+
+
+def test_run_tray_config_error_windows_uses_blocking_run(monkeypatch, tmp_path) -> None:
+	created_icons: list[DummyIcon] = []
+	pystray_stub = _build_dummy_pystray(created_icons)
+	error_started = {"called": False}
+
+	monkeypatch.setattr(tray_app, "pystray", pystray_stub)
+	monkeypatch.setattr(tray_app, "Event", DummyEvent)
+	monkeypatch.setattr(tray_app, "_build_error_image", lambda: object())
+	monkeypatch.setattr(tray_app, "get_user_log_dir", lambda: tmp_path)
+	monkeypatch.setattr(tray_app, "_create_config_editor", lambda: (lambda *_: None, lambda: None))
+	monkeypatch.setattr(
+		tray_app,
+		"_start_error_loop_thread",
+		lambda *args, **kwargs: error_started.__setitem__("called", True) or DummyThread(),
+	)
+	monkeypatch.setattr(tray_app.os, "name", "nt", raising=False)
+
+	tray_app.run_tray_config_error("details")
+
+	assert created_icons
+	icon = created_icons[0]
+	assert icon.run_called is True
+	assert icon.run_detached_called is False
+	assert error_started["called"] is True
+	assert (tmp_path / "config_error.txt").read_text(encoding="utf-8") == "details\n"
+
+
+def test_run_tray_config_error_non_windows_uses_detached(monkeypatch, tmp_path) -> None:
+	created_icons: list[DummyIcon] = []
+	pystray_stub = _build_dummy_pystray(created_icons)
+	error_started = {"called": False}
+
+	monkeypatch.setattr(tray_app, "pystray", pystray_stub)
+	monkeypatch.setattr(tray_app, "Event", DummyEvent)
+	monkeypatch.setattr(tray_app, "_build_error_image", lambda: object())
+	monkeypatch.setattr(tray_app, "get_user_log_dir", lambda: tmp_path)
+	monkeypatch.setattr(tray_app, "_create_config_editor", lambda: (lambda *_: None, lambda: None))
+	monkeypatch.setattr(
+		tray_app,
+		"_start_error_loop_thread",
+		lambda *args, **kwargs: error_started.__setitem__("called", True) or DummyThread(),
+	)
+	monkeypatch.setattr(tray_app.os, "name", "posix", raising=False)
+
+	tray_app.run_tray_config_error("details")
+
+	assert created_icons
+	icon = created_icons[0]
+	assert icon.run_called is False
+	assert icon.run_detached_called is True
+	assert error_started["called"] is True
+	assert (tmp_path / "config_error.txt").read_text(encoding="utf-8") == "details\n"
