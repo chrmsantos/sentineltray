@@ -83,11 +83,9 @@ if (-not (Test-Path $pythonExe)) {
 
 Write-Log "INFO" "Ensuring pip is available"
 $pipOk = $false
-try {
-    & $pythonExe -m pip --version | Out-Null
+& $pythonExe -m pip --version | Out-Null
+if ($LASTEXITCODE -eq 0) {
     $pipOk = $true
-} catch {
-    $pipOk = $false
 }
 
 if (-not $pipOk) {
@@ -97,9 +95,8 @@ if (-not $pipOk) {
     & $pythonExe $getPip
 }
 
-try {
-    & $pythonExe -m pip --version | Out-Null
-} catch {
+& $pythonExe -m pip --version | Out-Null
+if ($LASTEXITCODE -ne 0) {
     Write-Log "ERROR" "pip installation failed; portable runtime cannot download wheels."
     exit 1
 }
