@@ -1,7 +1,5 @@
 pywinauto==0.6.8
 pyyaml==6.0.3
-pillow==10.4.0
-pystray==0.19.5
 pywin32==306
 cryptography==42.0.8
 pytest==8.3.4

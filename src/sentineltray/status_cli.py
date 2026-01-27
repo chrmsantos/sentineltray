@@ -23,6 +23,10 @@ def _load_status_payload(path: Path) -> dict[str, Any]:
     return {}
 
 
+def load_status_payload(path: Path) -> dict[str, Any]:
+    return _load_status_payload(path)
+
+
 def _build_snapshot(payload: dict[str, Any]) -> StatusSnapshot:
     return StatusSnapshot(
         running=bool(payload.get("running", False)),
@@ -111,6 +115,10 @@ def _clear_screen() -> None:
         os.system("cls")
     else:
         os.system("clear")
+
+
+def clear_screen() -> None:
+    _clear_screen()
 
 
 def main() -> int:

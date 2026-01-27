@@ -10,6 +10,7 @@ import yaml
 
 from .security_utils import (
     DataProtectionError,
+    EncryptedPayload,
     decrypt_text_dpapi,
     decrypt_text_portable,
     encrypt_text_dpapi,
@@ -228,7 +229,7 @@ def encrypt_config_text(text: str, *, config_path: Path, method: str | None = No
     return serialize_payload(payload)
 
 
-def decrypt_config_payload(payload, *, config_path: Path) -> str:
+def decrypt_config_payload(payload: EncryptedPayload, *, config_path: Path) -> str:
     return _decrypt_payload(payload, config_path=config_path)
 
 

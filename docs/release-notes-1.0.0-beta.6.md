@@ -8,8 +8,8 @@
 
 - Single-instance mutex now falls back to per-user scope when global mutex is unavailable.
 - Defensive handling of optional dependencies remains enforced.
-- Tray icon now runs on the Windows main message loop to avoid missing tray registration.
-- Configuration failures now open a "Config Error" tray mode with guidance instead of exiting.
+- Console UI now runs in the foreground, with graceful exit on window close or menu command.
+- Configuration failures now open a console error view with guidance instead of exiting.
 - Launch attempts while already running now show a user notice and exit cleanly.
 
 ## Documentation
