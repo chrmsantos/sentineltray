@@ -49,7 +49,7 @@ The application always reads the local config file. Default location is driven b
 
 - %LOCALAPPDATA%\AxonZ\SentinelTray\config\config.local.yaml
 
-If config.local.yaml is missing or invalid, the app exits with guidance.
+If config.local.yaml is missing or invalid, the app opens the console error view with guidance.
 
 Local documentation for sample state files lives under templates/local/.
 
@@ -61,7 +61,7 @@ Disable portable mode (use system Python/venv):
 
 scripts\run.cmd /nonportable
 
-Foreground (with console output):
+Foreground (console interface):
 
 scripts\run.cmd /foreground
 
@@ -72,9 +72,7 @@ Manual venv activation from CMD:
 
 scripts\activate_venv.cmd
 
-Background (explicit):
-
-scripts\run.cmd /background
+Background mode is disabled; the console interface always runs in the foreground.
 
 ## Portable mode (self-contained)
 
@@ -106,8 +104,8 @@ Notes:
 - If runtime\python is missing in portable mode, run.cmd attempts to prepare it automatically.
 
 If you run main.py directly, it automatically adds src/ to the import path.
-SentinelTray starts in the background with a green tray icon. Left-click or right-click shows
-Config, Status (CLI) and Exit.
+SentinelTray starts in the foreground console interface. Use the menu to open Config,
+view Status, pause/resume, trigger a manual scan, or Exit.
 
 For a simple start, use the shortcut at the project root: Executar SentinelTray.cmd.
 
@@ -123,7 +121,7 @@ SentinelTray.exe instead of python.exe/pythonw.exe.
 
 ## Config editing
 
-Use the tray menu Config option to edit settings. It decrypts in memory, opens a temporary file
+Use the console menu Config option to edit settings. It decrypts in memory, opens a temporary file
 for editing, validates it, and re-encrypts on save.
 
 ## Config protection

@@ -33,13 +33,13 @@ set "LOG_FILE=%LOG_DIR%\run_%LOG_TS%.log"
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%" >nul 2>nul
 powershell -NoProfile -Command "Get-ChildItem -Path '%LOG_DIR%\run_*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -Skip 5 | Remove-Item -Force -ErrorAction SilentlyContinue" >nul 2>nul
 
-set "RUN_FOREGROUND=0"
+set "RUN_FOREGROUND=1"
 if /I "%~1"=="/foreground" (
   set "RUN_FOREGROUND=1"
   shift
 )
 if /I "%~1"=="/background" (
-  set "RUN_FOREGROUND=0"
+  set "RUN_FOREGROUND=1"
   shift
 )
 
@@ -131,9 +131,13 @@ if "%RUN_FOREGROUND%"=="1" (
   exit /b !EXIT_CODE!
 )
 
-call :log "INFO" "Launching background process"
-start "" "%PYTHONW%" "%ROOT%\main.py" %*
-exit /b 0
+call :log "WARN" "Background mode disabled; running in foreground"
+call :log "INFO" "Application running (foreground mode). Use Ctrl+C to stop."
+echo SentinelTray is running. Use Ctrl+C to stop.
+"%PYTHON%" "%ROOT%\main.py" %*
+set "EXIT_CODE=%ERRORLEVEL%"
+call :log "INFO" "Process finished with exit code !EXIT_CODE!"
+exit /b !EXIT_CODE!
 
 :bootstrap_deps
 if not exist "%RUNTIME_WHEELS%" (

@@ -116,6 +116,10 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+Write-Log "INFO" "Removing tray-only wheels (pillow, pystray)"
+Get-ChildItem -Path $wheelDir -Filter "pillow-*.whl" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+Get-ChildItem -Path $wheelDir -Filter "pystray-*.whl" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+
 Write-Log "INFO" "Writing checksums to $checksumsPath"
 if (-not (Test-Path $runtimeRoot)) {
     New-Item -ItemType Directory -Path $runtimeRoot | Out-Null

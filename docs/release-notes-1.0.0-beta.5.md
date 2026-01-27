@@ -1,7 +1,7 @@
 # SentinelTray 1.0.0-beta.5 Release Notes (2026-01-26)
 
 ## Highlights
-- Added tray status console (real-time CLI with 1-second counter).
+- Added real-time console status view (1-second counter).
 - Added root shortcut for simpler launches.
 - Added optional named executable build (SentinelTray.exe) for clearer Task Manager identity.
 

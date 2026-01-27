@@ -11,9 +11,8 @@ Consult the licenses on the official project pages:
 
 - pywinauto
 - PyYAML
-- Pillow
-- pystray
 - pywin32
+- cryptography
 - pytest
 - pytest-cov
 - mypy
