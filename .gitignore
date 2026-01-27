@@ -6,6 +6,7 @@ __pycache__/
 htmlcov/
 .venv/
 *.egg-info/
+*.lnk
 state.json
 logs/*.log
 logs/telemetry.json
