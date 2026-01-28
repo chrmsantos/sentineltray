@@ -14,6 +14,8 @@ The installer copies templates/local/config.local.yaml to the data folder when t
 3. state.json is only an example of the local history format.
 4. SentinelTray can auto-encrypt config.local.yaml on startup; use the tray menu to open the editor.
 5. Portable mode generates config.local.key next to the encrypted config.
+6. The editor always syncs with the official template, merging existing values into the latest structure.
+7. Use the console command [R] to run a template reconciliation dry-run before applying changes.
 
 ## Regex (wildcards)
 
