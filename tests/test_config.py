@@ -10,7 +10,7 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     config_path = Path(__file__).parent / "data" / "config.yaml"
     config = load_config(str(config_path))
 
-    assert config.window_title_regex == "Sino\\.Siscam\\.Desktop"
+    assert config.window_title_regex == "App\\.Monitor\\.Desktop"
     assert config.phrase_regex == "ALERT"
     assert config.poll_interval_seconds == 180
     assert config.healthcheck_interval_seconds == 900

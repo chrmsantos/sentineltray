@@ -25,7 +25,7 @@ The installer copies templates/local/config.local.yaml to the data folder when t
 
 Examples:
 
-- window_title_regex: '^Sino\\.Siscam\\..*'
+- window_title_regex: '^App\\.Monitor\\..*'
 - phrase_regex: 'PROTOCOLS?\\s+NOT\\s+RECEIVED'
 - phrase_regex: 'ALERT|CRITICAL'
 

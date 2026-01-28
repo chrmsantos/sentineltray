@@ -42,7 +42,7 @@ def _start_notifier(
     return thread
 
 
-def _create_config_editor() -> tuple[Callable[[], None], Callable[[], None]]:
+def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig | None]]:
     edit_process: subprocess.Popen[str] | None = None
 
     def on_open() -> None:
@@ -54,6 +54,10 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], None]]:
             config_path = data_dir / "config.local.yaml"
             encrypted_path = get_encrypted_config_path(config_path)
             temp_path = data_dir / "config.local.yaml.edit"
+
+            if temp_path.exists():
+                edit_process = subprocess.Popen(["notepad.exe", str(temp_path)], text=True)
+                return
 
             if encrypted_path.exists():
                 payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
@@ -72,7 +76,7 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], None]]:
         except Exception as exc:
             LOGGER.warning("Failed to open config editor: %s", exc)
 
-    def finalize_config_edit() -> None:
+    def finalize_config_edit() -> AppConfig | None:
         nonlocal edit_process
         if edit_process is None:
             return
@@ -87,11 +91,10 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], None]]:
             if not temp_path.exists():
                 return
             try:
-                load_config(str(temp_path))
+                new_config = load_config(str(temp_path))
             except Exception as exc:
                 LOGGER.warning("Config validation failed after edit: %s", exc)
-                temp_path.unlink(missing_ok=True)
-                return
+                return None
 
             plaintext = temp_path.read_text(encoding="utf-8")
             encoded = encrypt_config_text(plaintext, config_path=config_path)
@@ -99,8 +102,10 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], None]]:
             if config_path.exists():
                 config_path.unlink()
             temp_path.unlink(missing_ok=True)
+            return new_config
         except Exception as exc:
             LOGGER.warning("Failed to finalize config edit: %s", exc)
+        return None
 
     return on_open, finalize_config_edit
 
@@ -199,6 +204,31 @@ def run_console(config: AppConfig) -> None:
     on_open, finalize_config_edit = _create_config_editor()
     status_path = Path(config.status_export_file)
 
+    def save_config_edit() -> AppConfig | None:
+        return finalize_config_edit()
+
+    def apply_config_edit() -> None:
+        nonlocal config, status_path, notifier_thread, stop_event, started_at
+        new_config = save_config_edit()
+        if new_config is None:
+            return
+        config = new_config
+        status_path = Path(config.status_export_file)
+        started_at = time.monotonic()
+        stop_event.set()
+        try:
+            notifier_thread.join(timeout=5)
+        except Exception as exc:
+            LOGGER.warning("Failed to stop notifier for config reload: %s", exc)
+        stop_event = Event()
+        notifier_thread = _start_notifier(
+            config,
+            status,
+            stop_event,
+            pause_event,
+            manual_scan_event,
+        )
+
     try:
         while True:
             clear_screen()
@@ -232,7 +262,7 @@ def run_console(config: AppConfig) -> None:
                     config,
                     status_path=status_path,
                     started_at=started_at,
-                    finalize=finalize_config_edit,
+                    finalize=apply_config_edit,
                 )
             elif command in ("p", "pause", "pausar", "retomar", "resume"):
                 if pause_event.is_set():
@@ -243,7 +273,7 @@ def run_console(config: AppConfig) -> None:
                 manual_scan_event.set()
                 print("Scan manual solicitado.")
                 time.sleep(1)
-            finalize_config_edit()
+            apply_config_edit()
     except KeyboardInterrupt:
         return
     finally:
@@ -251,7 +281,7 @@ def run_console(config: AppConfig) -> None:
         try:
             notifier_thread.join(timeout=5)
         finally:
-            finalize_config_edit()
+            save_config_edit()
 
 
 def run_console_config_error(error_details: str) -> None:

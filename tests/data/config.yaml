@@ -1,4 +1,4 @@
-window_title_regex: 'Sino\.Siscam\.Desktop'
+window_title_regex: 'App\.Monitor\.Desktop'
 phrase_regex: "ALERT"
 poll_interval_seconds: 180
 healthcheck_interval_seconds: 900
