@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, replace
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import yaml
 
@@ -25,7 +25,37 @@ from .validation_utils import validate_email_address, validate_regex
 
 MAX_LOG_FILES = 5
 
+CURRENT_CONFIG_VERSION = 1
+
+LOGGER = logging.getLogger(__name__)
+
 SUPPORTED_ENCRYPTION_METHODS = {"dpapi", "portable"}
+
+_CONFIG_MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {}
+
+
+def _migrate_config_data(data: dict[str, Any]) -> dict[str, Any]:
+    version_raw = data.get("config_version", CURRENT_CONFIG_VERSION)
+    try:
+        version = int(version_raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("config_version must be an integer") from exc
+    if version > CURRENT_CONFIG_VERSION:
+        raise ValueError(
+            "config_version is newer than supported: "
+            f"{version} > {CURRENT_CONFIG_VERSION}"
+        )
+    if version < 1:
+        raise ValueError("config_version must be >= 1")
+    migrated = dict(data)
+    while version < CURRENT_CONFIG_VERSION:
+        migrate = _CONFIG_MIGRATIONS.get(version)
+        if migrate is None:
+            raise ValueError(f"Unsupported config_version {version}: no migration available")
+        migrated = migrate(migrated)
+        version = int(migrated.get("config_version", version + 1))
+    migrated["config_version"] = CURRENT_CONFIG_VERSION
+    return migrated
 
 
 def _get_project_root_from_file() -> Path:
@@ -298,6 +328,7 @@ def _build_email_config(email_data: dict[str, Any]) -> EmailConfig:
 
 
 def _build_config(data: dict[str, Any]) -> AppConfig:
+    data = _migrate_config_data(data)
     monitors: list[MonitorConfig] = []
     monitors_data = data.get("monitors")
     if monitors_data is not None:
