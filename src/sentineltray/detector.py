@@ -276,7 +276,8 @@ class WindowTextDetector:
 
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
-        self._minimize_all_windows(exclude=window)
+        if self._allow_window_restore:
+            self._minimize_all_windows(exclude=window)
         retry_delays = (1.0, 2.0, 4.0)
         if not self._window_exists(window, timeout=2):
             for delay in retry_delays:
@@ -302,6 +303,13 @@ class WindowTextDetector:
 
         texts: list[str] = []
         try:
+            try:
+                if hasattr(window, "window_text"):
+                    title_text = window.window_text()
+                    if title_text:
+                        texts.append(title_text)
+            except Exception:
+                LOGGER.debug("Failed to read window title text", exc_info=True)
             for element in window.descendants():
                 try:
                     text = element.window_text()
@@ -338,7 +346,7 @@ class WindowTextDetector:
         if not texts:
             return []
 
-        if not phrase_regex:
+        if not phrase_regex or not str(phrase_regex).strip():
             return texts
 
         def normalize(value: str) -> str:
@@ -346,7 +354,10 @@ class WindowTextDetector:
             return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
         normalized_regex = normalize(phrase_regex)
-        pattern = re.compile(normalized_regex, re.IGNORECASE)
+        try:
+            pattern = re.compile(normalized_regex, re.IGNORECASE)
+        except re.error as exc:
+            raise ValueError("Invalid phrase regex") from exc
         matches: list[str] = []
         for text in texts:
             if pattern.search(normalize(text)):

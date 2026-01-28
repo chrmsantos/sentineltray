@@ -24,6 +24,7 @@ Edit config.local.yaml and set:
 
 - window_title_regex (a unique title prefix is enough)
 - phrase_regex (empty means any visible text)
+   - whitespace-only also means any visible text
 - use single quotes for regex to avoid YAML escape issues
 - email.smtp_host
 - email.from_address
@@ -144,8 +145,8 @@ Use regex in window title/name strings and in the text to look for. Tips:
 
 Examples:
 
-- window_title_regex: 'Siscam.*Desktop'
-- window_title_regex: '^Sino\\.Siscam\\..*'
+- window_title_regex: 'Aplicacao.*Desktop'
+- window_title_regex: '^App\\.Monitor\\..*'
 - phrase_regex: 'PROTOCOLS?\\s+NOT\\s+RECEIVED'
 - phrase_regex: 'ALERT|CRITICAL'
 
@@ -212,6 +213,7 @@ monitors:
 - A startup test message is sent via email on each run to confirm delivery.
 - Periodic healthchecks send uptime and last activity via email.
 - Minimized windows are restored to read text.
+- When allow_window_restore is false, the app avoids minimizing other windows.
 - Phrase matching ignores accents, is case-insensitive, and matches partial text occurrences.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
