@@ -1,6 +1,6 @@
 # SentinelTray
 
-Beta version: 1.0.0-beta.7 (01-27-2026)
+Beta version: 1.0.0-beta.8 (01-28-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
@@ -23,8 +23,7 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 Edit config.local.yaml and set:
 
 - window_title_regex (a unique title prefix is enough)
-- phrase_regex (empty means any visible text)
-   - whitespace-only also means any visible text
+- phrase_regex (empty means any visible text; whitespace-only also means any visible text)
 - use single quotes for regex to avoid YAML escape issues
 - email.smtp_host
 - email.from_address
@@ -48,7 +47,7 @@ Edit config.local.yaml and set:
 The application always reads the local config file. Default location is driven by
 `SENTINELTRAY_DATA_DIR` when set. Otherwise it falls back to:
 
-- %LOCALAPPDATA%\AxonZ\SentinelTray\config\config.local.yaml
+- %LOCALAPPDATA%\Axon\SentinelTray\config\config.local.yaml
 
 If config.local.yaml is missing or invalid, the app opens the console error view with guidance.
 

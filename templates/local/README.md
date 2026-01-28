@@ -9,7 +9,7 @@ The installer copies templates/local/config.local.yaml to the data folder when t
 
 1. Create the configuration file at:
    %SENTINELTRAY_DATA_DIR%\config.local.yaml (when defined)
-   or %LOCALAPPDATA%\AxonZ\SentinelTray\config\config.local.yaml
+   or %LOCALAPPDATA%\Axon\SentinelTray\config\config.local.yaml
 2. Fill the required fields and restart the application.
 3. state.json is only an example of the local history format.
 4. SentinelTray can auto-encrypt config.local.yaml on startup; use the tray menu to open the editor.
