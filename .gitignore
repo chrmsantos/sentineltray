@@ -19,7 +19,7 @@ config.local.key
 *.local.yaml
 runtime/
 config/
-tmp/AppData/Local/AxonZ/SentinelTray/config/
-tmp/AppData/Local/AxonZ/SentinelTray/config/logs/
+tmp/AppData/Local/Axon/SentinelTray/config/
+tmp/AppData/Local/Axon/SentinelTray/config/logs/
 tmp/config/
 tmp/config/logs/

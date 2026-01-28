@@ -4,7 +4,7 @@ from dataclasses import dataclass, field, replace
 import logging
 import os
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 import yaml
 
@@ -72,7 +72,7 @@ def _get_data_root_override() -> Path | None:
 def _get_default_user_data_dir() -> Path:
     local_appdata = os.environ.get("LOCALAPPDATA")
     if local_appdata:
-        return Path(local_appdata) / "AxonZ" / "SentinelTray" / "config"
+        return Path(local_appdata) / "Axon" / "SentinelTray" / "config"
 
     user_root = os.environ.get("USERPROFILE")
     if user_root:
@@ -80,7 +80,7 @@ def _get_default_user_data_dir() -> Path:
             Path(user_root)
             / "AppData"
             / "Local"
-            / "AxonZ"
+            / "Axon"
             / "SentinelTray"
             / "config"
         )
@@ -170,7 +170,9 @@ class AppConfig:
     email_queue_max_attempts: int = 10
     email_queue_retry_base_seconds: int = 30
     log_throttle_seconds: int = 60
-    monitors: list[MonitorConfig] = field(default_factory=list)
+    monitors: list[MonitorConfig] = field(
+        default_factory=lambda: cast(list[MonitorConfig], [])
+    )
     config_version: int = 1
 
 
@@ -183,17 +185,17 @@ def _get_required(data: dict[str, Any], key: str) -> Any:
 def _load_yaml(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"Config file not found: {path}")
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
+    raw: object = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(raw, dict):
         raise ValueError("Config must be a mapping")
-    return data
+    return cast(dict[str, Any], raw)
 
 
 def _load_yaml_text(text: str) -> dict[str, Any]:
-    data = yaml.safe_load(text) or {}
-    if not isinstance(data, dict):
+    raw: object = yaml.safe_load(text) or {}
+    if not isinstance(raw, dict):
         raise ValueError("Config must be a mapping")
-    return data
+    return cast(dict[str, Any], raw)
 
 
 def get_encrypted_config_path(path: Path) -> Path:
@@ -242,7 +244,7 @@ def is_portable_mode(data_dir: Path | None = None) -> bool:
     return _is_portable_mode(data_dir)
 
 
-def _decrypt_payload(payload, *, config_path: Path) -> str:
+def _decrypt_payload(payload: EncryptedPayload, *, config_path: Path) -> str:
     if payload.method == "portable":
         key_path = get_portable_key_path(config_path)
         return decrypt_text_portable(payload, key_path=key_path)
@@ -296,7 +298,10 @@ def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, An
     merged = dict(base)
     for key, value in override.items():
         if isinstance(value, dict) and isinstance(merged.get(key), dict):
-            merged[key] = _merge_dicts(merged[key], value)
+            merged[key] = _merge_dicts(
+                cast(dict[str, Any], merged.get(key)),
+                cast(dict[str, Any], value),
+            )
         else:
             merged[key] = value
     return merged
@@ -307,7 +312,11 @@ def _build_email_config(email_data: dict[str, Any]) -> EmailConfig:
     if isinstance(to_raw, str):
         to_addresses = [item.strip() for item in to_raw.split(",") if item.strip()]
     elif isinstance(to_raw, list):
-        to_addresses = [str(item).strip() for item in to_raw if str(item).strip()]
+        to_addresses = [
+            str(item).strip()
+            for item in cast(list[object], to_raw)
+            if str(item).strip()
+        ]
     else:
         raise ValueError("email.to_addresses must be a list or comma-separated string")
 
@@ -334,14 +343,17 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
     if monitors_data is not None:
         if not isinstance(monitors_data, list) or not monitors_data:
             raise ValueError("monitors must be a non-empty list")
-        for entry in monitors_data:
+        for entry in cast(list[object], monitors_data):
             if not isinstance(entry, dict):
                 raise ValueError("monitors entries must be objects")
-            monitor_email = _build_email_config(_get_required(entry, "email"))
+            entry_map = cast(dict[str, Any], entry)
+            monitor_email = _build_email_config(
+                cast(dict[str, Any], _get_required(entry_map, "email"))
+            )
             monitors.append(
                 MonitorConfig(
-                    window_title_regex=str(_get_required(entry, "window_title_regex")),
-                    phrase_regex=str(_get_required(entry, "phrase_regex")),
+                    window_title_regex=str(_get_required(entry_map, "window_title_regex")),
+                    phrase_regex=str(_get_required(entry_map, "phrase_regex")),
                     email=monitor_email,
                 )
             )
@@ -460,6 +472,11 @@ def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
     )
 
 
+def _is_valid_log_level(level: str) -> bool:
+    level_name = str(level).upper()
+    return level_name in logging.getLevelNamesMapping()
+
+
 def _validate_config(config: AppConfig) -> None:
     log_root = get_user_log_dir().resolve()
 
@@ -487,9 +504,9 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("log_backup_count must be >= 0")
     if config.log_run_files_keep < 1:
         raise ValueError("log_run_files_keep must be >= 1")
-    if str(config.log_level).upper() not in logging._nameToLevel:
+    if not _is_valid_log_level(config.log_level):
         raise ValueError("log_level must be a valid logging level")
-    if str(config.log_console_level).upper() not in logging._nameToLevel:
+    if not _is_valid_log_level(config.log_console_level):
         raise ValueError("log_console_level must be a valid logging level")
     if not config.telemetry_file:
         raise ValueError("telemetry_file is required")
