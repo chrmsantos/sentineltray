@@ -6,7 +6,7 @@ import pytest
 
 from sentineltray.app import Notifier
 from sentineltray import app as app_module
-from sentineltray.config import AppConfig, EmailConfig, get_user_data_dir, get_user_log_dir
+from sentineltray.config import AppConfig, EmailConfig, MonitorConfig, get_user_data_dir, get_user_log_dir
 from sentineltray.detector import WindowUnavailableError
 from sentineltray.status import StatusStore
 
@@ -17,9 +17,21 @@ def test_run_loop_skips_window_unavailable(
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     base = get_user_data_dir()
     log_root = get_user_log_dir()
+    email = EmailConfig(
+        smtp_host="smtp.local",
+        smtp_port=587,
+        smtp_username="",
+        smtp_password="",
+        from_address="alerts@example.com",
+        to_addresses=["ops@example.com"],
+        use_tls=True,
+        timeout_seconds=10,
+        subject="SentinelTray Notification",
+        retry_attempts=0,
+        retry_backoff_seconds=0,
+        dry_run=True,
+    )
     config = AppConfig(
-        window_title_regex="APP",
-        phrase_regex="ALERT",
         poll_interval_seconds=1,
         healthcheck_interval_seconds=3600,
         error_backoff_base_seconds=5,
@@ -35,29 +47,16 @@ def test_run_loop_skips_window_unavailable(
         log_backup_count=5,
         log_run_files_keep=5,
         telemetry_file=str(log_root / "telemetry.json"),
-        status_export_file=str(log_root / "status.json"),
-        status_export_csv=str(log_root / "status.csv"),
         allow_window_restore=True,
         log_only_mode=False,
-        config_checksum_file=str(log_root / "config.checksum"),
-        min_free_disk_mb=100,
-        watchdog_timeout_seconds=60,
-        watchdog_restart=True,
         send_repeated_matches=True,
-        email=EmailConfig(
-            smtp_host="smtp.local",
-            smtp_port=587,
-            smtp_username="",
-            smtp_password="",
-            from_address="alerts@example.com",
-            to_addresses=["ops@example.com"],
-            use_tls=True,
-            timeout_seconds=10,
-            subject="SentinelTray Notification",
-            retry_attempts=0,
-            retry_backoff_seconds=0,
-            dry_run=True,
-        ),
+        monitors=[
+            MonitorConfig(
+                window_title_regex="APP",
+                phrase_regex="ALERT",
+                email=email,
+            )
+        ],
     )
 
     notifier = Notifier(config=config, status=StatusStore())

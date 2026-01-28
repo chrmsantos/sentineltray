@@ -62,4 +62,4 @@ email:
     merged = _apply_template_to_config_text(legacy, template_text)
 
     assert "log_level: DEBUG" in merged
-    assert "config_checksum_file" in merged
+    assert "email_queue_file" in merged

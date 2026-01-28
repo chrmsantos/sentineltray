@@ -41,4 +41,4 @@ Each item must include a full `email` block.
 - Do not include real credentials in sample files.
 - config.local.key must be kept alongside config.local.yaml.enc for portable setups.
 - Set SENTINELTRAY_CONFIG_ENCRYPTION=dpapi to force DPAPI on a single machine.
-- Additional robustness parameters available: min_repeat_seconds; error_notification_cooldown_seconds; window_error_backoff_base_seconds / window_error_backoff_max_seconds; window_error_circuit_threshold / window_error_circuit_seconds; email_queue_file / email_queue_max_items / email_queue_max_age_seconds; email_queue_max_attempts / email_queue_retry_base_seconds; log_throttle_seconds.
+- Additional robustness parameters available: min_repeat_seconds; error_notification_cooldown_seconds; window_error_backoff_base_seconds / window_error_backoff_max_seconds; window_error_circuit_threshold / window_error_circuit_seconds; email_queue_file / email_queue_max_items / email_queue_max_age_seconds; email_queue_max_attempts / email_queue_retry_base_seconds.

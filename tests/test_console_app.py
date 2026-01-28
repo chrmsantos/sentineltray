@@ -6,7 +6,7 @@ from typing import Any, Iterator
 import pytest
 
 from sentineltray import console_app
-from sentineltray.config import AppConfig, EmailConfig
+from sentineltray.config import AppConfig, EmailConfig, MonitorConfig
 
 
 def _make_config(tmp_path: Path) -> AppConfig:
@@ -24,9 +24,12 @@ def _make_config(tmp_path: Path) -> AppConfig:
         retry_backoff_seconds=1,
         dry_run=True,
     )
-    return AppConfig(
+    monitor = MonitorConfig(
         window_title_regex="EXEMPLO",
         phrase_regex="ALERTA",
+        email=email,
+    )
+    return AppConfig(
         poll_interval_seconds=10,
         healthcheck_interval_seconds=0,
         error_backoff_base_seconds=5,
@@ -42,35 +45,20 @@ def _make_config(tmp_path: Path) -> AppConfig:
         log_backup_count=1,
         log_run_files_keep=5,
         telemetry_file=str(tmp_path / "logs" / "telemetry.json"),
-        status_export_file=str(tmp_path / "logs" / "status.json"),
-        status_export_csv=str(tmp_path / "logs" / "status.csv"),
         allow_window_restore=True,
         log_only_mode=True,
-        config_checksum_file=str(tmp_path / "logs" / "config.checksum"),
-        min_free_disk_mb=10,
-        watchdog_timeout_seconds=60,
-        watchdog_restart=True,
         send_repeated_matches=True,
-        email=email,
+        monitors=[monitor],
     )
 
 
-def test_run_console_status_and_exit(
+def test_run_console_exit(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
     monkeypatch.setenv("SENTINELTRAY_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(console_app, "clear_screen", lambda: None)
-    def fake_load(_path: Path) -> dict[str, object]:
-        return {}
-
-    monkeypatch.setattr(console_app, "load_status_payload", fake_load)
-
-    calls: dict[str, Any] = {"display": 0, "finalize": 0, "opened": 0, "joined": False}
-
-    def fake_display(**_kwargs: Any) -> str:
-        calls["display"] += 1
-        return "STATUS"
+    calls: dict[str, Any] = {"finalize": 0, "opened": 0, "joined": False}
 
     def fake_create_editor():
         def on_open() -> None:
@@ -85,19 +73,17 @@ def test_run_console_status_and_exit(
         def join(self, timeout: float | None = None) -> None:
             calls["joined"] = True
 
-    monkeypatch.setattr(console_app, "build_status_display", fake_display)
     monkeypatch.setattr(console_app, "_create_config_editor", fake_create_editor)
     def fake_start_notifier(*_args: object, **_kwargs: object) -> DummyThread:
         return DummyThread()
 
     monkeypatch.setattr(console_app, "_start_notifier", fake_start_notifier)
-    monkeypatch.setattr(console_app.time, "monotonic", lambda: 0)
     def noop_sleep(_seconds: float) -> None:
         return None
 
     monkeypatch.setattr(console_app.time, "sleep", noop_sleep)
 
-    inputs: Iterator[str] = iter(["s", "", "q"])
+    inputs: Iterator[str] = iter(["q"])
     def fake_input(_prompt: str) -> str:
         return next(inputs)
 
@@ -105,7 +91,6 @@ def test_run_console_status_and_exit(
 
     console_app.run_console(_make_config(tmp_path))
 
-    assert calls["display"] >= 1
     assert calls["joined"] is True
 
 

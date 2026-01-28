@@ -1,6 +1,6 @@
 # SentinelTray
 
-Beta version: 1.0.0-beta.8 (01-28-2026)
+Beta version: 1.0.0-beta.9 (01-28-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
@@ -22,18 +22,19 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 Edit config.local.yaml and set:
 
-- window_title_regex (a unique title prefix is enough)
-- phrase_regex (empty means any visible text; whitespace-only also means any visible text)
+- monitors (list)
+- monitors[].window_title_regex (a unique title prefix is enough)
+- monitors[].phrase_regex (empty means any visible text; whitespace-only also means any visible text)
 - use single quotes for regex to avoid YAML escape issues
-- email.smtp_host
-- email.from_address
-- email.to_addresses
-- email.subject
-- email.retry_attempts
-- email.retry_backoff_seconds
-- email.dry_run = false when ready to send
-- status_export_csv, allow_window_restore, send_repeated_matches
-- log_only_mode, config_checksum_file, min_free_disk_mb
+- monitors[].email.smtp_host
+- monitors[].email.from_address
+- monitors[].email.to_addresses
+- monitors[].email.subject
+- monitors[].email.retry_attempts
+- monitors[].email.retry_backoff_seconds
+- monitors[].email.dry_run = false when ready to send
+- allow_window_restore, send_repeated_matches
+- log_only_mode
 - log_level, log_console_level, log_console_enabled
 - log_max_bytes, log_backup_count, log_run_files_keep
 - min_repeat_seconds, error_notification_cooldown_seconds
@@ -41,7 +42,6 @@ Edit config.local.yaml and set:
 - window_error_circuit_threshold, window_error_circuit_seconds
 - email_queue_file, email_queue_max_items, email_queue_max_age_seconds
 - email_queue_max_attempts, email_queue_retry_base_seconds
-- log_throttle_seconds
 - config_version (optional, default 1)
 
 The application always reads the local config file. Default location is driven by
@@ -105,7 +105,7 @@ Notes:
 
 If you run main.py directly, it automatically adds src/ to the import path.
 SentinelTray starts in the foreground console interface. Use the menu to open Config,
-view Status, pause/resume, trigger a manual scan, or Exit.
+trigger a manual scan, or Exit.
 
 For a simple start, use the shortcut at the project root: Executar SentinelTray.cmd.
 
@@ -149,11 +149,10 @@ Examples:
 - phrase_regex: 'PROTOCOLS?\\s+NOT\\s+RECEIVED'
 - phrase_regex: 'ALERT|CRITICAL'
 
-## Multiple monitors (title + text + email)
+## Monitors (title + text + email)
 
-To monitor more than one title + text pair, use `monitors`.
+Use `monitors` for all monitoring entries.
 Each item must include its own email configuration.
-When `monitors` is used, the top-level `email` block can be omitted.
 
 Exemplo:
 
@@ -201,7 +200,7 @@ monitors:
 - When another instance is already running, a notice is shown and the new launch exits cleanly.
 - Script logs (install/run/bootstrap) are stored under %SENTINELTRAY_DATA_DIR%\logs\scripts.
 - Third-party debug logs are suppressed to keep logs actionable.
-- Logs, telemetry, and status exports redact sensitive strings (emails and local paths) and store match summaries as hashes.
+- Logs and telemetry redact sensitive strings (emails and local paths) and store match summaries as hashes.
 - Runtime artifacts are integrity-checked via runtime/checksums.txt.
 - state.json stores the last sent messages to avoid duplicates.
 - Errors detected in each polling iteration are reported via email immediately.
@@ -223,8 +222,6 @@ monitors:
 - License: GPL-3.0-only.
 - Logs include a structured category field.
 - Local telemetry file captures last activity for quick diagnostics and lives in %SENTINELTRAY_DATA_DIR%\logs.
-- Status export JSON available at status_export_file (config\logs by default).
-- Status export CSV available at status_export_csv (config\logs by default).
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
 - Match alert emails use subject "SentinelTray Match Alert"; error alerts use "SentinelTray Error Alert".

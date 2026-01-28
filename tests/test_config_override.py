@@ -12,6 +12,6 @@ def test_load_config_with_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
 
     config = load_config_with_override(str(base_path), str(override_path))
 
-    assert config.window_title_regex == "SECRET_APP"
-    assert config.email.to_addresses == ["local@example.com"]
-    assert config.phrase_regex == "ALERT"
+    assert config.monitors[0].window_title_regex == "SECRET_APP"
+    assert config.monitors[0].email.to_addresses == ["local@example.com"]
+    assert config.monitors[0].phrase_regex == "ALERT"

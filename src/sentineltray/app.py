@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import csv
-import io
 import ctypes
 import hashlib
 import importlib.metadata
@@ -9,7 +7,6 @@ import json
 import logging
 import socket
 import re
-import shutil
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -17,7 +14,7 @@ from pathlib import Path
 from threading import Event
 from typing import Any, cast
 
-from .config import AppConfig, MonitorConfig, get_project_root, get_user_data_dir
+from .config import AppConfig, MonitorConfig, get_project_root
 from .detector import WindowTextDetector, WindowUnavailableError
 from .logging_setup import sanitize_text, setup_logging
 from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
@@ -173,10 +170,13 @@ def _get_commit_hash() -> str:
 
 
 def _check_smtp_health(config: AppConfig) -> None:
-    if config.email.dry_run:
+    if not config.monitors:
         return
-    host = config.email.smtp_host
-    port = config.email.smtp_port
+    email = config.monitors[0].email
+    if email.dry_run:
+        return
+    host = email.smtp_host
+    port = email.smtp_port
     if not host or not port:
         return
     try:
@@ -205,13 +205,10 @@ class Notifier:
         self._next_healthcheck = time.monotonic() + self.config.healthcheck_interval_seconds
         self._next_queue_drain = time.monotonic() + 30
         self._telemetry = JsonWriter(Path(self.config.telemetry_file))
-        self._status_export = JsonWriter(Path(self.config.status_export_file))
         self._app_version = _get_version()
         self._release_date = _get_release_date()
         self._commit_hash = _get_commit_hash()
         self._telemetry_write_errors = 0
-        self._status_export_errors = 0
-        self._status_csv_errors = 0
         self._state_write_errors = 0
         self._last_scan_error = False
         self._last_error_notification_at = 0.0
@@ -223,7 +220,6 @@ class Notifier:
             "oldest_age_seconds": 0,
         }
         self._sender: EmailSender | None = None
-        self._update_config_checksum()
         _check_smtp_health(self.config)
 
     def _reset_components(self) -> None:
@@ -231,7 +227,7 @@ class Notifier:
             monitor.detector = WindowTextDetector(
                 monitor.config.window_title_regex,
                 allow_window_restore=self.config.allow_window_restore,
-                log_throttle_seconds=self.config.log_throttle_seconds,
+                log_throttle_seconds=60,
             )
             monitor.sender = build_sender(
                 monitor.config.email,
@@ -265,19 +261,12 @@ class Notifier:
         return last_sent
 
     def _build_monitors(self) -> list[MonitorRuntime]:
-        monitors = self.config.monitors
-        if not monitors:
-            monitors = [
-                MonitorConfig(
-                    window_title_regex=self.config.window_title_regex,
-                    phrase_regex=self.config.phrase_regex,
-                    email=self.config.email,
-                )
-            ]
+        if not self.config.monitors:
+            raise ValueError("monitors must be configured")
 
         runtimes: list[MonitorRuntime] = []
-        monitor_count = len(monitors)
-        for monitor in monitors:
+        monitor_count = len(self.config.monitors)
+        for monitor in self.config.monitors:
             key = f"{monitor.window_title_regex}|{monitor.phrase_regex}"
             runtimes.append(
                 MonitorRuntime(
@@ -286,7 +275,7 @@ class Notifier:
                     detector=WindowTextDetector(
                         monitor.window_title_regex,
                         allow_window_restore=self.config.allow_window_restore,
-                        log_throttle_seconds=self.config.log_throttle_seconds,
+                        log_throttle_seconds=60,
                     ),
                     sender=build_sender(
                         monitor.email,
@@ -392,12 +381,13 @@ class Notifier:
             monitor.breaker_until = max(
                 monitor.breaker_until, time.monotonic() + breaker_seconds
             )
-            LOGGER.warning(
-                "Circuit breaker active for monitor %s (%ss)",
-                _summarize_text(monitor.key),
-                breaker_seconds,
-                extra={"category": "scan"},
-            )
+            if LOGGER.isEnabledFor(logging.WARNING):
+                LOGGER.warning(
+                    "Circuit breaker active for monitor %s (%ss)",
+                    _summarize_text(monitor.key),
+                    breaker_seconds,
+                    extra={"category": "scan"},
+                )
             if breaker_seconds > 0:
                 critical_message = (
                     "error: monitor paused for "
@@ -454,15 +444,16 @@ class Notifier:
                 continue
             finally:
                 duration_ms = (time.perf_counter() - monitor_started) * 1000
-                LOGGER.info(
-                    "Monitor scan duration %.2fms",
-                    duration_ms,
-                    extra={
-                        "category": "perf",
-                        "monitor": _summarize_text(monitor.key),
-                        "error": monitor_error or "",
-                    },
-                )
+                if LOGGER.isEnabledFor(logging.INFO):
+                    LOGGER.info(
+                        "Monitor scan duration %.2fms",
+                        duration_ms,
+                        extra={
+                            "category": "perf",
+                            "monitor": _summarize_text(monitor.key),
+                            "error": monitor_error or "",
+                        },
+                    )
 
             normalized = [_normalize(text) for text in matches if text]
             if normalized:
@@ -483,14 +474,15 @@ class Notifier:
                     self.config.debounce_seconds,
                     now,
                 )
-                for text, age_seconds in skipped:
-                    summary = _summarize_text(text)
-                    LOGGER.info(
-                        "Debounce active for %s (age %s seconds)",
-                        summary,
-                        age_seconds,
-                        extra={"category": "send"},
-                    )
+                if skipped and LOGGER.isEnabledFor(logging.INFO):
+                    for text, age_seconds in skipped:
+                        summary = _summarize_text(text)
+                        LOGGER.info(
+                            "Debounce active for %s (age %s seconds)",
+                            summary,
+                            age_seconds,
+                            extra={"category": "send"},
+                        )
 
             if send_items and self.config.min_repeat_seconds > 0:
                 now = datetime.now(timezone.utc)
@@ -500,14 +492,15 @@ class Notifier:
                     self.config.min_repeat_seconds,
                     now,
                 )
-                for text, age_seconds in skipped:
-                    summary = _summarize_text(text)
-                    LOGGER.info(
-                        "Min repeat window active for %s (age %s seconds)",
-                        summary,
-                        age_seconds,
-                        extra={"category": "send"},
-                    )
+                if skipped and LOGGER.isEnabledFor(logging.INFO):
+                    for text, age_seconds in skipped:
+                        summary = _summarize_text(text)
+                        LOGGER.info(
+                            "Min repeat window active for %s (age %s seconds)",
+                            summary,
+                            age_seconds,
+                            extra={"category": "send"},
+                        )
 
             if send_items:
                 previous_text = monitor.last_scan_text
@@ -643,10 +636,11 @@ class Notifier:
         uptime_seconds = int((datetime.now(timezone.utc) - self._started_at).total_seconds())
         self.status.set_uptime_seconds(uptime_seconds)
         snapshot = self.status.snapshot()
+        primary = self._monitors[0].config
         status_text = format_status(
             snapshot,
-            window_title_regex=self.config.window_title_regex,
-            phrase_regex=self.config.phrase_regex,
+            window_title_regex=primary.window_title_regex,
+            phrase_regex=primary.phrase_regex,
             poll_interval_seconds=self.config.poll_interval_seconds,
         )
         message = f"info: Em execução\n{status_text}"
@@ -709,14 +703,13 @@ class Notifier:
             "app_version": self._app_version,
             "release_date": self._release_date,
             "commit_hash": self._commit_hash,
-            "window_title_hash": _hash_value(self.config.window_title_regex),
+            "window_title_hash": _hash_value(self._monitors[0].config.window_title_regex),
             "window_title_hashes": [
                 _hash_value(monitor.config.window_title_regex) for monitor in self._monitors
             ],
             "monitor_count": len(self._monitors),
             "monitors": monitor_payload,
             "running": snapshot.running,
-            "paused": snapshot.paused,
             "uptime_seconds": snapshot.uptime_seconds,
             "last_scan": _safe_status_text(snapshot.last_scan),
             "last_match": _safe_status_text(snapshot.last_match),
@@ -728,8 +721,6 @@ class Notifier:
             "error_count": snapshot.error_count,
             "email_queue": self._queue_stats,
             "telemetry_write_errors": self._telemetry_write_errors,
-            "status_export_errors": self._status_export_errors,
-            "status_csv_errors": self._status_csv_errors,
             "state_write_errors": self._state_write_errors,
         }
         try:
@@ -738,74 +729,8 @@ class Notifier:
             self._telemetry_write_errors += 1
             LOGGER.exception("Telemetry write failed: %s", exc, extra={"category": "error"})
 
-        status_payload: dict[str, Any] = {
-            "running": snapshot.running,
-            "paused": snapshot.paused,
-            "last_scan": _safe_status_text(snapshot.last_scan),
-            "last_match": _safe_status_text(snapshot.last_match),
-            "last_match_at": _safe_status_text(snapshot.last_match_at),
-            "last_match_age_seconds": match_age_seconds,
-            "last_send": _safe_status_text(snapshot.last_send),
-            "last_error": _safe_status_text(snapshot.last_error),
-            "last_healthcheck": _safe_status_text(snapshot.last_healthcheck),
-            "uptime_seconds": snapshot.uptime_seconds,
-            "error_count": snapshot.error_count,
-            "monitor_count": len(self._monitors),
-            "email_queue": self._queue_stats,
-            "status_export_errors": self._status_export_errors,
-            "status_csv_errors": self._status_csv_errors,
-            "state_write_errors": self._state_write_errors,
-        }
-        try:
-            self._status_export.write(status_payload)
-        except Exception as exc:
-            self._status_export_errors += 1
-            LOGGER.exception("Status export failed: %s", exc, extra={"category": "error"})
-
-        self._write_status_csv(status_payload)
-
-    def _write_status_csv(self, payload: dict[str, object]) -> None:
-        path = Path(self.config.status_export_csv)
-        try:
-            buffer = io.StringIO()
-            writer = csv.writer(buffer)
-            for key, value in payload.items():
-                writer.writerow([key, value])
-            atomic_write_text(path, buffer.getvalue(), encoding="utf-8")
-        except Exception as exc:
-            self._status_csv_errors += 1
-            LOGGER.exception("Status CSV export failed: %s", exc, extra={"category": "error"})
-
-    def _update_config_checksum(self) -> None:
-        try:
-            base = get_user_data_dir()
-            config_path = base / "config.local.yaml"
-            if not config_path.exists():
-                return
-            checksum = hashlib.sha256(config_path.read_bytes()).hexdigest()
-            path = Path(self.config.config_checksum_file)
-            atomic_write_text(path, checksum, encoding="utf-8")
-        except Exception as exc:
-            LOGGER.exception("Config checksum update failed: %s", exc, extra={"category": "error"})
-
     def _ensure_free_disk(self) -> None:
-        try:
-            base = Path(self.config.log_file).parent
-            usage = shutil.disk_usage(base)
-            free_mb = usage.free // (1024 * 1024)
-            if free_mb < self.config.min_free_disk_mb:
-                raise RuntimeError("Low disk space")
-        except Exception as exc:
-            raise RuntimeError(f"Low disk space: {exc}") from exc
-
-    def _handle_watchdog(self, duration_seconds: float) -> None:
-        if duration_seconds <= self.config.watchdog_timeout_seconds:
-            return
-        message = f"error: watchdog timeout after {duration_seconds:.1f}s"
-        self._handle_error(message)
-        if self.config.watchdog_restart:
-            self._reset_components()
-            LOGGER.info("Watchdog restart completed", extra={"category": "error"})
+        return None
 
     def _drain_queues(self) -> None:
         total = {
@@ -840,12 +765,7 @@ class Notifier:
                     )
         self._queue_stats = total
 
-    def run_loop(
-        self,
-        stop_event: Event,
-        pause_event: Event | None = None,
-        manual_scan_event: Event | None = None,
-    ) -> None:
+    def run_loop(self, stop_event: Event, manual_scan_event: Event | None = None) -> None:
         setup_logging(
             self.config.log_file,
             log_level=self.config.log_level,
@@ -883,21 +803,8 @@ class Notifier:
                 stop_event.wait(min(0.5, remaining))
             return False
 
-        was_paused = False
         while not stop_event.is_set():
             loop_started = time.perf_counter()
-            if pause_event is not None and pause_event.is_set():
-                if not was_paused:
-                    LOGGER.info("Execution paused", extra={"category": "control"})
-                was_paused = True
-                self.status.set_paused(True)
-                self._update_telemetry()
-                stop_event.wait(0.5)
-                continue
-            if was_paused:
-                LOGGER.info("Execution resumed", extra={"category": "control"})
-            was_paused = False
-            self.status.set_paused(False)
             started_at = time.monotonic()
             try:
                 manual_requested = False
@@ -950,7 +857,6 @@ class Notifier:
                 self.status.increment_error_count()
             finally:
                 duration = time.monotonic() - started_at
-                self._handle_watchdog(duration)
                 LOGGER.info(
                     "Loop iteration duration %.2fms",
                     (time.perf_counter() - loop_started) * 1000,
@@ -979,7 +885,6 @@ class Notifier:
                 continue
 
         self.status.set_running(False)
-        self.status.set_paused(False)
 
 
 def run(config: AppConfig) -> None:

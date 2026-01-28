@@ -3,16 +3,28 @@ from __future__ import annotations
 import pytest
 
 from sentineltray.app import Notifier
-from sentineltray.config import AppConfig, EmailConfig
+from sentineltray.config import AppConfig, EmailConfig, MonitorConfig
 from sentineltray.detector import WindowTextDetector
 from sentineltray.email_sender import EmailSender
 from sentineltray.status import StatusStore
 
 
 def _config() -> AppConfig:
+    email = EmailConfig(
+        smtp_host="",
+        smtp_port=587,
+        smtp_username="",
+        smtp_password="",
+        from_address="",
+        to_addresses=[],
+        use_tls=True,
+        timeout_seconds=10,
+        subject="SentinelTray",
+        retry_attempts=0,
+        retry_backoff_seconds=0,
+        dry_run=True,
+    )
     return AppConfig(
-        window_title_regex="APP",
-        phrase_regex="ALERT",
         poll_interval_seconds=1,
         healthcheck_interval_seconds=3600,
         error_backoff_base_seconds=5,
@@ -28,14 +40,8 @@ def _config() -> AppConfig:
         log_backup_count=5,
         log_run_files_keep=5,
         telemetry_file="logs/telemetry.json",
-        status_export_file="logs/status.json",
-        status_export_csv="logs/status.csv",
         allow_window_restore=True,
         log_only_mode=False,
-        config_checksum_file="logs/config.checksum",
-        min_free_disk_mb=100,
-        watchdog_timeout_seconds=60,
-        watchdog_restart=True,
         send_repeated_matches=True,
         min_repeat_seconds=0,
         error_notification_cooldown_seconds=300,
@@ -44,25 +50,17 @@ def _config() -> AppConfig:
         window_error_circuit_threshold=3,
         window_error_circuit_seconds=300,
         email_queue_file="logs/email_queue.json",
-        email_queue_max_items=0,
+        email_queue_max_items=1,
         email_queue_max_age_seconds=0,
         email_queue_max_attempts=0,
         email_queue_retry_base_seconds=0,
-        log_throttle_seconds=60,
-        email=EmailConfig(
-            smtp_host="",
-            smtp_port=587,
-            smtp_username="",
-            smtp_password="",
-            from_address="",
-            to_addresses=[],
-            use_tls=True,
-            timeout_seconds=10,
-            subject="SentinelTray",
-            retry_attempts=0,
-            retry_backoff_seconds=0,
-            dry_run=True,
-        ),
+        monitors=[
+            MonitorConfig(
+                window_title_regex="APP",
+                phrase_regex="ALERT",
+                email=email,
+            )
+        ],
     )
 
 

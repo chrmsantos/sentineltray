@@ -30,13 +30,12 @@ This includes:
 Encrypted configs (config.local.yaml.enc) are supported via Windows DPAPI to protect sensitive data at rest. On startup, the app attempts to encrypt plaintext configs.
 The tray config editor uses a temporary plaintext file in the local data directory and removes it after re-encrypting.
 
-Operational data (diagnostics and status) is stored in:
+Operational data (diagnostics) is stored in:
 
 - %SENTINELTRAY_DATA_DIR%\logs
 
 - *.log (diagnostics)
 - telemetry.json (operational state)
-- status.json and status.csv (status exports)
 - config.checksum (configuration integrity)
 
 The repository contains only commented templates and fictitious examples.

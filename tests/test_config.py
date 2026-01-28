@@ -10,8 +10,8 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     config_path = Path(__file__).parent / "data" / "config.yaml"
     config = load_config(str(config_path))
 
-    assert config.window_title_regex == "App\\.Monitor\\.Desktop"
-    assert config.phrase_regex == "ALERT"
+    assert config.monitors[0].window_title_regex == "App\\.Monitor\\.Desktop"
+    assert config.monitors[0].phrase_regex == "ALERT"
     assert config.poll_interval_seconds == 180
     assert config.healthcheck_interval_seconds == 900
     assert config.error_backoff_base_seconds == 5
@@ -95,14 +95,8 @@ def test_load_config_with_monitors(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
                 "log_backup_count: 5",
                 "log_run_files_keep: 5",
                 "telemetry_file: 'logs/telemetry.json'",
-                "status_export_file: 'logs/status.json'",
-                "status_export_csv: 'logs/status.csv'",
                 "allow_window_restore: true",
                 "log_only_mode: false",
-                "config_checksum_file: 'logs/config.checksum'",
-                "min_free_disk_mb: 100",
-                "watchdog_timeout_seconds: 60",
-                "watchdog_restart: true",
             ]
         ),
         encoding="utf-8",
