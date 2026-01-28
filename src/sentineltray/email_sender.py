@@ -326,20 +326,18 @@ class QueueingEmailSender(EmailSender):
 def build_sender(
     config: EmailConfig,
     *,
-    queue_path: Path | None = None,
-    queue_max_items: int = 0,
-    queue_max_age_seconds: int = 0,
-    queue_max_attempts: int = 0,
-    queue_retry_base_seconds: int = 0,
+    queue_path: Path,
+    queue_max_items: int = 500,
+    queue_max_age_seconds: int = 86400,
+    queue_max_attempts: int = 10,
+    queue_retry_base_seconds: int = 30,
 ) -> EmailSender:
     base_sender = SmtpEmailSender(config=config)
-    if queue_path is None or queue_max_items <= 0:
-        return base_sender
     queue = DiskEmailQueue(
         queue_path,
-        max_items=queue_max_items,
-        max_age_seconds=queue_max_age_seconds,
-        max_attempts=queue_max_attempts,
-        retry_base_seconds=queue_retry_base_seconds,
+        max_items=max(1, queue_max_items),
+        max_age_seconds=max(0, queue_max_age_seconds),
+        max_attempts=max(0, queue_max_attempts),
+        retry_base_seconds=max(0, queue_retry_base_seconds),
     )
     return QueueingEmailSender(sender=base_sender, queue=queue)

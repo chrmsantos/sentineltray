@@ -1,3 +1,3 @@
-"""Deprecated module kept empty for compatibility."""
+"""WhatsApp support removed."""
 
-__all__: list[str] = []
+raise ImportError("WhatsApp support has been removed.")

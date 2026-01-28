@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from builtins import input as input
+
 import hashlib
 import io
 import logging
@@ -26,7 +28,6 @@ from .config import (
 )
 from .security_utils import parse_payload
 from .status import StatusStore
-from .status_cli import build_status_display, clear_screen, load_status_payload
 
 LOGGER = logging.getLogger(__name__)
 
@@ -211,13 +212,12 @@ def _start_notifier(
     config: AppConfig,
     status: StatusStore,
     stop_event: Event,
-    pause_event: Event,
     manual_scan_event: Event,
 ) -> Thread:
     notifier = Notifier(config=config, status=status)
     thread = Thread(
         target=notifier.run_loop,
-        args=(stop_event, pause_event, manual_scan_event),
+        args=(stop_event, manual_scan_event),
         daemon=True,
     )
     thread.start()
@@ -328,66 +328,13 @@ def _open_text_file(path: Path) -> None:
         LOGGER.warning("Failed to open details: %s", exc)
 
 
-def _read_key() -> str | None:
-    if os.name != "nt":
-        return None
-    try:
-        import msvcrt
-
-        if msvcrt.kbhit():
-            return msvcrt.getwch()
-    except Exception:
-        return None
-    return None
-
-
-def _status_snapshot_text(
-    config: AppConfig,
-    *,
-    status_path: Path,
-    counter_seconds: int,
-) -> str:
-    payload = load_status_payload(status_path)
-    return build_status_display(
-        config=config,
-        payload=payload,
-        counter_seconds=counter_seconds,
-        status_path=status_path,
-    )
-
-
-def _show_status_once(config: AppConfig, *, status_path: Path, counter_seconds: int) -> None:
-    clear_screen()
-    print(_status_snapshot_text(config, status_path=status_path, counter_seconds=counter_seconds))
-    print("")
-    input("Pressione Enter para voltar...")
-
-
-def _watch_status(config: AppConfig, *, status_path: Path, started_at: float, finalize: Callable[[], None]) -> None:
-    try:
-        while True:
-            counter = int(time.monotonic() - started_at)
-            clear_screen()
-            print(_status_snapshot_text(config, status_path=status_path, counter_seconds=counter))
-            print("")
-            print("Pressione Enter ou Q para voltar ao menu.")
-            key = _read_key()
-            if key in ("\r", "\n", "q", "Q"):
-                return
-            finalize()
-            time.sleep(1)
-    except KeyboardInterrupt:
-        return
+def clear_screen() -> None:
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 def _menu_header(status: StatusStore) -> list[str]:
     snapshot = status.snapshot()
-    if snapshot.paused:
-        state = "PAUSADO"
-    elif snapshot.running:
-        state = "EM EXECUÇÃO"
-    else:
-        state = "PARADO"
+    state = "EM EXECUÇÃO" if snapshot.running else "PARADO"
     return [
         "SentinelTray - Console",
         f"Status atual: {state}",
@@ -398,26 +345,21 @@ def _menu_header(status: StatusStore) -> list[str]:
 def run_console(config: AppConfig) -> None:
     status = StatusStore()
     stop_event = Event()
-    pause_event = Event()
     manual_scan_event = Event()
-    started_at = time.monotonic()
     notifier_thread = _start_notifier(
-        config, status, stop_event, pause_event, manual_scan_event
+        config, status, stop_event, manual_scan_event
     )
     on_open, finalize_config_edit = _create_config_editor()
-    status_path = Path(config.status_export_file)
 
     def save_config_edit() -> AppConfig | None:
         return finalize_config_edit()
 
     def apply_config_edit() -> None:
-        nonlocal config, status_path, notifier_thread, stop_event, started_at
+        nonlocal config, notifier_thread, stop_event
         new_config = save_config_edit()
         if new_config is None:
             return
         config = new_config
-        status_path = Path(config.status_export_file)
-        started_at = time.monotonic()
         stop_event.set()
         try:
             notifier_thread.join(timeout=5)
@@ -428,7 +370,6 @@ def run_console(config: AppConfig) -> None:
             config,
             status,
             stop_event,
-            pause_event,
             manual_scan_event,
         )
 
@@ -438,11 +379,8 @@ def run_console(config: AppConfig) -> None:
             for line in _menu_header(status):
                 print(line)
             print("Comandos:")
-            print("  [S] Status agora")
-            print("  [W] Status em tempo real")
             print("  [C] Editar config")
             print("  [R] Reconciliar template")
-            print("  [P] Pausar/Retomar")
             print("  [M] Scan manual")
             print("  [Q] Sair")
             print("")
@@ -459,25 +397,6 @@ def run_console(config: AppConfig) -> None:
                 apply_now = input("Aplicar reconciliação? (s/N) ").strip().lower()
                 if apply_now in ("s", "sim", "y", "yes"):
                     _reconcile_template(dry_run=False)
-            elif command in ("s", "status"):
-                counter = int(time.monotonic() - started_at)
-                _show_status_once(
-                    config,
-                    status_path=status_path,
-                    counter_seconds=counter,
-                )
-            elif command in ("w", "watch"):
-                _watch_status(
-                    config,
-                    status_path=status_path,
-                    started_at=started_at,
-                    finalize=apply_config_edit,
-                )
-            elif command in ("p", "pause", "pausar", "retomar", "resume"):
-                if pause_event.is_set():
-                    pause_event.clear()
-                else:
-                    pause_event.set()
             elif command in ("m", "manual", "scan"):
                 manual_scan_event.set()
                 print("Scan manual solicitado.")

@@ -1,3 +1,16 @@
-window_title_regex: 'SECRET_APP'
-email:
-  to_addresses: ["local@example.com"]
+monitors:
+  - window_title_regex: 'SECRET_APP'
+    phrase_regex: "ALERT"
+    email:
+      smtp_host: "smtp.local"
+      smtp_port: 587
+      smtp_username: ""
+      smtp_password: ""
+      from_address: "alerts@example.com"
+      to_addresses: ["local@example.com"]
+      use_tls: true
+      timeout_seconds: 10
+      subject: "SentinelTray Alert"
+      retry_attempts: 2
+      retry_backoff_seconds: 3
+      dry_run: false

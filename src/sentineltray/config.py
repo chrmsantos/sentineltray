@@ -131,8 +131,6 @@ class MonitorConfig:
 
 @dataclass(frozen=True)
 class AppConfig:
-    window_title_regex: str
-    phrase_regex: str
     poll_interval_seconds: int
     healthcheck_interval_seconds: int
     error_backoff_base_seconds: int
@@ -148,16 +146,9 @@ class AppConfig:
     log_backup_count: int
     log_run_files_keep: int
     telemetry_file: str
-    status_export_file: str
-    status_export_csv: str
     allow_window_restore: bool
     log_only_mode: bool
-    config_checksum_file: str
-    min_free_disk_mb: int
-    watchdog_timeout_seconds: int
-    watchdog_restart: bool
     send_repeated_matches: bool
-    email: EmailConfig
     min_repeat_seconds: int = 0
     error_notification_cooldown_seconds: int = 300
     window_error_backoff_base_seconds: int = 5
@@ -169,7 +160,6 @@ class AppConfig:
     email_queue_max_age_seconds: int = 86400
     email_queue_max_attempts: int = 10
     email_queue_retry_base_seconds: int = 30
-    log_throttle_seconds: int = 60
     monitors: list[MonitorConfig] = field(
         default_factory=lambda: cast(list[MonitorConfig], [])
     )
@@ -340,31 +330,22 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
     data = _migrate_config_data(data)
     monitors: list[MonitorConfig] = []
     monitors_data = data.get("monitors")
-    if monitors_data is not None:
-        if not isinstance(monitors_data, list) or not monitors_data:
-            raise ValueError("monitors must be a non-empty list")
-        for entry in cast(list[object], monitors_data):
-            if not isinstance(entry, dict):
-                raise ValueError("monitors entries must be objects")
-            entry_map = cast(dict[str, Any], entry)
-            monitor_email = _build_email_config(
-                cast(dict[str, Any], _get_required(entry_map, "email"))
+    if not isinstance(monitors_data, list) or not monitors_data:
+        raise ValueError("monitors must be a non-empty list")
+    for entry in cast(list[object], monitors_data):
+        if not isinstance(entry, dict):
+            raise ValueError("monitors entries must be objects")
+        entry_map = cast(dict[str, Any], entry)
+        monitor_email = _build_email_config(
+            cast(dict[str, Any], _get_required(entry_map, "email"))
+        )
+        monitors.append(
+            MonitorConfig(
+                window_title_regex=str(_get_required(entry_map, "window_title_regex")),
+                phrase_regex=str(_get_required(entry_map, "phrase_regex")),
+                email=monitor_email,
             )
-            monitors.append(
-                MonitorConfig(
-                    window_title_regex=str(_get_required(entry_map, "window_title_regex")),
-                    phrase_regex=str(_get_required(entry_map, "phrase_regex")),
-                    email=monitor_email,
-                )
-            )
-
-    email = None
-    if "email" in data:
-        email = _build_email_config(_get_required(data, "email"))
-    elif monitors:
-        email = monitors[0].email
-    else:
-        raise ValueError("email is required")
+        )
 
     log_backup_count = int(_get_required(data, "log_backup_count"))
     log_run_files_keep = int(_get_required(data, "log_run_files_keep"))
@@ -383,16 +364,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         )
         log_run_files_keep = MAX_LOG_FILES
 
-    if monitors:
-        window_title_regex = monitors[0].window_title_regex
-        phrase_regex = monitors[0].phrase_regex
-    else:
-        window_title_regex = str(_get_required(data, "window_title_regex"))
-        phrase_regex = str(_get_required(data, "phrase_regex"))
-
     config = AppConfig(
-        window_title_regex=window_title_regex,
-        phrase_regex=phrase_regex,
         poll_interval_seconds=int(_get_required(data, "poll_interval_seconds")),
         healthcheck_interval_seconds=int(
             _get_required(data, "healthcheck_interval_seconds")
@@ -414,18 +386,9 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         log_backup_count=log_backup_count,
         log_run_files_keep=log_run_files_keep,
         telemetry_file=str(_get_required(data, "telemetry_file")),
-        status_export_file=str(_get_required(data, "status_export_file")),
-        status_export_csv=str(_get_required(data, "status_export_csv")),
         allow_window_restore=bool(_get_required(data, "allow_window_restore")),
         log_only_mode=bool(_get_required(data, "log_only_mode")),
-        config_checksum_file=str(_get_required(data, "config_checksum_file")),
-        min_free_disk_mb=int(_get_required(data, "min_free_disk_mb")),
-        watchdog_timeout_seconds=int(
-            _get_required(data, "watchdog_timeout_seconds")
-        ),
-        watchdog_restart=bool(_get_required(data, "watchdog_restart")),
         send_repeated_matches=bool(data.get("send_repeated_matches", True)),
-        email=email,
         min_repeat_seconds=int(data.get("min_repeat_seconds", 0)),
         error_notification_cooldown_seconds=int(
             data.get("error_notification_cooldown_seconds", 300)
@@ -447,7 +410,6 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         email_queue_max_age_seconds=int(data.get("email_queue_max_age_seconds", 86400)),
         email_queue_max_attempts=int(data.get("email_queue_max_attempts", 10)),
         email_queue_retry_base_seconds=int(data.get("email_queue_retry_base_seconds", 30)),
-        log_throttle_seconds=int(data.get("log_throttle_seconds", 60)),
         monitors=monitors,
         config_version=int(data.get("config_version", 1)),
     )
@@ -465,9 +427,6 @@ def _apply_sensitive_path_policy(config: AppConfig) -> AppConfig:
         state_file=resolve_sensitive_path(base, config.state_file),
         log_file=resolve_log_path(base, log_root, config.log_file),
         telemetry_file=resolve_log_path(base, log_root, config.telemetry_file),
-        status_export_file=resolve_log_path(base, log_root, config.status_export_file),
-        status_export_csv=resolve_log_path(base, log_root, config.status_export_csv),
-        config_checksum_file=resolve_log_path(base, log_root, config.config_checksum_file),
         email_queue_file=resolve_log_path(base, log_root, config.email_queue_file),
     )
 
@@ -510,18 +469,9 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("log_console_level must be a valid logging level")
     if not config.telemetry_file:
         raise ValueError("telemetry_file is required")
-    if not config.status_export_file:
-        raise ValueError("status_export_file is required")
-    if not config.status_export_csv:
-        raise ValueError("status_export_csv is required")
     ensure_under_root(log_root, config.log_file, "log_file")
     ensure_under_root(log_root, config.telemetry_file, "telemetry_file")
-    ensure_under_root(log_root, config.status_export_file, "status_export_file")
-    ensure_under_root(log_root, config.status_export_csv, "status_export_csv")
-    ensure_under_root(log_root, config.config_checksum_file, "config_checksum_file")
     ensure_under_root(log_root, config.email_queue_file, "email_queue_file")
-    if config.min_free_disk_mb < 1:
-        raise ValueError("min_free_disk_mb must be >= 1")
     if config.error_notification_cooldown_seconds < 0:
         raise ValueError("error_notification_cooldown_seconds must be >= 0")
     if config.window_error_backoff_base_seconds < 1:
@@ -534,40 +484,16 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("window_error_circuit_threshold must be >= 1")
     if config.window_error_circuit_seconds < 0:
         raise ValueError("window_error_circuit_seconds must be >= 0")
-    if config.email_queue_max_items < 0:
-        raise ValueError("email_queue_max_items must be >= 0")
+    if config.email_queue_max_items < 1:
+        raise ValueError("email_queue_max_items must be >= 1")
     if config.email_queue_max_age_seconds < 0:
         raise ValueError("email_queue_max_age_seconds must be >= 0")
     if config.email_queue_max_attempts < 0:
         raise ValueError("email_queue_max_attempts must be >= 0")
     if config.email_queue_retry_base_seconds < 0:
         raise ValueError("email_queue_retry_base_seconds must be >= 0")
-    if config.log_throttle_seconds < 0:
-        raise ValueError("log_throttle_seconds must be >= 0")
     if config.config_version < 1:
         raise ValueError("config_version must be >= 1")
-    if config.email.timeout_seconds < 1:
-        raise ValueError("email.timeout_seconds must be >= 1")
-    if config.email.smtp_port < 1:
-        raise ValueError("email.smtp_port must be >= 1")
-    if config.email.retry_attempts < 0:
-        raise ValueError("email.retry_attempts must be >= 0")
-    if config.email.retry_backoff_seconds < 0:
-        raise ValueError("email.retry_backoff_seconds must be >= 0")
-    if not config.email.dry_run:
-        if not config.email.smtp_host:
-            raise ValueError("email.smtp_host is required")
-        if not config.email.from_address:
-            raise ValueError("email.from_address is required")
-        if not config.email.to_addresses:
-            raise ValueError("email.to_addresses is required")
-        validate_email_address("email.from_address", config.email.from_address)
-        for address in config.email.to_addresses:
-            validate_email_address("email.to_addresses", address)
-    if config.window_title_regex:
-        validate_regex("window_title_regex", config.window_title_regex)
-    if config.phrase_regex:
-        validate_regex("phrase_regex", config.phrase_regex)
     if config.monitors:
         for monitor in config.monitors:
             if monitor.window_title_regex:
@@ -584,8 +510,6 @@ def _validate_config(config: AppConfig) -> None:
                 validate_email_address("monitors.email.from_address", monitor.email.from_address)
                 for address in monitor.email.to_addresses:
                     validate_email_address("monitors.email.to_addresses", address)
-    if config.watchdog_timeout_seconds < 1:
-        raise ValueError("watchdog_timeout_seconds must be >= 1")
 
 
 def load_config(path: str) -> AppConfig:

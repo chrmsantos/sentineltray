@@ -10,9 +10,6 @@ htmlcov/
 state.json
 logs/*.log
 logs/telemetry.json
-logs/status.json
-logs/status.csv
-logs/config.checksum
 config.local.yaml.edit
 config.local.yaml
 config.local.key

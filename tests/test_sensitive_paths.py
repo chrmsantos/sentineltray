@@ -17,8 +17,22 @@ def test_sensitive_paths_forced_to_user_root(
     config_path.write_text(
         "\n".join(
             [
-                "window_title_regex: 'APP'",
-                "phrase_regex: 'ALERT'",
+                "monitors:",
+                "  - window_title_regex: 'APP'",
+                "    phrase_regex: 'ALERT'",
+                "    email:",
+                "      smtp_host: ''",
+                "      smtp_port: 587",
+                "      smtp_username: ''",
+                "      smtp_password: ''",
+                "      from_address: ''",
+                "      to_addresses: []",
+                "      use_tls: true",
+                "      timeout_seconds: 10",
+                "      subject: 'SentinelTray Notification'",
+                "      retry_attempts: 0",
+                "      retry_backoff_seconds: 0",
+                "      dry_run: true",
                 "poll_interval_seconds: 1",
                 "healthcheck_interval_seconds: 60",
                 "error_backoff_base_seconds: 5",
@@ -34,27 +48,8 @@ def test_sensitive_paths_forced_to_user_root(
                 "log_backup_count: 5",
                 "log_run_files_keep: 5",
                 f"telemetry_file: '{other_root / 'telemetry.json'}'",
-                f"status_export_file: '{other_root / 'status.json'}'",
-                f"status_export_csv: '{other_root / 'status.csv'}'",
-                     "allow_window_restore: true",
+                "allow_window_restore: true",
                 "log_only_mode: false",
-                "config_checksum_file: 'logs/config.checksum'",
-                "min_free_disk_mb: 100",
-                "watchdog_timeout_seconds: 60",
-                "watchdog_restart: true",
-                "email:",
-                "  smtp_host: ''",
-                "  smtp_port: 587",
-                "  smtp_username: ''",
-                "  smtp_password: ''",
-                "  from_address: ''",
-                "  to_addresses: []",
-                "  use_tls: true",
-                "  timeout_seconds: 10",
-                "  subject: 'SentinelTray Notification'",
-                "  retry_attempts: 0",
-                "  retry_backoff_seconds: 0",
-                "  dry_run: true",
             ]
         ),
         encoding="utf-8",
@@ -67,8 +62,3 @@ def test_sensitive_paths_forced_to_user_root(
     assert config.state_file == str(base / "state.json")
     assert config.log_file == str(log_root / "sentineltray.log")
     assert config.telemetry_file == str(log_root / "telemetry.json")
-    assert config.status_export_file == str(log_root / "status.json")
-    assert config.status_export_csv == str(log_root / "status.csv")
-    assert config.config_checksum_file == str(
-        log_root / "config.checksum"
-    )

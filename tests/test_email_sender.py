@@ -1,10 +1,15 @@
 import smtplib
 
 from sentineltray.config import EmailConfig
-from sentineltray.email_sender import EmailAuthError, SmtpEmailSender, build_sender
+from sentineltray.email_sender import (
+    EmailAuthError,
+    QueueingEmailSender,
+    SmtpEmailSender,
+    build_sender,
+)
 
 
-def test_build_sender_returns_smtp_sender() -> None:
+def test_build_sender_returns_queue_sender(tmp_path) -> None:
     config = EmailConfig(
         smtp_host="smtp.local",
         smtp_port=587,
@@ -20,8 +25,8 @@ def test_build_sender_returns_smtp_sender() -> None:
         dry_run=True,
     )
 
-    sender = build_sender(config)
-    assert isinstance(sender, SmtpEmailSender)
+    sender = build_sender(config, queue_path=tmp_path / "queue.json")
+    assert isinstance(sender, QueueingEmailSender)
 
 
 def test_email_sender_retries(monkeypatch) -> None:

@@ -39,6 +39,13 @@ class WindowTextDetector:
         self._last_window = None
         self._log_throttle_seconds = max(0, log_throttle_seconds)
         self._last_log: dict[str, float] = {}
+        self._phrase_regex_cache: str | None = None
+        self._phrase_pattern_cache: re.Pattern[str] | None = None
+
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        decomposed = unicodedata.normalize("NFKD", value)
+        return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
     def _log_throttled(self, level: int, key: str, message: str, *args: object) -> None:
         if self._log_throttle_seconds == 0:
@@ -346,19 +353,21 @@ class WindowTextDetector:
         if not texts:
             return []
 
-        if not phrase_regex or not str(phrase_regex).strip():
+        phrase_value = "" if phrase_regex is None else str(phrase_regex)
+        if not phrase_value.strip():
             return texts
 
-        def normalize(value: str) -> str:
-            decomposed = unicodedata.normalize("NFKD", value)
-            return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
-
-        normalized_regex = normalize(phrase_regex)
-        try:
-            pattern = re.compile(normalized_regex, re.IGNORECASE)
-        except re.error as exc:
-            raise ValueError("Invalid phrase regex") from exc
+        normalized_regex = self._normalize_text(phrase_value)
+        if normalized_regex != self._phrase_regex_cache or self._phrase_pattern_cache is None:
+            try:
+                pattern = re.compile(normalized_regex, re.IGNORECASE)
+            except re.error as exc:
+                raise ValueError("Invalid phrase regex") from exc
+            self._phrase_regex_cache = normalized_regex
+            self._phrase_pattern_cache = pattern
+        pattern = self._phrase_pattern_cache
         matches: list[str] = []
+        normalize = self._normalize_text
         for text in texts:
             if pattern.search(normalize(text)):
                 matches.append(text)

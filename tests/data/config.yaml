@@ -1,5 +1,19 @@
-window_title_regex: 'App\.Monitor\.Desktop'
-phrase_regex: "ALERT"
+monitors:
+  - window_title_regex: 'App\.Monitor\.Desktop'
+    phrase_regex: "ALERT"
+    email:
+      smtp_host: "smtp.local"
+      smtp_port: 587
+      smtp_username: ""
+      smtp_password: ""
+      from_address: "alerts@example.com"
+      to_addresses: ["ops@example.com"]
+      use_tls: true
+      timeout_seconds: 10
+      subject: "SentinelTray Alert"
+      retry_attempts: 2
+      retry_backoff_seconds: 3
+      dry_run: false
 poll_interval_seconds: 180
 healthcheck_interval_seconds: 900
 error_backoff_base_seconds: 5
@@ -15,24 +29,5 @@ log_max_bytes: 5000000
 log_backup_count: 5
 log_run_files_keep: 5
 telemetry_file: "logs/telemetry.json"
-status_export_file: "logs/status.json"
-status_export_csv: "logs/status.csv"
 allow_window_restore: true
 log_only_mode: false
-config_checksum_file: "logs/config.checksum"
-min_free_disk_mb: 100
-watchdog_timeout_seconds: 60
-watchdog_restart: true
-email:
-  smtp_host: "smtp.local"
-  smtp_port: 587
-  smtp_username: ""
-  smtp_password: ""
-  from_address: "alerts@example.com"
-  to_addresses: ["ops@example.com"]
-  use_tls: true
-  timeout_seconds: 10
-  subject: "SentinelTray Alert"
-  retry_attempts: 2
-  retry_backoff_seconds: 3
-  dry_run: false

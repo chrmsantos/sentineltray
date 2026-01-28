@@ -8,7 +8,6 @@ from threading import Lock
 @dataclass(frozen=True)
 class StatusSnapshot:
     running: bool
-    paused: bool
     last_scan: str
     last_match: str
     last_match_at: str
@@ -23,7 +22,6 @@ class StatusStore:
     def __init__(self) -> None:
         self._lock = Lock()
         self._running = False
-        self._paused = False
         self._last_scan = ""
         self._last_match = ""
         self._last_match_at = ""
@@ -36,10 +34,6 @@ class StatusStore:
     def set_running(self, value: bool) -> None:
         with self._lock:
             self._running = value
-
-    def set_paused(self, value: bool) -> None:
-        with self._lock:
-            self._paused = value
 
     def set_last_scan(self, value: str) -> None:
         with self._lock:
@@ -77,7 +71,6 @@ class StatusStore:
         with self._lock:
             return StatusSnapshot(
                 running=self._running,
-                paused=self._paused,
                 last_scan=self._last_scan,
                 last_match=self._last_match,
                 last_match_at=self._last_match_at,
@@ -118,7 +111,6 @@ def format_status(
     poll_interval_seconds: int | None = None,
 ) -> str:
     running = "yes" if snapshot.running else "no"
-    paused = "yes" if snapshot.paused else "no"
     phrase_label = phrase_regex or "<any text>"
     window_label = window_title_regex or "<configured window>"
     last_scan = _format_timestamp(snapshot.last_scan)
@@ -127,7 +119,6 @@ def format_status(
     last_match_at = _format_timestamp(snapshot.last_match_at)
     lines = [
         f"Running: {running}",
-        f"Paused: {paused}",
         f"Monitored window: {window_label}",
         f"Monitored text: {phrase_label}",
         f"Last check: {last_scan}",

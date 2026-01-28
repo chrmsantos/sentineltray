@@ -4,7 +4,6 @@ from sentineltray.status import StatusStore, format_status
 def test_status_store_snapshot() -> None:
     store = StatusStore()
     store.set_running(True)
-    store.set_paused(True)
     store.set_last_scan("2026-01-19T23:00:00-03:00")
     store.set_last_match("2026-01-19T23:00:00-03:00")
     store.set_last_send("2026-01-19T23:00:00-03:00")
@@ -16,7 +15,6 @@ def test_status_store_snapshot() -> None:
 
     snapshot = store.snapshot()
     assert snapshot.running is True
-    assert snapshot.paused is True
     assert snapshot.last_scan == "2026-01-19T23:00:00-03:00"
     assert snapshot.last_match == "2026-01-19T23:00:00-03:00"
     assert snapshot.last_send == "2026-01-19T23:00:00-03:00"
@@ -32,7 +30,6 @@ def test_status_store_snapshot() -> None:
         poll_interval_seconds=60,
     )
     assert "Running: yes" in text
-    assert "Paused: yes" in text
     assert "19-01-2026 - 23:00" in text
     assert "Monitored window: APP" in text
     assert "Monitored text: ALERT" in text
