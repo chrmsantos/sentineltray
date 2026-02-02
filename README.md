@@ -208,8 +208,7 @@ monitors:
 - Monitor failures use a per-monitor circuit breaker and local backoff to avoid alert storms.
 - Email delivery failures are queued locally and retried with exponential backoff.
 - Error notifications are rate-limited via error_notification_cooldown_seconds.
-- A startup test message is sent via email on each run to confirm delivery.
-- Periodic healthchecks send uptime and last activity via email.
+- Startup test and periodic healthchecks update status/logs but do not send email.
 - Minimized windows are restored to read text.
 - When allow_window_restore is false, the app avoids minimizing other windows.
 - Phrase matching ignores accents, is case-insensitive, and matches partial text occurrences.
