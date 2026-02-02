@@ -306,6 +306,13 @@ class Notifier:
         category: str,
         force_send: bool = False,
     ) -> bool:
+        if category not in {"send", "error"}:
+            LOGGER.info(
+                "Email notification suppressed for category %s",
+                category,
+                extra={"category": category},
+            )
+            return False
         if self.config.log_only_mode and not force_send:
             LOGGER.info(
                 "Log-only mode active, skipping send",
@@ -616,7 +623,7 @@ class Notifier:
             sent_direct = False
             queued_any = False
             for monitor in self._monitors:
-                if self._send_message(monitor, message, category="send", force_send=True):
+                if self._send_message(monitor, message, category="info", force_send=True):
                     sent_any = True
                     if monitor.last_send_queued:
                         queued_any = True
@@ -650,15 +657,15 @@ class Notifier:
             sent_direct = False
             queued_any = False
             for monitor in self._monitors:
-                if self._send_message(monitor, safe_message, category="send"):
+                if self._send_message(monitor, safe_message, category="info"):
                     sent_any = True
                     if monitor.last_send_queued:
                         queued_any = True
                     else:
                         sent_direct = True
+            self.status.set_last_healthcheck(_now_iso())
             if sent_any or self.config.log_only_mode:
                 self.status.set_last_send(_now_iso())
-                self.status.set_last_healthcheck(_now_iso())
                 if sent_direct:
                     LOGGER.info("Sent healthcheck message", extra={"category": "send"})
                 elif queued_any:

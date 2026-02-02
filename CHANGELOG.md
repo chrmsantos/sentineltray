@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-02
+
+- Notifications: suppressed non-alert informational emails (startup test, healthcheck); only match and error emails are sent.
+
 ## 2026-01-28 (beta.9)
 
 - Performance: cached compiled phrase regex and reduced logging overhead.

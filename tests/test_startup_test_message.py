@@ -59,5 +59,5 @@ def test_send_startup_test_message_sends_and_updates_status() -> None:
     notifier._send_startup_test()
 
     snapshot = status.snapshot()
-    assert sent == ["info: startup test message"]
-    assert snapshot.last_send
+    assert sent == []
+    assert snapshot.last_send == ""

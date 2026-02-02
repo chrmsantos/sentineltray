@@ -62,8 +62,7 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
     notifier._send_healthcheck()
 
     snapshot = status.snapshot()
-    assert sent
-    assert sent[0].startswith("info:")
-    assert "Em execu" in sent[0]
+    assert sent == []
+    assert snapshot.last_send == "s1"
     assert snapshot.last_healthcheck
     assert snapshot.uptime_seconds >= 0
