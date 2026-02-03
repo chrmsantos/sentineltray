@@ -4,6 +4,8 @@
 
 - Notifications: drop info-category emails to avoid "SentinelTray Info" subjects.
 - Scanning: when the target window is open, restore if minimized, then enforce foreground and maximized before scanning.
+- Console: status header now shows EXECUTANDO/PARADO, error count, and last message sent indicator.
+- Console: display includes ERROS count and última mensagem line in the status header.
 
 ## 2026-02-02
 
