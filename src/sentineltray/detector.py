@@ -103,6 +103,41 @@ class WindowTextDetector:
             return False
         return False
 
+    def _force_foreground(self, window) -> None:
+        try:
+            if hasattr(window, "set_focus"):
+                window.set_focus()
+        except Exception:
+            LOGGER.debug("Failed to set focus", exc_info=True)
+        try:
+            if not hasattr(window, "handle"):
+                return
+            handle = window.handle
+            if not handle:
+                return
+            user32 = ctypes.windll.user32
+            user32.ShowWindow(handle, 3)
+            user32.BringWindowToTop(handle)
+            user32.SetForegroundWindow(handle)
+            user32.SetWindowPos(handle, -1, 0, 0, 0, 0, 0x0001 | 0x0002)
+            user32.SetWindowPos(handle, -2, 0, 0, 0, 0, 0x0001 | 0x0002)
+        except Exception:
+            LOGGER.debug("Failed to force window foreground", exc_info=True)
+
+    def _ensure_foreground_and_maximized(self, window) -> None:
+        if not self._window_is_foreground(window):
+            self._force_foreground(window)
+        if not self._window_is_maximized(window):
+            try:
+                if hasattr(window, "maximize"):
+                    window.maximize()
+            except Exception:
+                LOGGER.debug("Failed to maximize window", exc_info=True)
+        if not self._window_is_foreground(window):
+            raise WindowUnavailableError("Target window not in foreground")
+        if not self._window_is_maximized(window):
+            raise WindowUnavailableError("Target window not maximized")
+
     def _select_best_window(self, desktop: Desktop):
         candidates = desktop.windows(title_re=self._window_title_regex)
         if not candidates:
@@ -172,19 +207,13 @@ class WindowTextDetector:
         window = self._get_window()
         if not self._window_exists(window, timeout=1.0):
             raise WindowUnavailableError("Target window not found")
-        if not self._window_is_foreground(window):
-            raise WindowUnavailableError("Target window not in foreground")
-        if not self._window_is_maximized(window):
-            raise WindowUnavailableError("Target window not maximized")
+        self._ensure_foreground_and_maximized(window)
 
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
         if not self._window_exists(window, timeout=1.0):
             raise WindowUnavailableError("Target window not found")
-        if not self._window_is_foreground(window):
-            raise WindowUnavailableError("Target window not in foreground")
-        if not self._window_is_maximized(window):
-            raise WindowUnavailableError("Target window not maximized")
+        self._ensure_foreground_and_maximized(window)
 
         texts: list[str] = []
         try:
