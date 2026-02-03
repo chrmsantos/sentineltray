@@ -213,23 +213,37 @@ class WindowTextDetector:
                     return self._last_window
             except Exception:
                 self._last_window = None
-        desktop = Desktop(backend="uia")
-        try:
-            window_spec = desktop.window(title_re=self._window_title_regex)
-        except ElementAmbiguousError:
-            return self._select_best_window(desktop)
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                desktop = Desktop(backend="uia")
+                try:
+                    window_spec = desktop.window(title_re=self._window_title_regex)
+                except ElementAmbiguousError:
+                    return self._select_best_window(desktop)
 
-        try:
-            window = window_spec.wrapper_object()
-            self._last_window = window
-            return window
-        except ElementAmbiguousError:
-            window = self._select_best_window(desktop)
-            self._last_window = window
-            return window
-        except Exception:
-            self._last_window = window_spec
-            return window_spec
+                try:
+                    window = window_spec.wrapper_object()
+                    self._last_window = window
+                    return window
+                except ElementAmbiguousError:
+                    window = self._select_best_window(desktop)
+                    self._last_window = window
+                    return window
+                except Exception:
+                    self._last_window = window_spec
+                    return window_spec
+            except Exception as exc:
+                last_exc = exc
+                self._log_throttled(
+                    logging.WARNING,
+                    "window_lookup_failed",
+                    "Window lookup failed (attempt %s/3): %s",
+                    attempt + 1,
+                    exc,
+                )
+                time.sleep(0.5 * (2**attempt))
+        raise WindowUnavailableError("Target window lookup failed") from last_exc
 
     def check_ready(self) -> None:
         window = self._get_window()

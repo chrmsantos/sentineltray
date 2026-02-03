@@ -8,6 +8,7 @@ import logging
 import socket
 import re
 import time
+from uuid import uuid4
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +17,7 @@ from typing import Any, cast
 
 from .config import AppConfig, MonitorConfig, get_project_root
 from .detector import WindowTextDetector, WindowUnavailableError
-from .logging_setup import sanitize_text, setup_logging
+from .logging_setup import sanitize_text, scan_context, setup_logging
 from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, EmailSender, build_sender
@@ -417,6 +418,11 @@ class Notifier:
                 )
 
     def scan_once(self) -> None:
+        scan_id = uuid4().hex
+        with scan_context(scan_id):
+            self._scan_once_impl()
+
+    def _scan_once_impl(self) -> None:
         self.status.set_last_scan(_now_iso())
         any_match = False
         self._last_scan_error = False
@@ -771,6 +777,7 @@ class Notifier:
                         extra={"category": "send"},
                     )
         self._queue_stats = total
+        self.status.set_email_queue_stats(total)
 
     def run_loop(self, stop_event: Event, manual_scan_event: Event | None = None) -> None:
         setup_logging(

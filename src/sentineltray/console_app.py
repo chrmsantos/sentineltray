@@ -27,7 +27,7 @@ from .config import (
     load_config,
 )
 from .security_utils import parse_payload
-from .status import StatusStore
+from .status import StatusStore, format_timestamp
 
 LOGGER = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ def _hash_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _prune_files(path: Path, pattern: str, keep: int = 5) -> None:
+def _prune_files(path: Path, pattern: str, keep: int = 3) -> None:
     entries = sorted(
         path.glob(pattern),
         key=lambda item: item.stat().st_mtime,
@@ -238,7 +238,7 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig 
             temp_path = data_dir / "config.local.yaml.edit"
             template_text = _read_template_config_text()
 
-            _prune_files(data_dir, "config.local.yaml.edit.*", keep=5)
+            _prune_files(data_dir, "config.local.yaml.edit.*", keep=3)
 
             if temp_path.exists():
                 edit_process = subprocess.Popen(["notepad.exe", str(temp_path)], text=True)
@@ -317,7 +317,7 @@ def _write_config_error_details(message: str) -> Path:
         except Exception:
             pass
     path.write_text(message.strip() + "\n", encoding="utf-8")
-    _prune_files(log_dir, "config_error*.txt", keep=5)
+    _prune_files(log_dir, "config_error*.txt", keep=3)
     return path
 
 
@@ -335,12 +335,21 @@ def clear_screen() -> None:
 def _menu_header(status: StatusStore) -> list[str]:
     snapshot = status.snapshot()
     state = "EXECUTANDO" if snapshot.running else "PARADO"
-    last_message = "ENVIADA" if snapshot.last_send else "NENHUMA"
+    last_send_at = format_timestamp(snapshot.last_send)
+    last_message = f"ENVIADA ({last_send_at})" if last_send_at else "NENHUMA"
+    queue = snapshot.email_queue
+    queue_line = (
+        "Fila e-mail: "
+        f"{queue.get('queued', 0)} pendentes, "
+        f"{queue.get('deferred', 0)} atrasados, "
+        f"{queue.get('failed', 0)} falhas"
+    )
     return [
         "SentinelTray - Console",
         f"Status atual: {state}",
         f"ERROS: {snapshot.error_count}",
         f"Última mensagem: {last_message}",
+        queue_line,
         "",
     ]
 
