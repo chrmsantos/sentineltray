@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-03
+
+- Notifications: drop info-category emails to avoid "SentinelTray Info" subjects.
+
 ## 2026-02-02
 
 - Notifications: suppressed non-alert informational emails (startup test, healthcheck); only match and error emails are sent.
