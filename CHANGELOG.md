@@ -3,6 +3,7 @@
 ## 2026-02-03
 
 - Notifications: drop info-category emails to avoid "SentinelTray Info" subjects.
+- Scanning: only proceed when the target window is open, foreground, and maximized; no window state changes.
 
 ## 2026-02-02
 

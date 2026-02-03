@@ -209,8 +209,7 @@ monitors:
 - Email delivery failures are queued locally and retried with exponential backoff.
 - Error notifications are rate-limited via error_notification_cooldown_seconds.
 - Startup test and periodic healthchecks update status/logs but do not send email.
-- Minimized windows are restored to read text.
-- When allow_window_restore is false, the app avoids minimizing other windows.
+- Scans only run when the target window is open, foreground, and maximized; window state is not altered.
 - Phrase matching ignores accents, is case-insensitive, and matches partial text occurrences.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.

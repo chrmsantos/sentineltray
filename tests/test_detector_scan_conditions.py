@@ -1,0 +1,84 @@
+from __future__ import annotations
+
+import pytest
+
+from sentineltray.detector import WindowTextDetector, WindowUnavailableError
+
+
+class FakeElement:
+    def __init__(self, text: str) -> None:
+        self._text = text
+
+    def window_text(self) -> str:
+        return self._text
+
+
+class FakeWindow:
+    def __init__(
+        self,
+        *,
+        exists: bool = True,
+        foreground: bool = True,
+        maximized: bool = True,
+    ) -> None:
+        self._exists = exists
+        self._foreground = foreground
+        self._maximized = maximized
+
+    def exists(self, timeout: float = 0.0) -> bool:
+        return self._exists
+
+    def is_visible(self) -> bool:
+        return self._exists
+
+    def has_focus(self) -> bool:
+        return self._foreground
+
+    def is_maximized(self) -> bool:
+        return self._maximized
+
+    def window_text(self) -> str:
+        return "Target App"
+
+    def descendants(self):
+        return [FakeElement("ALERT"), FakeElement("Other")]
+
+
+def test_scan_requires_foreground_and_maximized(monkeypatch: pytest.MonkeyPatch) -> None:
+    detector = WindowTextDetector("APP")
+    monkeypatch.setattr(detector, "_get_window", lambda: FakeWindow())
+
+    matches = detector.find_matches("ALERT")
+    assert matches == ["ALERT"]
+
+
+def test_scan_rejects_background_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    detector = WindowTextDetector("APP")
+    monkeypatch.setattr(
+        detector,
+        "_get_window",
+        lambda: FakeWindow(foreground=False),
+    )
+
+    with pytest.raises(WindowUnavailableError, match="foreground"):
+        detector.find_matches("ALERT")
+
+
+def test_scan_rejects_non_maximized_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    detector = WindowTextDetector("APP")
+    monkeypatch.setattr(
+        detector,
+        "_get_window",
+        lambda: FakeWindow(maximized=False),
+    )
+
+    with pytest.raises(WindowUnavailableError, match="maximized"):
+        detector.find_matches("ALERT")
+
+
+def test_scan_rejects_missing_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    detector = WindowTextDetector("APP")
+    monkeypatch.setattr(detector, "_get_window", lambda: FakeWindow(exists=False))
+
+    with pytest.raises(WindowUnavailableError, match="not found"):
+        detector.find_matches("ALERT")
