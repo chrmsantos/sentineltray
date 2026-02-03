@@ -106,6 +106,12 @@ class SmtpEmailSender(EmailSender):
             raise ValueError("to_addresses is required")
 
         category, body = _build_body(message)
+        if category == "Info":
+            LOGGER.info(
+                "Info notification suppressed",
+                extra={"category": "send"},
+            )
+            return
 
         email = EmailMessage()
         email["From"] = self.config.from_address

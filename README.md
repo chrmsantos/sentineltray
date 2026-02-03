@@ -224,6 +224,7 @@ monitors:
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
 - Match alert emails use subject "SentinelTray Match Alert"; error alerts use "SentinelTray Error Alert".
+- Info-category emails are suppressed; subjects like "SentinelTray Info" are never sent.
 - Portable encryption stores a local key file; keep it with the config folder for portability.
 - DPAPI-encrypted configs cannot be decrypted on other machines/users.
 - Config validation rejects invalid intervals and paths at startup.
