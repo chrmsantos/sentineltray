@@ -6,6 +6,9 @@
 - Scanning: when the target window is open, restore if minimized, then enforce foreground and maximized before scanning.
 - Console: status header now shows EXECUTANDO/PARADO, error count, and last message sent indicator.
 - Console: display includes ERROS count and última mensagem line in the status header.
+- Security: SMTP password must come from SENTINELTRAY_SMTP_PASSWORD; config secrets are rejected.
+- Logging: retention capped to 3 files and scan_id added to text/JSON logs; info logs are deduplicated.
+- Config: first run requires dry_run=true unless log-only mode is enabled.
 
 ## 2026-02-02
 

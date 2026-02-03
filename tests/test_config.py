@@ -23,8 +23,8 @@ def test_load_config(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     assert config.log_console_level == "WARNING"
     assert config.log_console_enabled is True
     assert config.log_max_bytes == 5000000
-    assert config.log_backup_count == 5
-    assert config.log_run_files_keep == 5
+    assert config.log_backup_count == 3
+    assert config.log_run_files_keep == 3
     assert config.telemetry_file == str(log_root / "telemetry.json")
     assert config.config_version == 1
 
@@ -33,14 +33,14 @@ def test_log_retention_is_capped(monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     config_path = tmp_path / "config.yaml"
     base_config = (Path(__file__).parent / "data" / "config.yaml").read_text(encoding="utf-8")
-    updated = base_config.replace("log_backup_count: 5", "log_backup_count: 12")
-    updated = updated.replace("log_run_files_keep: 5", "log_run_files_keep: 9")
+    updated = base_config.replace("log_backup_count: 3", "log_backup_count: 12")
+    updated = updated.replace("log_run_files_keep: 3", "log_run_files_keep: 9")
     config_path.write_text(updated, encoding="utf-8")
 
     config = load_config(str(config_path))
 
-    assert config.log_backup_count == 5
-    assert config.log_run_files_keep == 5
+    assert config.log_backup_count == 3
+    assert config.log_run_files_keep == 3
 
 
 def test_load_config_with_monitors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -92,8 +92,8 @@ def test_load_config_with_monitors(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
                 "log_console_level: 'WARNING'",
                 "log_console_enabled: true",
                 "log_max_bytes: 5000000",
-                "log_backup_count: 5",
-                "log_run_files_keep: 5",
+                "log_backup_count: 3",
+                "log_run_files_keep: 3",
                 "telemetry_file: 'logs/telemetry.json'",
                 "allow_window_restore: true",
                 "log_only_mode: false",

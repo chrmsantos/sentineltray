@@ -164,8 +164,8 @@ def _setup_boot_logging() -> None:
         log_console_level="INFO",
         log_console_enabled=True,
         log_max_bytes=1_000_000,
-        log_backup_count=5,
-        log_run_files_keep=5,
+        log_backup_count=3,
+        log_run_files_keep=3,
         app_version=__version_label__,
         release_date=__release_date__,
         commit_hash="",
@@ -181,6 +181,22 @@ def _ensure_windows() -> None:
         extra={"category": "startup"},
     )
     raise SystemExit("SentinelTray requires Windows.")
+
+
+def _require_dry_run_on_first_use(config) -> None:
+    try:
+        state_path = Path(config.state_file)
+    except Exception:
+        return
+    if state_path.exists():
+        return
+    if config.log_only_mode:
+        return
+    for monitor in config.monitors:
+        if not monitor.email.dry_run:
+            raise ValueError(
+                "First run requires dry_run=true to validate configuration safely."
+            )
 
 
 def main() -> int:
@@ -206,6 +222,7 @@ def main() -> int:
             extra={"category": "startup"},
         )
         config = load_config_secure(str(local_path))
+        _require_dry_run_on_first_use(config)
         encrypted_path = get_encrypted_config_path(local_path)
         if local_path.exists() and not encrypted_path.exists():
             try:
