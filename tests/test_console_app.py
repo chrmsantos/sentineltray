@@ -7,6 +7,7 @@ import pytest
 
 from sentineltray import console_app
 from sentineltray.config import AppConfig, EmailConfig, MonitorConfig
+from sentineltray.status import StatusStore
 
 
 def _make_config(tmp_path: Path) -> AppConfig:
@@ -119,3 +120,16 @@ def test_run_console_config_error_details(
     console_app.run_console_config_error("details")
 
     assert "path" in opened
+
+
+def test_menu_header_status_lines() -> None:
+    status = StatusStore()
+    status.set_running(True)
+    status.increment_error_count()
+    status.set_last_send("2026-02-03T10:00:00-03:00")
+
+    header = console_app._menu_header(status)
+
+    assert "Status atual: EXECUTANDO" in header
+    assert "ERROS: 1" in header
+    assert "Última mensagem: ENVIADA" in header

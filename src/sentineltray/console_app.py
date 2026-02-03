@@ -334,10 +334,13 @@ def clear_screen() -> None:
 
 def _menu_header(status: StatusStore) -> list[str]:
     snapshot = status.snapshot()
-    state = "EM EXECUÇÃO" if snapshot.running else "PARADO"
+    state = "EXECUTANDO" if snapshot.running else "PARADO"
+    last_message = "ENVIADA" if snapshot.last_send else "NENHUMA"
     return [
         "SentinelTray - Console",
         f"Status atual: {state}",
+        f"ERROS: {snapshot.error_count}",
+        f"Última mensagem: {last_message}",
         "",
     ]
 
