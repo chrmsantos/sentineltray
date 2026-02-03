@@ -9,6 +9,7 @@ import os
 import subprocess
 import time
 from collections.abc import MutableMapping
+from getpass import getpass
 from pathlib import Path
 from threading import Event, Thread
 from typing import Any, Callable
@@ -25,6 +26,7 @@ from .config import (
     get_user_data_dir,
     get_user_log_dir,
     load_config,
+    load_config_secure,
 )
 from .security_utils import parse_payload
 from .status import StatusStore, format_timestamp
@@ -427,6 +429,8 @@ def run_console(config: AppConfig) -> None:
 def run_console_config_error(error_details: str) -> None:
     on_open, finalize_config_edit = _create_config_editor()
     details_path = _write_config_error_details(error_details)
+    local_path = get_user_data_dir() / "config.local.yaml"
+    supports_smtp_prompt = "SENTINELTRAY_SMTP_PASSWORD" in error_details
     try:
         while True:
             clear_screen()
@@ -437,6 +441,8 @@ def run_console_config_error(error_details: str) -> None:
             print("Comandos:")
             print("  [C] Editar config")
             print("  [D] Abrir detalhes")
+            if supports_smtp_prompt:
+                print("  [P] Definir senha SMTP")
             print("  [Q] Sair")
             print("")
             try:
@@ -449,6 +455,22 @@ def run_console_config_error(error_details: str) -> None:
                 on_open()
             elif command in ("d", "details", "detalhes"):
                 _open_text_file(details_path)
+            elif supports_smtp_prompt and command in ("p", "smtp"):
+                print("")
+                username = input("Usuário SMTP (opcional): ").strip()
+                password = getpass("Senha SMTP (SENTINELTRAY_SMTP_PASSWORD): ").strip()
+                if password:
+                    os.environ["SENTINELTRAY_SMTP_PASSWORD"] = password
+                if username:
+                    os.environ["SENTINELTRAY_SMTP_USERNAME"] = username
+                try:
+                    config = load_config_secure(str(local_path))
+                except Exception as exc:
+                    print(f"Falha ao validar config: {exc}")
+                    time.sleep(2)
+                    continue
+                run_console(config)
+                return
             finalize_config_edit()
     except KeyboardInterrupt:
         return

@@ -9,6 +9,7 @@
 - Security: SMTP password must come from SENTINELTRAY_SMTP_PASSWORD; config secrets are rejected.
 - Logging: retention capped to 3 files and scan_id added to text/JSON logs; info logs are deduplicated.
 - Config: first run requires dry_run=true unless log-only mode is enabled.
+- Console: config error screen can prompt for SMTP env variables and retry.
 
 ## 2026-02-02
 

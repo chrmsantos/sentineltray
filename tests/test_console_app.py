@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -120,6 +121,41 @@ def test_run_console_config_error_details(
     console_app.run_console_config_error("details")
 
     assert "path" in opened
+
+
+def test_run_console_config_error_smtp_prompt(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setenv("SENTINELTRAY_DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(console_app, "clear_screen", lambda: None)
+    monkeypatch.setattr(console_app, "_create_config_editor", lambda: (lambda: None, lambda: None))
+
+    inputs: Iterator[str] = iter(["p", "smtp-user"])
+
+    def fake_input(_prompt: str) -> str:
+        return next(inputs)
+
+    monkeypatch.setattr(console_app, "input", fake_input)
+    monkeypatch.setattr(console_app, "getpass", lambda _prompt: "smtp-pass")
+
+    config = _make_config(tmp_path)
+    calls: dict[str, Any] = {"config": None}
+
+    def fake_load(_path: str) -> AppConfig:
+        return config
+
+    def fake_run_console(value: AppConfig) -> None:
+        calls["config"] = value
+
+    monkeypatch.setattr(console_app, "load_config_secure", fake_load)
+    monkeypatch.setattr(console_app, "run_console", fake_run_console)
+
+    console_app.run_console_config_error("Missing SENTINELTRAY_SMTP_PASSWORD")
+
+    assert os.environ["SENTINELTRAY_SMTP_PASSWORD"] == "smtp-pass"
+    assert os.environ["SENTINELTRAY_SMTP_USERNAME"] == "smtp-user"
+    assert calls["config"] is config
 
 
 def test_menu_header_status_lines() -> None:
