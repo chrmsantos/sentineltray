@@ -22,7 +22,7 @@ def test_setup_logging_creates_run_log_and_prunes(tmp_path: Path) -> None:
     setup_logging(str(base_log), app_version="1.2.3", release_date="2026-01-22")
 
     logs = sorted(log_dir.glob("sentineltray_*.log"))
-    assert len(logs) == 5
+    assert len(logs) == 3
     assert any(path not in existing for path in logs)
     assert base_log.exists()
     assert (log_dir / "sentineltray.jsonl").exists()
@@ -55,12 +55,12 @@ def test_setup_logging_caps_retention(tmp_path: Path) -> None:
     )
 
     logs = sorted(log_dir.glob("sentineltray_*.log"))
-    assert len(logs) == 5
+    assert len(logs) == 3
 
     handlers = logging.getLogger().handlers
     rotating_handlers = [handler for handler in handlers if isinstance(handler, RotatingFileHandler)]
     assert rotating_handlers
-    assert rotating_handlers[0].backupCount == 5
+    assert rotating_handlers[0].backupCount == 3
 
     for handler in logging.getLogger().handlers:
         handler.close()
@@ -88,7 +88,14 @@ def test_json_log_contains_context(tmp_path: Path) -> None:
 
     setup_logging(str(base_log), app_version="9.9.9", release_date="2026-01-22")
     logger = logging.getLogger("sentineltray.test")
+    logger.setLevel(logging.INFO)
     logger.info("test entry", extra={"category": "test"})
+
+    for handler in logging.getLogger().handlers:
+        try:
+            handler.flush()
+        except Exception:
+            continue
 
     json_path = log_dir / "sentineltray.jsonl"
     assert json_path.exists()

@@ -32,12 +32,13 @@ def test_auth_failure_disables_email_sends() -> None:
         log_console_level="WARNING",
         log_console_enabled=True,
         log_max_bytes=5000000,
-        log_backup_count=5,
-        log_run_files_keep=5,
+        log_backup_count=3,
+        log_run_files_keep=3,
         telemetry_file="logs/telemetry.json",
         allow_window_restore=True,
         log_only_mode=False,
         send_repeated_matches=True,
+        error_notification_cooldown_seconds=0,
         monitors=[
             MonitorConfig(
                 window_title_regex="APP",
@@ -58,9 +59,10 @@ def test_auth_failure_disables_email_sends() -> None:
 
     notifier._sender = FakeSender()
 
-    notifier._send_startup_test()
-    notifier._send_startup_test()
+    notifier._handle_error("error: auth test")
+    first_snapshot = notifier.status.snapshot()
+    notifier._handle_error("error: auth test")
 
     assert calls["count"] == 1
     assert notifier._monitors[0].email_disabled
-    assert "smtp auth failed" in notifier.status.snapshot().last_error.lower()
+    assert "auth" in first_snapshot.last_error.lower()

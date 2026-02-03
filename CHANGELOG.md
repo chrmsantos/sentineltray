@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-02-03
+## 2026-02-03 (beta.10)
 
 - Notifications: drop info-category emails to avoid "SentinelTray Info" subjects.
 - Scanning: when the target window is open, restore if minimized, then enforce foreground and maximized before scanning.
