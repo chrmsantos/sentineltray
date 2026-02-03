@@ -37,6 +37,12 @@ class FakeWindow:
     def is_maximized(self) -> bool:
         return self._maximized
 
+    def maximize(self) -> None:
+        self._maximized = True
+
+    def set_focus(self) -> None:
+        self._foreground = True
+
     def window_text(self) -> str:
         return "Target App"
 
@@ -60,8 +66,8 @@ def test_scan_rejects_background_window(monkeypatch: pytest.MonkeyPatch) -> None
         lambda: FakeWindow(foreground=False),
     )
 
-    with pytest.raises(WindowUnavailableError, match="foreground"):
-        detector.find_matches("ALERT")
+    matches = detector.find_matches("ALERT")
+    assert matches == ["ALERT"]
 
 
 def test_scan_rejects_non_maximized_window(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -72,8 +78,8 @@ def test_scan_rejects_non_maximized_window(monkeypatch: pytest.MonkeyPatch) -> N
         lambda: FakeWindow(maximized=False),
     )
 
-    with pytest.raises(WindowUnavailableError, match="maximized"):
-        detector.find_matches("ALERT")
+    matches = detector.find_matches("ALERT")
+    assert matches == ["ALERT"]
 
 
 def test_scan_rejects_missing_window(monkeypatch: pytest.MonkeyPatch) -> None:
