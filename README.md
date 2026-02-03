@@ -209,7 +209,7 @@ monitors:
 - Email delivery failures are queued locally and retried with exponential backoff.
 - Error notifications are rate-limited via error_notification_cooldown_seconds.
 - Startup test and periodic healthchecks update status/logs but do not send email.
-- When the target window is open, scans ensure it is foreground and maximized before reading text.
+- When the target window is open, scans restore (if minimized), then ensure it is foreground and maximized before reading text.
 - Phrase matching ignores accents, is case-insensitive, and matches partial text occurrences.
 - Consecutive errors trigger exponential backoff before the next scan.
 - Repeated messages are debounced by time window to avoid spam.
