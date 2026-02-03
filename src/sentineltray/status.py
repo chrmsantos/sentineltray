@@ -16,6 +16,7 @@ class StatusSnapshot:
     last_healthcheck: str
     uptime_seconds: int
     error_count: int
+    email_queue: dict[str, int]
 
 
 class StatusStore:
@@ -30,6 +31,13 @@ class StatusStore:
         self._last_healthcheck = ""
         self._uptime_seconds = 0
         self._error_count = 0
+        self._email_queue = {
+            "queued": 0,
+            "sent": 0,
+            "failed": 0,
+            "deferred": 0,
+            "oldest_age_seconds": 0,
+        }
 
     def set_running(self, value: bool) -> None:
         with self._lock:
@@ -67,6 +75,10 @@ class StatusStore:
         with self._lock:
             self._error_count += 1
 
+    def set_email_queue_stats(self, value: dict[str, int]) -> None:
+        with self._lock:
+            self._email_queue = dict(value)
+
     def snapshot(self) -> StatusSnapshot:
         with self._lock:
             return StatusSnapshot(
@@ -79,6 +91,7 @@ class StatusStore:
                 last_healthcheck=self._last_healthcheck,
                 uptime_seconds=self._uptime_seconds,
                 error_count=self._error_count,
+                email_queue=dict(self._email_queue),
             )
 
 
@@ -90,6 +103,10 @@ def _format_timestamp(value: str) -> str:
         return timestamp.strftime("%d-%m-%Y - %H:%M")
     except ValueError:
         return value
+
+
+def format_timestamp(value: str) -> str:
+    return _format_timestamp(value)
 
 
 def _format_next_check(last_scan: str, poll_interval_seconds: int | None) -> str:
@@ -128,6 +145,7 @@ def format_status(
         f"Last alert sent: {_format_timestamp(snapshot.last_send)}",
         f"Last error recorded: {_format_timestamp(snapshot.last_error)}",
         f"Last health summary: {_format_timestamp(snapshot.last_healthcheck)}",
+        f"Email queue pending: {snapshot.email_queue.get('queued', 0)}",
         f"Uptime (seconds): {snapshot.uptime_seconds}",
         f"Total errors: {snapshot.error_count}",
     ]

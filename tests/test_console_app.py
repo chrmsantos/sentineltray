@@ -127,9 +127,19 @@ def test_menu_header_status_lines() -> None:
     status.set_running(True)
     status.increment_error_count()
     status.set_last_send("2026-02-03T10:00:00-03:00")
+    status.set_email_queue_stats(
+        {
+            "queued": 2,
+            "sent": 1,
+            "failed": 0,
+            "deferred": 1,
+            "oldest_age_seconds": 120,
+        }
+    )
 
     header = console_app._menu_header(status)
 
     assert "Status atual: EXECUTANDO" in header
     assert "ERROS: 1" in header
-    assert "Última mensagem: ENVIADA" in header
+    assert "Última mensagem: ENVIADA (03-02-2026 - 10:00)" in header
+    assert "Fila e-mail: 2 pendentes, 1 atrasados, 0 falhas" in header

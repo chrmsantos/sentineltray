@@ -1,3 +1,5 @@
+import contextlib
+import contextvars
 import json
 import logging
 import os
@@ -12,7 +14,18 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path, PureWindowsPath
 from uuid import uuid4
 
-MAX_LOG_FILES = 5
+MAX_LOG_FILES = 3
+
+_SCAN_ID: contextvars.ContextVar[str] = contextvars.ContextVar("scan_id", default="")
+
+
+@contextlib.contextmanager
+def scan_context(scan_id: str) -> None:
+    token = _SCAN_ID.set(scan_id)
+    try:
+        yield
+    finally:
+        _SCAN_ID.reset(token)
 
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 WINDOWS_PATH_RE = re.compile(r"[A-Za-z]:\\[^\s]+")
@@ -51,6 +64,8 @@ class ContextFilter(logging.Filter):
             record.release_date = self._release_date
         if not hasattr(record, "commit_hash"):
             record.commit_hash = self._commit_hash
+        if not hasattr(record, "scan_id"):
+            record.scan_id = _SCAN_ID.get()
         if not hasattr(record, "hostname"):
             record.hostname = self._hostname
         if not hasattr(record, "platform"):
@@ -91,6 +106,31 @@ class RedactionFilter(logging.Filter):
         return True
 
 
+class DedupFilter(logging.Filter):
+    def __init__(self, *, window_seconds: int = 30) -> None:
+        super().__init__()
+        self._window_seconds = max(1, window_seconds)
+        self._lock = threading.Lock()
+        self._recent: dict[tuple[str, int, str, str], float] = {}
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.levelno >= logging.WARNING:
+            return True
+        key = (
+            record.name,
+            record.levelno,
+            record.getMessage(),
+            str(getattr(record, "category", "general")),
+        )
+        now = time.monotonic()
+        with self._lock:
+            last = self._recent.get(key)
+            if last is not None and (now - last) < self._window_seconds:
+                return False
+            self._recent[key] = now
+        return True
+
+
 class SanitizingFormatter(logging.Formatter):
     def formatException(self, ei) -> str:
         return sanitize_text(super().formatException(ei))
@@ -114,6 +154,7 @@ class JsonFormatter(logging.Formatter):
             "thread": record.thread,
             "thread_name": record.threadName,
             "session_id": getattr(record, "session_id", ""),
+            "scan_id": getattr(record, "scan_id", ""),
             "app_version": getattr(record, "app_version", ""),
             "release_date": getattr(record, "release_date", ""),
             "commit_hash": getattr(record, "commit_hash", ""),
@@ -197,8 +238,8 @@ def setup_logging(
     log_console_level: str = "WARNING",
     log_console_enabled: bool = True,
     log_max_bytes: int = 5_000_000,
-    log_backup_count: int = 5,
-    log_run_files_keep: int = 5,
+    log_backup_count: int = 3,
+    log_run_files_keep: int = 3,
     app_version: str | None = None,
     release_date: str | None = None,
     commit_hash: str | None = None,
@@ -228,7 +269,8 @@ def setup_logging(
 
     formatter = SanitizingFormatter(
         "%(asctime)s %(levelname)s %(category)s %(name)s %(filename)s:%(lineno)d "
-        "%(funcName)s %(process)d %(processName)s %(thread)d %(threadName)s %(message)s"
+        "%(funcName)s %(process)d %(processName)s %(thread)d %(threadName)s "
+        "scan_id=%(scan_id)s %(message)s"
     )
     json_formatter = JsonFormatter()
 
@@ -237,6 +279,7 @@ def setup_logging(
 
     effective_backup_count = min(MAX_LOG_FILES, max(0, log_backup_count))
     effective_run_files_keep = min(MAX_LOG_FILES, max(1, log_run_files_keep))
+    dedup_filter = DedupFilter()
 
     handlers: list[logging.Handler] = []
 
@@ -251,6 +294,7 @@ def setup_logging(
         rotating_handler.setLevel(resolved_level)
         rotating_handler.addFilter(CategoryFilter())
         rotating_handler.addFilter(RedactionFilter())
+        rotating_handler.addFilter(dedup_filter)
         rotating_handler.addFilter(context_filter)
         handlers.append(rotating_handler)
 
@@ -259,6 +303,7 @@ def setup_logging(
         run_handler.setLevel(resolved_level)
         run_handler.addFilter(CategoryFilter())
         run_handler.addFilter(RedactionFilter())
+        run_handler.addFilter(dedup_filter)
         run_handler.addFilter(context_filter)
         handlers.append(run_handler)
 
@@ -272,6 +317,7 @@ def setup_logging(
         json_handler.setLevel(resolved_level)
         json_handler.addFilter(CategoryFilter())
         json_handler.addFilter(RedactionFilter())
+        json_handler.addFilter(dedup_filter)
         json_handler.addFilter(context_filter)
         handlers.append(json_handler)
 
@@ -280,6 +326,7 @@ def setup_logging(
         json_run_handler.setLevel(resolved_level)
         json_run_handler.addFilter(CategoryFilter())
         json_run_handler.addFilter(RedactionFilter())
+        json_run_handler.addFilter(dedup_filter)
         json_run_handler.addFilter(context_filter)
         handlers.append(json_run_handler)
     except OSError as exc:
@@ -302,6 +349,7 @@ def setup_logging(
         console_handler.setLevel(resolved_console_level)
         console_handler.addFilter(CategoryFilter())
         console_handler.addFilter(RedactionFilter())
+        console_handler.addFilter(dedup_filter)
         console_handler.addFilter(context_filter)
         handlers.append(console_handler)
 
