@@ -23,7 +23,7 @@ from .security_utils import (
 from .path_utils import ensure_under_root, resolve_log_path, resolve_sensitive_path
 from .validation_utils import validate_email_address, validate_regex
 
-MAX_LOG_FILES = 5
+MAX_LOG_FILES = 3
 
 CURRENT_CONFIG_VERSION = 1
 
@@ -32,6 +32,22 @@ LOGGER = logging.getLogger(__name__)
 SUPPORTED_ENCRYPTION_METHODS = {"dpapi", "portable"}
 
 _CONFIG_MIGRATIONS: dict[int, Callable[[dict[str, Any]], dict[str, Any]]] = {}
+
+_DEFAULT_CONFIG_VALUES: dict[str, Any] = {
+    "send_repeated_matches": True,
+    "min_repeat_seconds": 0,
+    "error_notification_cooldown_seconds": 300,
+    "window_error_backoff_base_seconds": 5,
+    "window_error_backoff_max_seconds": 120,
+    "window_error_circuit_threshold": 3,
+    "window_error_circuit_seconds": 300,
+    "email_queue_file": "logs/email_queue.json",
+    "email_queue_max_items": 500,
+    "email_queue_max_age_seconds": 86400,
+    "email_queue_max_attempts": 10,
+    "email_queue_retry_base_seconds": 30,
+    "config_version": CURRENT_CONFIG_VERSION,
+}
 
 
 def _migrate_config_data(data: dict[str, Any]) -> dict[str, Any]:
@@ -56,6 +72,21 @@ def _migrate_config_data(data: dict[str, Any]) -> dict[str, Any]:
         version = int(migrated.get("config_version", version + 1))
     migrated["config_version"] = CURRENT_CONFIG_VERSION
     return migrated
+
+
+def _apply_config_defaults(data: dict[str, Any]) -> dict[str, Any]:
+    missing: list[str] = []
+    updated = dict(data)
+    for key, value in _DEFAULT_CONFIG_VALUES.items():
+        if key not in updated:
+            updated[key] = value
+            missing.append(key)
+    if missing:
+        LOGGER.warning(
+            "Applied defaults for missing config keys: %s",
+            ", ".join(sorted(missing)),
+        )
+    return updated
 
 
 def _get_project_root_from_file() -> Path:
@@ -297,7 +328,16 @@ def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, An
     return merged
 
 
-def _build_email_config(email_data: dict[str, Any]) -> EmailConfig:
+def _env_override(name: str, monitor_index: int | None) -> str | None:
+    base_key = f"SENTINELTRAY_{name}"
+    if monitor_index is not None:
+        indexed = os.environ.get(f"{base_key}_{monitor_index}")
+        if indexed:
+            return indexed
+    return os.environ.get(base_key)
+
+
+def _build_email_config(email_data: dict[str, Any], *, monitor_index: int | None) -> EmailConfig:
     to_raw = _get_required(email_data, "to_addresses")
     if isinstance(to_raw, str):
         to_addresses = [item.strip() for item in to_raw.split(",") if item.strip()]
@@ -310,11 +350,24 @@ def _build_email_config(email_data: dict[str, Any]) -> EmailConfig:
     else:
         raise ValueError("email.to_addresses must be a list or comma-separated string")
 
+    smtp_username = str(_get_required(email_data, "smtp_username"))
+    smtp_password = str(_get_required(email_data, "smtp_password"))
+    env_username = _env_override("SMTP_USERNAME", monitor_index)
+    env_password = _env_override("SMTP_PASSWORD", monitor_index)
+    if env_username:
+        smtp_username = env_username
+    if env_password:
+        smtp_password = env_password
+    if smtp_password and not env_password:
+        raise ValueError(
+            "smtp_password must be provided via SENTINELTRAY_SMTP_PASSWORD"
+        )
+
     return EmailConfig(
         smtp_host=str(_get_required(email_data, "smtp_host")),
         smtp_port=int(_get_required(email_data, "smtp_port")),
-        smtp_username=str(_get_required(email_data, "smtp_username")),
-        smtp_password=str(_get_required(email_data, "smtp_password")),
+        smtp_username=smtp_username,
+        smtp_password=smtp_password,
         from_address=str(_get_required(email_data, "from_address")),
         to_addresses=to_addresses,
         use_tls=bool(_get_required(email_data, "use_tls")),
@@ -327,17 +380,18 @@ def _build_email_config(email_data: dict[str, Any]) -> EmailConfig:
 
 
 def _build_config(data: dict[str, Any]) -> AppConfig:
-    data = _migrate_config_data(data)
+    data = _apply_config_defaults(_migrate_config_data(data))
     monitors: list[MonitorConfig] = []
     monitors_data = data.get("monitors")
     if not isinstance(monitors_data, list) or not monitors_data:
         raise ValueError("monitors must be a non-empty list")
-    for entry in cast(list[object], monitors_data):
+    for index, entry in enumerate(cast(list[object], monitors_data), start=1):
         if not isinstance(entry, dict):
             raise ValueError("monitors entries must be objects")
         entry_map = cast(dict[str, Any], entry)
         monitor_email = _build_email_config(
-            cast(dict[str, Any], _get_required(entry_map, "email"))
+            cast(dict[str, Any], _get_required(entry_map, "email")),
+            monitor_index=index,
         )
         monitors.append(
             MonitorConfig(
@@ -363,6 +417,32 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
             log_run_files_keep,
         )
         log_run_files_keep = MAX_LOG_FILES
+
+    defaults_applied: list[str] = []
+    if "send_repeated_matches" not in data:
+        defaults_applied.append("send_repeated_matches")
+    if "min_repeat_seconds" not in data:
+        defaults_applied.append("min_repeat_seconds")
+    if "error_notification_cooldown_seconds" not in data:
+        defaults_applied.append("error_notification_cooldown_seconds")
+    if "window_error_backoff_base_seconds" not in data:
+        defaults_applied.append("window_error_backoff_base_seconds")
+    if "window_error_backoff_max_seconds" not in data:
+        defaults_applied.append("window_error_backoff_max_seconds")
+    if "window_error_circuit_threshold" not in data:
+        defaults_applied.append("window_error_circuit_threshold")
+    if "window_error_circuit_seconds" not in data:
+        defaults_applied.append("window_error_circuit_seconds")
+    if "email_queue_file" not in data:
+        defaults_applied.append("email_queue_file")
+    if "email_queue_max_items" not in data:
+        defaults_applied.append("email_queue_max_items")
+    if "email_queue_max_age_seconds" not in data:
+        defaults_applied.append("email_queue_max_age_seconds")
+    if "email_queue_max_attempts" not in data:
+        defaults_applied.append("email_queue_max_attempts")
+    if "email_queue_retry_base_seconds" not in data:
+        defaults_applied.append("email_queue_retry_base_seconds")
 
     config = AppConfig(
         poll_interval_seconds=int(_get_required(data, "poll_interval_seconds")),
@@ -415,6 +495,11 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
     )
     config = _apply_sensitive_path_policy(config)
     _validate_config(config)
+    if defaults_applied:
+        logging.getLogger(__name__).info(
+            "Defaults applied for missing keys: %s",
+            ", ".join(defaults_applied),
+        )
     return config
 
 

@@ -32,7 +32,9 @@ Edit config.local.yaml and set:
 - monitors[].email.subject
 - monitors[].email.retry_attempts
 - monitors[].email.retry_backoff_seconds
-- monitors[].email.dry_run = false when ready to send
+- monitors[].email.dry_run = true on first run; set false after validation
+- monitors[].email.smtp_username via SENTINELTRAY_SMTP_USERNAME
+- monitors[].email.smtp_password via SENTINELTRAY_SMTP_PASSWORD
 - allow_window_restore, send_repeated_matches
 - log_only_mode
 - log_level, log_console_level, log_console_enabled
@@ -192,7 +194,7 @@ monitors:
 
 ## Notes
 
-- Logs are written per execution with detailed fields and kept with a max of 5 files in %SENTINELTRAY_DATA_DIR%\logs (values above 5 are capped).
+- Logs are written per execution with detailed fields and kept with a max of 3 files in %SENTINELTRAY_DATA_DIR%\logs (values above 3 are capped).
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - JSON logs are written alongside text logs in sentineltray.jsonl and per-run sentineltray_*.jsonl.
 - On Windows, the tray icon uses the main message loop for reliability. If it is not visible, check hidden tray icons.
