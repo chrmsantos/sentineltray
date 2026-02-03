@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ctypes
-from ctypes import wintypes
 import logging
 import re
 import time
@@ -69,27 +68,37 @@ class WindowTextDetector:
         except Exception:
             return False
 
-    def _window_has_area(self, window) -> bool:
+    def _window_is_foreground(self, window) -> bool:
         try:
-            if hasattr(window, "rectangle"):
-                rect = window.rectangle()
-                return rect.width() > 0 and rect.height() > 0
+            if hasattr(window, "has_focus") and window.has_focus():
+                return True
+        except Exception:
+            return False
+        try:
+            if hasattr(window, "is_active") and window.is_active():
+                return True
+        except Exception:
+            return False
+        try:
+            if hasattr(window, "handle"):
+                handle = window.handle
+                if handle:
+                    return ctypes.windll.user32.GetForegroundWindow() == handle
         except Exception:
             return False
         return False
 
-    def _window_is_visible(self, window) -> bool:
+    def _window_is_maximized(self, window) -> bool:
         try:
-            if hasattr(window, "is_visible"):
-                return bool(window.is_visible())
+            if hasattr(window, "is_maximized"):
+                return bool(window.is_maximized())
         except Exception:
             return False
-        return False
-
-    def _window_is_enabled(self, window) -> bool:
         try:
-            if hasattr(window, "is_enabled"):
-                return bool(window.is_enabled())
+            if hasattr(window, "handle"):
+                handle = window.handle
+                if handle:
+                    return bool(ctypes.windll.user32.IsZoomed(handle))
         except Exception:
             return False
         return False
@@ -163,150 +172,19 @@ class WindowTextDetector:
         window = self._get_window()
         if not self._window_exists(window, timeout=1.0):
             raise WindowUnavailableError("Target window not found")
-        if not self._window_has_area(window):
-            raise WindowUnavailableError("Target window has no visible area")
-        if not self._window_is_enabled(window):
-            raise WindowUnavailableError("Target window not enabled")
-
-    def _prepare_window(self, window) -> None:
-        try:
-            if hasattr(window, "is_minimized") and window.is_minimized():
-                window.restore()
-            if hasattr(window, "is_maximized") and not window.is_maximized():
-                if hasattr(window, "maximize"):
-                    window.maximize()
-            if hasattr(window, "set_focus"):
-                window.set_focus()
-            self._force_foreground(window)
-            self._click_title_bar(window)
-        except Exception as exc:
-            raise WindowUnavailableError("Target window could not be restored") from exc
-
-        last_exc: Exception | None = None
-        timeouts = (2, 3, 4)
-        for timeout in timeouts:
-            try:
-                window.wait("visible", timeout=timeout)
-                return
-            except Exception as exc:
-                last_exc = exc
-                self._log_throttled(
-                    logging.INFO,
-                    "window_not_visible",
-                    "Target window not visible (retrying)",
-                )
-                try:
-                    if hasattr(window, "restore"):
-                        window.restore()
-                    if hasattr(window, "set_focus"):
-                        window.set_focus()
-                    if hasattr(window, "is_maximized") and not window.is_maximized():
-                        if hasattr(window, "maximize"):
-                            window.maximize()
-                    self._force_foreground(window)
-                    self._click_title_bar(window)
-                except Exception:
-                    LOGGER.debug("Window restore retry failed", exc_info=True)
-                time.sleep(0.5)
-                try:
-                    window = self._get_window()
-                except Exception:
-                    continue
-        exists = self._window_exists(window, timeout=0.0)
-        has_area = self._window_has_area(window)
-        is_visible = self._window_is_visible(window)
-        is_enabled = self._window_is_enabled(window)
-        if exists and has_area:
-            if is_visible and is_enabled:
-                LOGGER.info(
-                    "Visibility wait timed out; window reports visible and enabled; proceeding",
-                    extra={"category": "scan"},
-                )
-            else:
-                LOGGER.warning(
-                    "Target window visibility check failed; proceeding with scan (visible=%s enabled=%s)",
-                    is_visible,
-                    is_enabled,
-                    extra={"category": "scan"},
-                )
-            return
-        raise WindowUnavailableError("Target window not visible") from last_exc
-
-    def _minimize_window(self, window) -> None:
-        if not self._allow_window_restore:
-            return
-        try:
-            if hasattr(window, "minimize"):
-                window.minimize()
-        except Exception:
-            LOGGER.debug("Failed to minimize target window", exc_info=True)
-
-    def _force_foreground(self, window) -> None:
-        try:
-            if not hasattr(window, "handle"):
-                return
-            handle = window.handle
-            if not handle:
-                return
-            user32 = ctypes.windll.user32
-            user32.ShowWindow(handle, 3)
-            user32.BringWindowToTop(handle)
-            user32.SetForegroundWindow(handle)
-            user32.SetWindowPos(handle, -1, 0, 0, 0, 0, 0x0001 | 0x0002)
-            user32.SetWindowPos(handle, -2, 0, 0, 0, 0, 0x0001 | 0x0002)
-        except Exception:
-            LOGGER.debug("Failed to force window foreground", exc_info=True)
-
-    def _click_title_bar(self, window) -> None:
-        try:
-            if not hasattr(window, "rectangle"):
-                return
-            rect = window.rectangle()
-            if not rect:
-                return
-            width = rect.width()
-            height = rect.height()
-            if width <= 0 or height <= 0:
-                return
-            x = rect.left + max(5, width // 2)
-            y = rect.top + 10
-            user32 = ctypes.windll.user32
-            point = wintypes.POINT()
-            if user32.GetCursorPos(ctypes.byref(point)) == 0:
-                return
-            user32.SetCursorPos(int(x), int(y))
-            user32.mouse_event(0x0002, 0, 0, 0, 0)
-            user32.mouse_event(0x0004, 0, 0, 0, 0)
-            user32.SetCursorPos(point.x, point.y)
-        except Exception:
-            LOGGER.debug("Failed to click title bar", exc_info=True)
+        if not self._window_is_foreground(window):
+            raise WindowUnavailableError("Target window not in foreground")
+        if not self._window_is_maximized(window):
+            raise WindowUnavailableError("Target window not maximized")
 
     def _iter_texts(self) -> Iterable[str]:
         window = self._get_window()
-        if self._allow_window_restore:
-            self._minimize_all_windows(exclude=window)
-        retry_delays = (1.0, 2.0, 4.0)
-        if not self._window_exists(window, timeout=2):
-            for delay in retry_delays:
-                self._log_throttled(
-                    logging.INFO,
-                    "window_not_found",
-                    "Target window not found, retrying",
-                )
-                time.sleep(delay)
-                window = self._get_window()
-                if self._window_exists(window, timeout=2):
-                    break
-            else:
-                raise WindowUnavailableError("Target window not found")
-
-        self._prepare_window(window)
-
-        try:
-            if hasattr(window, "is_enabled") and not window.is_enabled():
-                raise WindowUnavailableError("Target window not enabled")
-        except Exception as exc:
-            raise WindowUnavailableError("Target window not enabled") from exc
+        if not self._window_exists(window, timeout=1.0):
+            raise WindowUnavailableError("Target window not found")
+        if not self._window_is_foreground(window):
+            raise WindowUnavailableError("Target window not in foreground")
+        if not self._window_is_maximized(window):
+            raise WindowUnavailableError("Target window not maximized")
 
         texts: list[str] = []
         try:
@@ -326,27 +204,7 @@ class WindowTextDetector:
                     texts.append(text)
         except Exception as exc:
             raise RuntimeError("Failed to read window texts") from exc
-        finally:
-            self._minimize_window(window)
-
         return texts
-
-    def _minimize_all_windows(self, exclude=None) -> None:
-        try:
-            exclude_handle = None
-            if exclude is not None and hasattr(exclude, "handle"):
-                exclude_handle = exclude.handle
-            desktop = Desktop(backend="uia")
-            for item in desktop.windows():
-                try:
-                    if exclude_handle and hasattr(item, "handle") and item.handle == exclude_handle:
-                        continue
-                    if hasattr(item, "minimize"):
-                        item.minimize()
-                except Exception:
-                    LOGGER.debug("Failed to minimize window", exc_info=True)
-        except Exception:
-            LOGGER.debug("Failed to enumerate windows for minimize", exc_info=True)
 
     def find_matches(self, phrase_regex: str) -> list[str]:
         texts = self._iter_texts()
