@@ -44,8 +44,8 @@ def test_run_loop_skips_window_unavailable(
         log_console_level="WARNING",
         log_console_enabled=False,
         log_max_bytes=5000000,
-        log_backup_count=5,
-        log_run_files_keep=5,
+        log_backup_count=3,
+        log_run_files_keep=3,
         telemetry_file=str(log_root / "telemetry.json"),
         allow_window_restore=True,
         log_only_mode=False,
@@ -90,4 +90,4 @@ def test_run_loop_skips_window_unavailable(
     snapshot = notifier.status.snapshot()
     assert snapshot.error_count == 0
     assert snapshot.last_error
-    assert sends["count"] == 2
+    assert sends["count"] == 1

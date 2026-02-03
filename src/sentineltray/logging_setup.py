@@ -277,10 +277,10 @@ def setup_logging(
     resolved_level = _resolve_level(log_level, logging.INFO)
     resolved_console_level = _resolve_level(log_console_level, logging.WARNING)
 
+    root_logger.setLevel(resolved_level)
+
     effective_backup_count = min(MAX_LOG_FILES, max(0, log_backup_count))
     effective_run_files_keep = min(MAX_LOG_FILES, max(1, log_run_files_keep))
-    dedup_filter = DedupFilter()
-
     handlers: list[logging.Handler] = []
 
     try:
@@ -294,7 +294,7 @@ def setup_logging(
         rotating_handler.setLevel(resolved_level)
         rotating_handler.addFilter(CategoryFilter())
         rotating_handler.addFilter(RedactionFilter())
-        rotating_handler.addFilter(dedup_filter)
+        rotating_handler.addFilter(DedupFilter())
         rotating_handler.addFilter(context_filter)
         handlers.append(rotating_handler)
 
@@ -303,7 +303,7 @@ def setup_logging(
         run_handler.setLevel(resolved_level)
         run_handler.addFilter(CategoryFilter())
         run_handler.addFilter(RedactionFilter())
-        run_handler.addFilter(dedup_filter)
+        run_handler.addFilter(DedupFilter())
         run_handler.addFilter(context_filter)
         handlers.append(run_handler)
 
@@ -317,7 +317,7 @@ def setup_logging(
         json_handler.setLevel(resolved_level)
         json_handler.addFilter(CategoryFilter())
         json_handler.addFilter(RedactionFilter())
-        json_handler.addFilter(dedup_filter)
+        json_handler.addFilter(DedupFilter())
         json_handler.addFilter(context_filter)
         handlers.append(json_handler)
 
@@ -326,7 +326,7 @@ def setup_logging(
         json_run_handler.setLevel(resolved_level)
         json_run_handler.addFilter(CategoryFilter())
         json_run_handler.addFilter(RedactionFilter())
-        json_run_handler.addFilter(dedup_filter)
+        json_run_handler.addFilter(DedupFilter())
         json_run_handler.addFilter(context_filter)
         handlers.append(json_run_handler)
     except OSError as exc:
@@ -349,7 +349,7 @@ def setup_logging(
         console_handler.setLevel(resolved_console_level)
         console_handler.addFilter(CategoryFilter())
         console_handler.addFilter(RedactionFilter())
-        console_handler.addFilter(dedup_filter)
+        console_handler.addFilter(DedupFilter())
         console_handler.addFilter(context_filter)
         handlers.append(console_handler)
 

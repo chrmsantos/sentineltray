@@ -33,7 +33,9 @@ def test_find_matches_includes_window_title(monkeypatch: pytest.MonkeyPatch) -> 
 
     detector = WindowTextDetector("APP", allow_window_restore=False)
     monkeypatch.setattr(detector, "_get_window", lambda: FakeWindow())
-    monkeypatch.setattr(detector, "_prepare_window", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(detector, "_window_exists", lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        detector, "_ensure_foreground_and_maximized", lambda *_args, **_kwargs: None
+    )
 
     assert detector.find_matches("Title") == ["Title"]
