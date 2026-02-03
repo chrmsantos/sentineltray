@@ -20,10 +20,12 @@ class FakeWindow:
         exists: bool = True,
         foreground: bool = True,
         maximized: bool = True,
+        minimized: bool = False,
     ) -> None:
         self._exists = exists
         self._foreground = foreground
         self._maximized = maximized
+        self._minimized = minimized
 
     def exists(self, timeout: float = 0.0) -> bool:
         return self._exists
@@ -37,11 +39,17 @@ class FakeWindow:
     def is_maximized(self) -> bool:
         return self._maximized
 
+    def is_minimized(self) -> bool:
+        return self._minimized
+
     def maximize(self) -> None:
         self._maximized = True
 
     def set_focus(self) -> None:
         self._foreground = True
+
+    def restore(self) -> None:
+        self._minimized = False
 
     def window_text(self) -> str:
         return "Target App"
@@ -88,3 +96,15 @@ def test_scan_rejects_missing_window(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(WindowUnavailableError, match="not found"):
         detector.find_matches("ALERT")
+
+
+def test_scan_restores_minimized_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    detector = WindowTextDetector("APP")
+    monkeypatch.setattr(
+        detector,
+        "_get_window",
+        lambda: FakeWindow(foreground=False, maximized=False, minimized=True),
+    )
+
+    matches = detector.find_matches("ALERT")
+    assert matches == ["ALERT"]

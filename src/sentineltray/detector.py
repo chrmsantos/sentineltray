@@ -60,7 +60,7 @@ class WindowTextDetector:
         try:
             if hasattr(window, "exists") and window.exists(timeout=timeout):
                 return True
-            if hasattr(window, "is_minimized") and window.is_minimized():
+            if self._window_is_minimized(window):
                 return True
             if hasattr(window, "is_visible"):
                 return window.is_visible()
@@ -103,6 +103,21 @@ class WindowTextDetector:
             return False
         return False
 
+    def _window_is_minimized(self, window) -> bool:
+        try:
+            if hasattr(window, "is_minimized"):
+                return bool(window.is_minimized())
+        except Exception:
+            return False
+        try:
+            if hasattr(window, "handle"):
+                handle = window.handle
+                if handle:
+                    return bool(ctypes.windll.user32.IsIconic(handle))
+        except Exception:
+            return False
+        return False
+
     def _force_foreground(self, window) -> None:
         try:
             if hasattr(window, "set_focus"):
@@ -125,6 +140,19 @@ class WindowTextDetector:
             LOGGER.debug("Failed to force window foreground", exc_info=True)
 
     def _ensure_foreground_and_maximized(self, window) -> None:
+        if self._window_is_minimized(window):
+            try:
+                if hasattr(window, "restore"):
+                    window.restore()
+            except Exception:
+                LOGGER.debug("Failed to restore window", exc_info=True)
+            try:
+                if hasattr(window, "handle"):
+                    handle = window.handle
+                    if handle:
+                        ctypes.windll.user32.ShowWindow(handle, 9)
+            except Exception:
+                LOGGER.debug("Failed to restore window via handle", exc_info=True)
         if not self._window_is_foreground(window):
             self._force_foreground(window)
         if not self._window_is_maximized(window):
