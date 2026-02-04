@@ -131,7 +131,7 @@ def test_run_console_config_error_smtp_prompt(
     monkeypatch.setattr(console_app, "clear_screen", lambda: None)
     monkeypatch.setattr(console_app, "_create_config_editor", lambda: (lambda: None, lambda: None))
 
-    inputs: Iterator[str] = iter(["p", "smtp-user"])
+    inputs: Iterator[str] = iter(["p"])
 
     def fake_input(_prompt: str) -> str:
         return next(inputs)
@@ -154,7 +154,6 @@ def test_run_console_config_error_smtp_prompt(
     console_app.run_console_config_error("Missing SENTINELTRAY_SMTP_PASSWORD")
 
     assert os.environ["SENTINELTRAY_SMTP_PASSWORD"] == "smtp-pass"
-    assert os.environ["SENTINELTRAY_SMTP_USERNAME"] == "smtp-user"
     assert calls["config"] is config
 
 

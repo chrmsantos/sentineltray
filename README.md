@@ -33,8 +33,8 @@ Edit config.local.yaml and set:
 - monitors[].email.retry_attempts
 - monitors[].email.retry_backoff_seconds
 - monitors[].email.dry_run = true on first run; set false after validation
-- monitors[].email.smtp_username via SENTINELTRAY_SMTP_USERNAME
-- monitors[].email.smtp_password via SENTINELTRAY_SMTP_PASSWORD
+- monitors[].email.smtp_username (no config local)
+- monitors[].email.smtp_password is prompted at startup or via SENTINELTRAY_SMTP_PASSWORD
 - allow_window_restore, send_repeated_matches
 - log_only_mode
 - log_level, log_console_level, log_console_enabled
