@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sentineltray.console_app import _apply_template_to_config_text
+from sentineltray.config_reconcile import apply_template_to_config_text
 
 
 def test_apply_template_to_config_text_merges_values() -> None:
@@ -25,7 +25,7 @@ email:
 extra_key: 'keep'
 """
 
-    merged = _apply_template_to_config_text(legacy, template)
+    merged = apply_template_to_config_text(legacy, template)
 
     assert "window_title_regex: APP" in merged
     assert "phrase_regex: ALERT" in merged
@@ -59,7 +59,7 @@ email:
   dry_run: true
 """
 
-    merged = _apply_template_to_config_text(legacy, template_text)
+    merged = apply_template_to_config_text(legacy, template_text)
 
     assert "log_level: DEBUG" in merged
     assert "email_queue_file" in merged

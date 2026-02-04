@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-02-04
+
+- Startup: added integrity checks for data/log directories, portable runtime markers, and automatic config template reconciliation.
+
 ## 2026-02-03 (beta.10)
 
 - Notifications: drop info-category emails to avoid "SentinelTray Info" subjects.
