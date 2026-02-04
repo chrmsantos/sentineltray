@@ -4,7 +4,7 @@ monitors:
     email:
       smtp_host: "smtp.local"
       smtp_port: 587
-      smtp_username: ""
+      smtp_username: "smtp-user"
       smtp_password: ""
       from_address: "alerts@example.com"
       to_addresses: ["ops@example.com"]
