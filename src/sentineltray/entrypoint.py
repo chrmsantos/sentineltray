@@ -12,11 +12,17 @@ from .config import (
     get_encrypted_config_path,
     get_user_data_dir,
     get_user_log_dir,
+    get_project_root,
     is_portable_mode,
     load_config_secure,
     select_encryption_method,
 )
 from .console_app import run_console, run_console_config_error
+from .config_reconcile import (
+    ensure_local_config_from_template,
+    read_template_config_text,
+    reconcile_template_config,
+)
 from .logging_setup import setup_logging
 from . import __release_date__, __version_label__
 
@@ -172,6 +178,55 @@ def _setup_boot_logging() -> None:
     )
 
 
+def _run_startup_integrity_checks(local_path: Path) -> None:
+    data_dir = local_path.parent
+    data_dir.mkdir(parents=True, exist_ok=True)
+    log_root = get_user_log_dir()
+    log_root.mkdir(parents=True, exist_ok=True)
+
+    template_text = read_template_config_text(get_project_root())
+    if template_text is None:
+        LOGGER.warning(
+            "Config template not found; startup integrity limited",
+            extra={"category": "startup"},
+        )
+    else:
+        ensure_local_config_from_template(
+            local_path,
+            template_text=template_text,
+            logger=LOGGER,
+        )
+        try:
+            reconcile_template_config(
+                local_path,
+                template_text=template_text,
+                dry_run=False,
+                logger=LOGGER,
+            )
+        except Exception as exc:
+            LOGGER.warning(
+                "Failed to reconcile config template: %s",
+                exc,
+                extra={"category": "config"},
+            )
+
+    if is_portable_mode(data_dir):
+        runtime_python = get_project_root() / "runtime" / "python" / "python.exe"
+        checksums = get_project_root() / "runtime" / "checksums.txt"
+        if not runtime_python.exists():
+            LOGGER.warning(
+                "Portable runtime missing: %s",
+                runtime_python,
+                extra={"category": "startup"},
+            )
+        if not checksums.exists():
+            LOGGER.warning(
+                "Runtime checksums missing: %s",
+                checksums,
+                extra={"category": "startup"},
+            )
+
+
 def _ensure_windows() -> None:
     if sys.platform == "win32":
         return
@@ -208,9 +263,10 @@ def main() -> int:
     config = None
     config_error_message = None
     try:
-        _ensure_local_override(local_path)
         _setup_boot_logging()
         _ensure_windows()
+        _run_startup_integrity_checks(local_path)
+        _ensure_local_override(local_path)
         LOGGER.info(
             "Portable mode: %s",
             "yes" if is_portable_mode(local_path.parent) else "no",

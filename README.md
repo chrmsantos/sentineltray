@@ -201,6 +201,7 @@ monitors:
 - If the config is missing or invalid, SentinelTray still starts in "Config Error" mode and exposes the error details in the tray menu.
 - When another instance is already running, a notice is shown and the new launch exits cleanly.
 - Script logs (install/run/bootstrap) are stored under %SENTINELTRAY_DATA_DIR%\logs\scripts.
+- On startup, SentinelTray reconciles config.local.yaml with the official template and creates the local config from the template if missing.
 - Third-party debug logs are suppressed to keep logs actionable.
 - Logs and telemetry redact sensitive strings (emails and local paths) and store match summaries as hashes.
 - Runtime artifacts are integrity-checked via runtime/checksums.txt.
