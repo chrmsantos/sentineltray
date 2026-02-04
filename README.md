@@ -34,7 +34,7 @@ Edit config.local.yaml and set:
 - monitors[].email.retry_backoff_seconds
 - monitors[].email.dry_run = true on first run; set false after validation
 - monitors[].email.smtp_username (no config local)
-- monitors[].email.smtp_password is prompted at startup or via SENTINELTRAY_SMTP_PASSWORD
+- monitors[].email.smtp_password is always prompted at startup when a username is configured (per monitor)
 - allow_window_restore, send_repeated_matches
 - log_only_mode
 - log_level, log_console_level, log_console_enabled

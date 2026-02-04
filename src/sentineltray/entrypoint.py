@@ -259,14 +259,9 @@ def _require_dry_run_on_first_use(config) -> None:
 
 def _missing_smtp_passwords(config: AppConfig) -> list[tuple[int, str]]:
     missing: list[tuple[int, str]] = []
-    global_password = os.environ.get("SENTINELTRAY_SMTP_PASSWORD")
     for index, monitor in enumerate(config.monitors, start=1):
         username = str(monitor.email.smtp_username or "").strip()
         if not username:
-            continue
-        if global_password:
-            continue
-        if os.environ.get(f"SENTINELTRAY_SMTP_PASSWORD_{index}"):
             continue
         missing.append((index, username))
     return missing

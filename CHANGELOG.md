@@ -3,7 +3,7 @@
 ## 2026-02-04
 
 - Startup: added integrity checks for data/log directories, portable runtime markers, and automatic config template reconciliation.
-- SMTP: username now comes only from config.local.yaml; password is prompted at startup when a username is configured.
+- SMTP: username now comes only from config.local.yaml; password is prompted at startup for every configured username.
 
 ## 2026-02-03 (beta.10)
 
