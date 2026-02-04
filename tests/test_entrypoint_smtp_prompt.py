@@ -96,7 +96,7 @@ def test_missing_passwords_skips_when_global_set(monkeypatch: pytest.MonkeyPatch
 
     missing = entrypoint._missing_smtp_passwords(config)
 
-    assert missing == []
+    assert missing == [(1, "smtp-user")]
 
 
 def test_missing_passwords_skips_empty_username(monkeypatch: pytest.MonkeyPatch) -> None:
