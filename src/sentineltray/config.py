@@ -352,10 +352,7 @@ def _build_email_config(email_data: dict[str, Any], *, monitor_index: int | None
 
     smtp_username = str(_get_required(email_data, "smtp_username"))
     smtp_password = str(_get_required(email_data, "smtp_password"))
-    env_username = _env_override("SMTP_USERNAME", monitor_index)
     env_password = _env_override("SMTP_PASSWORD", monitor_index)
-    if env_username:
-        smtp_username = env_username
     if env_password:
         smtp_password = env_password
     if smtp_password and not env_password:
@@ -588,6 +585,8 @@ def _validate_config(config: AppConfig) -> None:
             if not monitor.email.dry_run:
                 if not monitor.email.smtp_host:
                     raise ValueError("monitors.email.smtp_host is required")
+                if not monitor.email.smtp_username:
+                    raise ValueError("monitors.email.smtp_username is required")
                 if not monitor.email.from_address:
                     raise ValueError("monitors.email.from_address is required")
                 if not monitor.email.to_addresses:

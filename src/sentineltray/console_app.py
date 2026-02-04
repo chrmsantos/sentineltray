@@ -322,6 +322,16 @@ def run_console_config_error(error_details: str) -> None:
     details_path = _write_config_error_details(error_details)
     local_path = get_user_data_dir() / "config.local.yaml"
     supports_smtp_prompt = "SENTINELTRAY_SMTP_PASSWORD" in error_details
+    smtp_usernames: list[str] = []
+    try:
+        config = load_config_secure(str(local_path))
+        smtp_usernames = [
+            monitor.email.smtp_username
+            for monitor in config.monitors
+            if monitor.email.smtp_username
+        ]
+    except Exception:
+        smtp_usernames = []
     try:
         while True:
             clear_screen()
@@ -348,12 +358,14 @@ def run_console_config_error(error_details: str) -> None:
                 _open_text_file(details_path)
             elif supports_smtp_prompt and command in ("p", "smtp"):
                 print("")
-                username = input("Usuário SMTP (opcional): ").strip()
+                if smtp_usernames:
+                    for username in smtp_usernames:
+                        print(f"Usuário SMTP: {username}")
+                else:
+                    print("Usuário SMTP: (não definido no config)")
                 password = getpass("Senha SMTP (SENTINELTRAY_SMTP_PASSWORD): ").strip()
                 if password:
                     os.environ["SENTINELTRAY_SMTP_PASSWORD"] = password
-                if username:
-                    os.environ["SENTINELTRAY_SMTP_USERNAME"] = username
                 try:
                     config = load_config_secure(str(local_path))
                 except Exception as exc:

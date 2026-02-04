@@ -5,9 +5,12 @@ import ctypes
 import logging
 import os
 import sys
+from builtins import input as input
+from getpass import getpass
 from pathlib import Path
 
 from .config import (
+    AppConfig,
     encrypt_config_file,
     get_encrypted_config_path,
     get_user_data_dir,
@@ -254,6 +257,44 @@ def _require_dry_run_on_first_use(config) -> None:
             )
 
 
+def _missing_smtp_passwords(config: AppConfig) -> list[tuple[int, str]]:
+    missing: list[tuple[int, str]] = []
+    global_password = os.environ.get("SENTINELTRAY_SMTP_PASSWORD")
+    for index, monitor in enumerate(config.monitors, start=1):
+        username = str(monitor.email.smtp_username or "").strip()
+        if not username:
+            continue
+        if global_password:
+            continue
+        if os.environ.get(f"SENTINELTRAY_SMTP_PASSWORD_{index}"):
+            continue
+        missing.append((index, username))
+    return missing
+
+
+def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
+    if not missing:
+        return
+    print("SentinelTray - Login SMTP")
+    print("")
+    print("Informe a senha SMTP para continuar.")
+    print("Opções: [Q] Sair")
+    print("")
+    for index, username in missing:
+        while True:
+            print(f"Usuário SMTP (monitor {index}): {username}")
+            password = getpass("Senha SMTP: ").strip()
+            if password:
+                os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
+                break
+            choice = input("Senha vazia. [T]entar novamente ou [Q] Sair: ").strip().lower()
+            if choice in ("q", "sair", "exit"):
+                raise SystemExit("Senha SMTP não informada.")
+            print("")
+    print("")
+    print("Senha SMTP registrada para a sessão.")
+
+
 def main() -> int:
     _ensure_single_instance()
     args = [arg for arg in sys.argv[1:] if arg]
@@ -278,6 +319,10 @@ def main() -> int:
             extra={"category": "startup"},
         )
         config = load_config_secure(str(local_path))
+        missing_passwords = _missing_smtp_passwords(config)
+        if missing_passwords:
+            _prompt_smtp_passwords(missing_passwords)
+            config = load_config_secure(str(local_path))
         _require_dry_run_on_first_use(config)
         encrypted_path = get_encrypted_config_path(local_path)
         if local_path.exists() and not encrypted_path.exists():
