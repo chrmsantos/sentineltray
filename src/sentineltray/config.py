@@ -355,10 +355,13 @@ def _build_email_config(email_data: dict[str, Any], *, monitor_index: int | None
     env_password = _env_override("SMTP_PASSWORD", monitor_index)
     if env_password:
         smtp_password = env_password
-    if smtp_password and not env_password:
-        raise ValueError(
-            "smtp_password must be provided via SENTINELTRAY_SMTP_PASSWORD"
-        )
+    else:
+        if smtp_password:
+            LOGGER.warning(
+                "smtp_password in config is ignored; provide via env",
+                extra={"category": "config", "monitor_index": monitor_index},
+            )
+        smtp_password = ""
 
     return EmailConfig(
         smtp_host=str(_get_required(email_data, "smtp_host")),

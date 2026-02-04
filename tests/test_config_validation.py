@@ -203,8 +203,8 @@ def test_smtp_password_requires_env(monkeypatch: pytest.MonkeyPatch, tmp_path: P
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="smtp_password must be provided"):
-        load_config(str(config_path))
+    config = load_config(str(config_path))
+    assert config.monitors[0].email.smtp_password == ""
 
 
 def test_smtp_password_env_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
