@@ -148,7 +148,7 @@ def test_run_console_config_error_smtp_prompt(
     def fake_run_console(value: AppConfig) -> None:
         calls["config"] = value
 
-    monkeypatch.setattr(console_app, "load_config_secure", fake_load)
+    monkeypatch.setattr(console_app, "load_config", fake_load)
     monkeypatch.setattr(console_app, "run_console", fake_run_console)
 
     console_app.run_console_config_error("Missing SENTINELTRAY_SMTP_PASSWORD")

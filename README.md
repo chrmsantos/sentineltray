@@ -8,15 +8,6 @@ Minimal Windows notifier that reads visible text from a target desktop app and s
 
 - Windows user session (no admin required).
 - SMTP server access for email delivery.
-- Portable mode requires a bundled runtime and offline wheels (see Portable mode).
-
-## Portability & no-admin operation
-
-- Runs entirely under the current user profile by default (LOCALAPPDATA).
-- No registry writes, services, or admin privileges required.
-- Single-instance uses per-user mutex when global mutex is unavailable.
-- For a fully self-contained layout, keep config and runtime inside the project folder
-   and run in portable mode.
 
 ## Setup
 
@@ -59,51 +50,11 @@ Local documentation for sample state files lives under templates/local/.
 
 scripts\run.cmd
 
-Disable portable mode (use system Python/venv):
-
-scripts\run.cmd /nonportable
-
-Foreground (console interface):
-
-scripts\run.cmd /foreground
-
-When a venv is present, foreground mode opens PowerShell, activates it automatically,
-and keeps the window open after execution.
+When a venv is present, the launcher uses it automatically.
 
 Manual venv activation from CMD:
 
 scripts\activate_venv.cmd
-
-Background mode is disabled; the console interface always runs in the foreground.
-
-## Portable mode (self-contained)
-
-Portable mode assumes everything lives inside the project folder. For a fully portable setup:
-
-1. Place a Python runtime at runtime\python\python.exe.
-2. Place offline wheels at runtime\wheels (matching requirements.lock).
-3. Run scripts\run.cmd (it bootstraps dependencies once).
-
-Automated setup:
-
-scripts\prepare_portable_runtime.cmd -PythonVersion 3.11.8
-
-Note: the automated setup downloads Python and wheels from the internet.
-
-Package generation:
-
-scripts\\package_portable.cmd
-
-Notes:
-
-- run.cmd enables portable mode by default via SENTINELTRAY_PORTABLE=1.
-- Use /nonportable or SENTINELTRAY_PORTABLE=0 to allow system Python/venv.
-- The first run installs dependencies from runtime\wheels and writes runtime\.deps_ready.
-- If pip is missing in a manually added runtime, the bootstrap step downloads get-pip.py once.
-- If wheels are missing, the bootstrap step downloads them automatically (internet required).
-- Use SENTINELTRAY_PIP_PROXY, SENTINELTRAY_PIP_INDEX_URL and SENTINELTRAY_PIP_TRUSTED_HOST when behind a proxy.
-- If runtime\python or runtime\wheels are missing, run.cmd fails with a logged error.
-- If runtime\python is missing in portable mode, run.cmd attempts to prepare it automatically.
 
 If you run main.py directly, it automatically adds src/ to the import path.
 SentinelTray starts in the foreground console interface. Use the menu to open Config,
@@ -123,16 +74,8 @@ SentinelTray.exe instead of python.exe/pythonw.exe.
 
 ## Config editing
 
-Use the console menu Config option to edit settings. It decrypts in memory, opens a temporary file
-for editing, validates it, and re-encrypts on save.
-
-## Config protection
-
-When config.local.yaml.enc is present, SentinelTray loads it automatically.
-If only config.local.yaml exists, SentinelTray attempts to encrypt it on startup.
-Portable mode uses a local key file (config.local.key) stored alongside the config.
-DPAPI encryption remains available but is not portable across machines/users.
-Use SENTINELTRAY_CONFIG_ENCRYPTION=dpapi to force DPAPI when needed.
+Use the console menu Config option to edit settings. It opens a temporary file, validates
+it, and writes it back to config.local.yaml on save.
 
 ## Regex (wildcards) and examples
 
@@ -197,8 +140,7 @@ monitors:
 - Logs are written per execution with detailed fields and kept with a max of 3 files in %SENTINELTRAY_DATA_DIR%\logs (values above 3 are capped).
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - JSON logs are written alongside text logs in sentineltray.jsonl and per-run sentineltray_*.jsonl.
-- On Windows, the tray icon uses the main message loop for reliability. If it is not visible, check hidden tray icons.
-- If the config is missing or invalid, SentinelTray still starts in "Config Error" mode and exposes the error details in the tray menu.
+- If the config is missing or invalid, SentinelTray still starts in "Config Error" mode and exposes the error details in the console.
 - When another instance is already running, a notice is shown and the new launch exits cleanly.
 - Script logs (install/run/bootstrap) are stored under %SENTINELTRAY_DATA_DIR%\logs\scripts.
 - On startup, SentinelTray reconciles config.local.yaml with the official template and creates the local config from the template if missing.
@@ -227,8 +169,6 @@ monitors:
 - Email delivery failures are detected and reported as specific errors.
 - Match alert emails use subject "SentinelTray Match Alert"; error alerts use "SentinelTray Error Alert".
 - Info-category emails are suppressed; subjects like "SentinelTray Info" are never sent.
-- Portable encryption stores a local key file; keep it with the config folder for portability.
-- DPAPI-encrypted configs cannot be decrypted on other machines/users.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.

@@ -11,16 +11,13 @@ from pathlib import Path
 
 from .config import (
     AppConfig,
-    encrypt_config_file,
-    get_encrypted_config_path,
     get_user_data_dir,
     get_user_log_dir,
     get_project_root,
-    is_portable_mode,
-    load_config_secure,
-    select_encryption_method,
+    load_config,
 )
 from .console_app import run_console, run_console_config_error
+from .email_sender import EmailAuthError, validate_smtp_credentials
 from .config_reconcile import (
     ensure_local_config_from_template,
     read_template_config_text,
@@ -113,12 +110,10 @@ def _ensure_single_instance() -> None:
 
 
 def _ensure_local_override(path: Path) -> None:
-    encrypted_path = get_encrypted_config_path(path)
-    if not path.exists() and not encrypted_path.exists():
+    if not path.exists():
         raise SystemExit(
             "Local configuration not found.\n"
             f"Expected file: {path}\n"
-            f"Or encrypted file: {encrypted_path}\n"
             "Create it from templates/local/config.local.yaml, "
             "fill the required fields, and run again."
         )
@@ -135,11 +130,9 @@ def _ensure_local_override(path: Path) -> None:
 
 def _handle_config_error(path: Path, exc: Exception) -> str:
     reason = str(exc)
-    encrypted_path = get_encrypted_config_path(path)
     message = (
         "Configuration error.\n\n"
         f"Config file: {path}\n"
-        f"Encrypted config: {encrypted_path}\n"
         f"Details: {reason}\n\n"
         "Review the YAML formatting and required fields.\n"
         "After fixing, reopen SentinelTray.\n\n"
@@ -213,21 +206,22 @@ def _run_startup_integrity_checks(local_path: Path) -> None:
                 extra={"category": "config"},
             )
 
-    if is_portable_mode(data_dir):
-        runtime_python = get_project_root() / "runtime" / "python" / "python.exe"
-        checksums = get_project_root() / "runtime" / "checksums.txt"
-        if not runtime_python.exists():
-            LOGGER.warning(
-                "Portable runtime missing: %s",
-                runtime_python,
-                extra={"category": "startup"},
-            )
-        if not checksums.exists():
-            LOGGER.warning(
-                "Runtime checksums missing: %s",
-                checksums,
-                extra={"category": "startup"},
-            )
+
+
+def _validate_smtp_config(config: AppConfig) -> None:
+    failures: list[str] = []
+    for index, monitor in enumerate(config.monitors, start=1):
+        email = monitor.email
+        if email.dry_run:
+            continue
+        try:
+            validate_smtp_credentials(email)
+        except EmailAuthError as exc:
+            failures.append(f"monitor {index}: {exc}")
+        except Exception as exc:
+            failures.append(f"monitor {index}: {exc}")
+    if failures:
+        raise ValueError("SMTP validation failed: " + "; ".join(failures))
 
 
 def _ensure_windows() -> None:
@@ -259,9 +253,15 @@ def _require_dry_run_on_first_use(config) -> None:
 
 def _missing_smtp_passwords(config: AppConfig) -> list[tuple[int, str]]:
     missing: list[tuple[int, str]] = []
+    global_password = os.environ.get("SENTINELTRAY_SMTP_PASSWORD", "").strip()
     for index, monitor in enumerate(config.monitors, start=1):
         username = str(monitor.email.smtp_username or "").strip()
         if not username:
+            continue
+        if str(monitor.email.smtp_password or "").strip():
+            continue
+        indexed_password = os.environ.get(f"SENTINELTRAY_SMTP_PASSWORD_{index}", "").strip()
+        if indexed_password or global_password:
             continue
         missing.append((index, username))
     return missing
@@ -303,30 +303,13 @@ def main() -> int:
         _ensure_windows()
         _run_startup_integrity_checks(local_path)
         _ensure_local_override(local_path)
-        LOGGER.info(
-            "Portable mode: %s",
-            "yes" if is_portable_mode(local_path.parent) else "no",
-            extra={"category": "startup"},
-        )
-        LOGGER.info(
-            "Config encryption: %s",
-            select_encryption_method(local_path),
-            extra={"category": "startup"},
-        )
-        config = load_config_secure(str(local_path))
+        config = load_config(str(local_path))
         missing_passwords = _missing_smtp_passwords(config)
         if missing_passwords:
             _prompt_smtp_passwords(missing_passwords)
-            config = load_config_secure(str(local_path))
+            config = load_config(str(local_path))
         _require_dry_run_on_first_use(config)
-        encrypted_path = get_encrypted_config_path(local_path)
-        if local_path.exists() and not encrypted_path.exists():
-            try:
-                encrypt_config_file(str(local_path), remove_plain=True)
-            except Exception as exc:
-                sys.stderr.write(
-                    f"Warning: failed to encrypt config file: {exc}\n"
-                )
+        _validate_smtp_config(config)
     except Exception as exc:
         config_error_message = _handle_config_error(local_path, exc)
 

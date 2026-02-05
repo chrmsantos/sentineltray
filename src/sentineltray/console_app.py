@@ -14,13 +14,9 @@ from typing import Callable
 from .app import Notifier
 from .config import (
     AppConfig,
-    decrypt_config_payload,
-    encrypt_config_text,
-    get_encrypted_config_path,
     get_user_data_dir,
     get_user_log_dir,
     load_config,
-    load_config_secure,
 )
 from .config_reconcile import (
     TemplateReconcileSummary,
@@ -29,7 +25,6 @@ from .config_reconcile import (
     read_template_config_text,
     reconcile_template_config,
 )
-from .security_utils import parse_payload
 from .status import StatusStore, format_timestamp
 
 LOGGER = logging.getLogger(__name__)
@@ -127,7 +122,6 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig 
         try:
             data_dir = get_user_data_dir()
             config_path = data_dir / "config.local.yaml"
-            encrypted_path = get_encrypted_config_path(config_path)
             temp_path = data_dir / "config.local.yaml.edit"
             template_text = read_template_config_text()
 
@@ -137,15 +131,12 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig 
                 edit_process = subprocess.Popen(["notepad.exe", str(temp_path)], text=True)
                 return
 
-            if encrypted_path.exists():
-                payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
-                plaintext = decrypt_config_payload(payload, config_path=config_path)
-                merged_text = apply_template_to_config_text(plaintext, template_text)
-                temp_path.write_text(merged_text, encoding="utf-8")
-            elif config_path.exists():
+            if config_path.exists():
                 legacy_text = config_path.read_text(encoding="utf-8")
                 merged_text = apply_template_to_config_text(legacy_text, template_text)
                 temp_path.write_text(merged_text, encoding="utf-8")
+            elif template_text is not None:
+                temp_path.write_text(template_text, encoding="utf-8")
             else:
                 LOGGER.warning("Config file not found to edit")
                 return
@@ -174,7 +165,6 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig 
         try:
             data_dir = get_user_data_dir()
             config_path = data_dir / "config.local.yaml"
-            encrypted_path = get_encrypted_config_path(config_path)
             temp_path = data_dir / "config.local.yaml.edit"
             if not temp_path.exists():
                 return
@@ -185,10 +175,7 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig 
                 return None
 
             plaintext = temp_path.read_text(encoding="utf-8")
-            encoded = encrypt_config_text(plaintext, config_path=config_path)
-            encrypted_path.write_text(encoded, encoding="utf-8")
-            if config_path.exists():
-                config_path.unlink()
+            config_path.write_text(plaintext, encoding="utf-8")
             temp_path.unlink(missing_ok=True)
             return new_config
         except Exception as exc:
@@ -237,12 +224,28 @@ def _menu_header(status: StatusStore) -> list[str]:
         f"{queue.get('deferred', 0)} atrasados, "
         f"{queue.get('failed', 0)} falhas"
     )
+    breaker_line = f"Monitores em breaker: {snapshot.breaker_active_count}"
+    failures = [
+        (key, count)
+        for key, count in snapshot.monitor_failures.items()
+        if count > 0
+    ]
+    failures.sort(key=lambda item: item[1], reverse=True)
+    failure_line = ""
+    if failures:
+        summary = []
+        for key, count in failures[:3]:
+            label = key if len(key) <= 20 else f"{key[:17]}..."
+            summary.append(f"{label}={count}")
+        failure_line = "Falhas por monitor: " + ", ".join(summary)
     return [
         "SentinelTray - Console",
         f"Status atual: {state}",
         f"ERROS: {snapshot.error_count}",
         f"Última mensagem: {last_message}",
         queue_line,
+        breaker_line,
+        failure_line,
         "",
     ]
 
@@ -324,7 +327,7 @@ def run_console_config_error(error_details: str) -> None:
     supports_smtp_prompt = "SENTINELTRAY_SMTP_PASSWORD" in error_details
     smtp_usernames: list[str] = []
     try:
-        config = load_config_secure(str(local_path))
+        config = load_config(str(local_path))
         smtp_usernames = [
             monitor.email.smtp_username
             for monitor in config.monitors
@@ -367,7 +370,7 @@ def run_console_config_error(error_details: str) -> None:
                 if password:
                     os.environ["SENTINELTRAY_SMTP_PASSWORD"] = password
                 try:
-                    config = load_config_secure(str(local_path))
+                    config = load_config(str(local_path))
                 except Exception as exc:
                     print(f"Falha ao validar config: {exc}")
                     time.sleep(2)

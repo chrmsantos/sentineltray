@@ -96,12 +96,38 @@ def test_missing_passwords_skips_when_global_set(monkeypatch: pytest.MonkeyPatch
 
     missing = entrypoint._missing_smtp_passwords(config)
 
-    assert missing == [(1, "smtp-user")]
+    assert missing == []
 
 
 def test_missing_passwords_skips_empty_username(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SENTINELTRAY_SMTP_PASSWORD", raising=False)
     config = _make_config("")
+
+    missing = entrypoint._missing_smtp_passwords(config)
+
+    assert missing == []
+
+
+def test_missing_passwords_skips_when_config_has_password(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("SENTINELTRAY_SMTP_PASSWORD", raising=False)
+    config = _make_config("smtp-user")
+    config = config.__class__(
+        **{
+            **config.__dict__,
+            "monitors": [
+                config.monitors[0].__class__(
+                    window_title_regex=config.monitors[0].window_title_regex,
+                    phrase_regex=config.monitors[0].phrase_regex,
+                    email=config.monitors[0].email.__class__(
+                        **{
+                            **config.monitors[0].email.__dict__,
+                            "smtp_password": "secret",
+                        }
+                    ),
+                )
+            ],
+        }
+    )
 
     missing = entrypoint._missing_smtp_passwords(config)
 

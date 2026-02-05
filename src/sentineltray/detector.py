@@ -139,28 +139,47 @@ class WindowTextDetector:
         except Exception:
             LOGGER.debug("Failed to force window foreground", exc_info=True)
 
+    def _show_window(self, handle: int, command: int) -> None:
+        ctypes.windll.user32.ShowWindow(handle, command)
+
+    def _restore_window(self, window) -> None:
+        try:
+            if hasattr(window, "restore"):
+                window.restore()
+        except Exception:
+            LOGGER.debug("Failed to restore window", exc_info=True)
+        try:
+            if hasattr(window, "handle"):
+                handle = window.handle
+                if handle:
+                    self._show_window(handle, 9)
+        except Exception:
+            LOGGER.debug("Failed to restore window via handle", exc_info=True)
+
     def _ensure_foreground_and_maximized(self, window) -> None:
         if self._window_is_minimized(window):
-            try:
-                if hasattr(window, "restore"):
-                    window.restore()
-            except Exception:
-                LOGGER.debug("Failed to restore window", exc_info=True)
-            try:
-                if hasattr(window, "handle"):
-                    handle = window.handle
-                    if handle:
-                        ctypes.windll.user32.ShowWindow(handle, 9)
-            except Exception:
-                LOGGER.debug("Failed to restore window via handle", exc_info=True)
+            if not self._allow_window_restore:
+                raise WindowUnavailableError("Target window minimized; restore disabled")
+            self._restore_window(window)
+        elif self._allow_window_restore and not self._window_is_maximized(window):
+            self._restore_window(window)
         if not self._window_is_foreground(window):
             self._force_foreground(window)
         if not self._window_is_maximized(window):
+            if not self._allow_window_restore:
+                raise WindowUnavailableError("Target window not maximized; restore disabled")
             try:
                 if hasattr(window, "maximize"):
                     window.maximize()
             except Exception:
                 LOGGER.debug("Failed to maximize window", exc_info=True)
+            try:
+                if hasattr(window, "handle"):
+                    handle = window.handle
+                    if handle:
+                        self._show_window(handle, 3)
+            except Exception:
+                LOGGER.debug("Failed to maximize window via handle", exc_info=True)
         if not self._window_is_foreground(window):
             raise WindowUnavailableError("Target window not in foreground")
         if not self._window_is_maximized(window):
