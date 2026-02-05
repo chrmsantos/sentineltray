@@ -4,7 +4,9 @@ import atexit
 import ctypes
 import logging
 import os
+import subprocess
 import sys
+import time
 from builtins import input as input
 from getpass import getpass
 from pathlib import Path
@@ -83,8 +85,22 @@ def _ensure_single_instance_mutex() -> bool:
 
 def _ensure_single_instance() -> None:
     if not _ensure_single_instance_mutex():
-        _show_already_running_notice()
-        raise SystemExit(0)
+        terminated = _terminate_existing_instance()
+        if terminated:
+            for _ in range(6):
+                time.sleep(0.5)
+                if _ensure_single_instance_mutex():
+                    break
+            else:
+                LOGGER.error(
+                    "Failed to acquire single-instance mutex after termination",
+                    extra={"category": "startup"},
+                )
+                _show_already_running_notice()
+                raise SystemExit(0)
+        else:
+            _show_already_running_notice()
+            raise SystemExit(0)
     pid_path = _pid_file_path()
     pid_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -107,6 +123,64 @@ def _ensure_single_instance() -> None:
             return
 
     atexit.register(_cleanup)
+
+
+def _terminate_existing_instance() -> bool:
+    pid_path = _pid_file_path()
+    if not pid_path.exists():
+        LOGGER.warning(
+            "Single-instance mutex exists but PID file is missing",
+            extra={"category": "startup"},
+        )
+        return False
+    try:
+        prior_pid = pid_path.read_text(encoding="utf-8").strip()
+    except Exception as exc:
+        LOGGER.warning(
+            "Failed to read PID file for termination: %s",
+            exc,
+            extra={"category": "startup"},
+        )
+        return False
+    if not prior_pid:
+        LOGGER.warning(
+            "PID file was empty; cannot terminate prior instance",
+            extra={"category": "startup"},
+        )
+        return False
+    LOGGER.info(
+        "Existing instance detected; terminating PID %s",
+        prior_pid,
+        extra={"category": "startup"},
+    )
+    try:
+        result = subprocess.run(
+            ["taskkill", "/PID", prior_pid, "/F"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except Exception as exc:
+        LOGGER.error(
+            "Failed to terminate prior instance PID %s: %s",
+            prior_pid,
+            exc,
+            extra={"category": "startup"},
+        )
+        return False
+    if result.returncode != 0:
+        LOGGER.error(
+            "taskkill failed for PID %s: %s",
+            prior_pid,
+            result.stderr.strip(),
+            extra={"category": "startup"},
+        )
+        return False
+    try:
+        pid_path.unlink()
+    except Exception:
+        pass
+    return True
 
 
 def _ensure_local_override(path: Path) -> None:
@@ -291,6 +365,7 @@ def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
 
 
 def main() -> int:
+    _setup_boot_logging()
     _ensure_single_instance()
     args = [arg for arg in sys.argv[1:] if arg]
     _reject_extra_args(args)
@@ -299,7 +374,6 @@ def main() -> int:
     config = None
     config_error_message = None
     try:
-        _setup_boot_logging()
         _ensure_windows()
         _run_startup_integrity_checks(local_path)
         _ensure_local_override(local_path)
