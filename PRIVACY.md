@@ -35,7 +35,6 @@ Operational data (diagnostics) is stored in:
 
 - *.log (diagnostics)
 - telemetry.json (operational state)
-- config.checksum (configuration integrity)
 
 The repository contains only commented templates and fictitious examples.
 
@@ -52,7 +51,7 @@ On startup, if %SENTINELTRAY_DATA_DIR%\config.local.yaml does not exist, the app
 
 ## Retention
 
-- Logs are kept only for the last 5 runs (higher values are capped).
+- Logs are kept only for the last 3 runs (higher values are capped).
 - state.json contains only what is required to avoid duplicate sends.
 - Local send queues (when enabled) follow the configured quantity and age limits.
 

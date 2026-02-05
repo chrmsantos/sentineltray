@@ -25,7 +25,7 @@ Edit config.local.yaml and set:
 - monitors[].email.retry_backoff_seconds
 - monitors[].email.dry_run = true on first run; set false after validation
 - monitors[].email.smtp_username (no config local)
-- monitors[].email.smtp_password is always prompted at startup when a username is configured (per monitor)
+- monitors[].email.smtp_password is prompted at startup when missing and no env override is set (per monitor)
 - allow_window_restore, send_repeated_matches
 - log_only_mode
 - log_level, log_console_level, log_console_enabled
@@ -141,12 +141,10 @@ monitors:
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - JSON logs are written alongside text logs in sentineltray.jsonl and per-run sentineltray_*.jsonl.
 - If the config is missing or invalid, SentinelTray still starts in "Config Error" mode and exposes the error details in the console.
-- When another instance is already running, a notice is shown and the new launch exits cleanly.
-- Script logs (install/run/bootstrap) are stored under %SENTINELTRAY_DATA_DIR%\logs\scripts.
+- When another instance is already running, the previous instance is terminated before startup (logged in sentineltray_boot.log).
 - On startup, SentinelTray reconciles config.local.yaml with the official template and creates the local config from the template if missing.
 - Third-party debug logs are suppressed to keep logs actionable.
 - Logs and telemetry redact sensitive strings (emails and local paths) and store match summaries as hashes.
-- Runtime artifacts are integrity-checked via runtime/checksums.txt.
 - state.json stores the last sent messages to avoid duplicates.
 - Errors detected in each polling iteration are reported via email immediately.
 - When the target window is unavailable or disabled, an alert is sent and the scan is skipped.
