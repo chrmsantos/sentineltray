@@ -29,6 +29,10 @@ Examples:
 - phrase_regex: 'PROTOCOLS?\\s+NOT\\s+RECEIVED'
 - phrase_regex: 'ALERT|CRITICAL'
 
+Notes:
+
+- window_title_regex uses regex search (partial match by default). Use ^...$ if you need an exact match.
+
 ## Multiple monitors
 
 Use the `monitors` key to define multiple title + text pairs.

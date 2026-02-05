@@ -224,7 +224,7 @@ def _build_email_config(
     elif dry_run:
         smtp_password = ""
     else:
-        raise ValueError("Missing required config key: smtp_password")
+        smtp_password = ""
     env_password = _env_override("SMTP_PASSWORD", monitor_index)
     if env_password:
         smtp_password = env_password
@@ -238,7 +238,10 @@ def _build_email_config(
         if stored_password:
             smtp_password = stored_password
     if not dry_run and not smtp_password.strip():
-        raise ValueError("smtp_password is required when dry_run=false")
+        LOGGER.info(
+            "SMTP password missing for monitor %s; will prompt in CLI",
+            monitor_index or 0,
+        )
 
     return EmailConfig(
         smtp_host=str(_get_required(email_data, "smtp_host")),

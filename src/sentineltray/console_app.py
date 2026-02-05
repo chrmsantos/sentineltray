@@ -18,10 +18,29 @@ from .config import (
     get_user_log_dir,
     load_config,
 )
+from .detector import WindowTextDetector
 from .status import StatusStore, format_timestamp
 from .dpapi_utils import save_secret
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _clear_stored_smtp_password(index: int) -> None:
+    env_key = f"SENTINELTRAY_SMTP_PASSWORD_{index}"
+    if env_key in os.environ:
+        os.environ.pop(env_key, None)
+    secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
+    if not secret_path.exists():
+        return
+    try:
+        secret_path.unlink()
+    except Exception as exc:
+        LOGGER.warning(
+            "Failed to clear stored SMTP password for monitor %s: %s",
+            index,
+            exc,
+            extra={"category": "config"},
+        )
 
 def _prune_files(path: Path, pattern: str, keep: int = 3) -> None:
     entries = sorted(
@@ -165,6 +184,9 @@ def _menu_header(status: StatusStore) -> list[str]:
     state = "EXECUTANDO" if snapshot.running else "PARADO"
     last_send_at = format_timestamp(snapshot.last_send)
     last_message = f"ENVIADA ({last_send_at})" if last_send_at else "NENHUMA"
+    last_scan_at = format_timestamp(snapshot.last_scan)
+    last_scan_line = f"Ultimo scan: {last_scan_at or 'NENHUM'}"
+    last_error_line = f"Ultimo erro: {snapshot.last_error or 'NENHUM'}"
     queue = snapshot.email_queue
     queue_line = (
         "Fila e-mail: "
@@ -190,12 +212,45 @@ def _menu_header(status: StatusStore) -> list[str]:
         "SentinelTray - Console",
         f"Status atual: {state}",
         f"ERROS: {snapshot.error_count}",
+        last_scan_line,
         f"Última mensagem: {last_message}",
+        last_error_line,
         queue_line,
         breaker_line,
         failure_line,
         "",
     ]
+
+
+def _print_window_matches(config: AppConfig) -> None:
+    print("Janelas correspondentes por monitor:")
+    print("")
+    for index, monitor in enumerate(config.monitors, start=1):
+        detector = WindowTextDetector(
+            monitor.window_title_regex,
+            allow_window_restore=False,
+            log_throttle_seconds=0,
+        )
+        try:
+            titles = detector.list_matching_window_titles()
+        except Exception as exc:
+            print(f"Monitor {index}: erro ao listar janelas: {exc}")
+            continue
+        if not titles:
+            print(
+                f"Monitor {index}: nenhuma janela corresponde ({monitor.window_title_regex})"
+            )
+            continue
+        print(
+            f"Monitor {index}: {len(titles)} janela(s) encontrada(s)"
+            f" ({monitor.window_title_regex})"
+        )
+        for title in titles[:5]:
+            print(f"  - {title}")
+        if len(titles) > 5:
+            print(f"  ... e mais {len(titles) - 5}")
+    print("")
+    input("Enter para voltar...")
 
 
 def run_console(config: AppConfig) -> None:
@@ -206,6 +261,7 @@ def run_console(config: AppConfig) -> None:
         config, status, stop_event, manual_scan_event
     )
     on_open, finalize_config_edit, close_editor = _create_config_editor()
+    last_auth_error = ""
 
     def save_config_edit() -> AppConfig | None:
         return finalize_config_edit()
@@ -231,12 +287,59 @@ def run_console(config: AppConfig) -> None:
 
     try:
         while True:
+            snapshot = status.snapshot()
+            if "smtp auth failed" in snapshot.last_error and snapshot.last_error != last_auth_error:
+                last_auth_error = snapshot.last_error
+                stop_event.set()
+                try:
+                    notifier_thread.join(timeout=5)
+                except Exception as exc:
+                    LOGGER.warning("Failed to stop notifier for SMTP reset: %s", exc)
+                print("\nFalha de autenticação SMTP detectada.")
+                print("Informe a senha correta para continuar.\n")
+                updated_any = False
+                for index, monitor in enumerate(config.monitors, start=1):
+                    username = str(monitor.email.smtp_username or "").strip()
+                    if not username:
+                        continue
+                    _clear_stored_smtp_password(index)
+                    print(f"Usuário SMTP (monitor {index}): {username}")
+                    password = getpass("Senha SMTP: ").strip()
+                    if not password:
+                        continue
+                    os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
+                    updated_any = True
+                    try:
+                        secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
+                        save_secret(secret_path, password)
+                    except Exception as exc:
+                        LOGGER.warning(
+                            "Failed to store SMTP password securely: %s",
+                            exc,
+                            extra={"category": "config"},
+                        )
+                if updated_any:
+                    local_path = get_user_data_dir() / "config.local.yaml"
+                    try:
+                        config = load_config(str(local_path))
+                        status.set_last_error("")
+                    except Exception as exc:
+                        print(f"Falha ao validar config: {exc}")
+                        time.sleep(2)
+                stop_event = Event()
+                notifier_thread = _start_notifier(
+                    config,
+                    status,
+                    stop_event,
+                    manual_scan_event,
+                )
             clear_screen()
             for line in _menu_header(status):
                 print(line)
             print("Comandos:")
             print("  [C] Editar config")
             print("  [M] Scan manual")
+            print("  [W] Ver janelas")
             print("  [Q] Sair")
             print("")
             try:
@@ -251,6 +354,9 @@ def run_console(config: AppConfig) -> None:
                 manual_scan_event.set()
                 print("Scan manual solicitado.")
                 time.sleep(1)
+            elif command in ("w", "window", "windows", "janela", "janelas"):
+                LOGGER.info("Window match check requested", extra={"category": "control"})
+                _print_window_matches(config)
             apply_config_edit()
     except KeyboardInterrupt:
         return

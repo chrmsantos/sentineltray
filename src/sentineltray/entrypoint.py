@@ -301,7 +301,32 @@ def _run_startup_integrity_checks(local_path: Path) -> None:
 
 
 
-def _validate_smtp_config(config: AppConfig) -> None:
+def _clear_stored_smtp_password(index: int) -> None:
+    env_key = f"SENTINELTRAY_SMTP_PASSWORD_{index}"
+    if env_key in os.environ:
+        os.environ.pop(env_key, None)
+    secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
+    if not secret_path.exists():
+        return
+    try:
+        secret_path.unlink()
+        LOGGER.info(
+            "Cleared stored SMTP password for monitor %s",
+            index,
+            extra={"category": "config"},
+        )
+    except Exception as exc:
+        LOGGER.warning(
+            "Failed to clear stored SMTP password for monitor %s: %s",
+            index,
+            exc,
+            extra={"category": "config"},
+        )
+
+
+def _validate_smtp_config(config: AppConfig) -> tuple[list[tuple[int, str]], list[str]]:
+    auth_failures: list[tuple[int, str]] = []
+    auth_messages: list[str] = []
     failures: list[str] = []
     for index, monitor in enumerate(config.monitors, start=1):
         email = monitor.email
@@ -310,11 +335,13 @@ def _validate_smtp_config(config: AppConfig) -> None:
         try:
             validate_smtp_credentials(email)
         except EmailAuthError as exc:
-            failures.append(f"monitor {index}: {exc}")
+            auth_failures.append((index, email.smtp_username))
+            auth_messages.append(f"monitor {index}: {exc}")
         except Exception as exc:
             failures.append(f"monitor {index}: {exc}")
     if failures:
         raise ValueError("SMTP validation failed: " + "; ".join(failures))
+    return auth_failures, auth_messages
 
 
 def _ensure_windows() -> None:
@@ -411,7 +438,18 @@ def main() -> int:
             _prompt_smtp_passwords(missing_passwords)
             config = load_config(str(local_path))
         _require_dry_run_on_first_use(config)
-        _validate_smtp_config(config)
+        auth_failures, auth_messages = _validate_smtp_config(config)
+        if auth_failures:
+            for index, _ in auth_failures:
+                _clear_stored_smtp_password(index)
+            _prompt_smtp_passwords(auth_failures)
+            config = load_config(str(local_path))
+            auth_failures, auth_messages = _validate_smtp_config(config)
+            if auth_failures:
+                raise ValueError(
+                    "SMTP validation failed (SENTINELTRAY_SMTP_PASSWORD): "
+                    + "; ".join(auth_messages)
+                )
     except Exception as exc:
         config_error_message = _handle_config_error(local_path, exc)
 

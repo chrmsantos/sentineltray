@@ -1,7 +1,6 @@
 import pytest
 
 pywinauto = pytest.importorskip("pywinauto")
-from pywinauto.findwindows import ElementAmbiguousError
 
 from sentineltray.detector import WindowTextDetector
 
@@ -93,10 +92,11 @@ def test_find_matches_case_insensitive(monkeypatch) -> None:
 
 def test_get_window_resolves_ambiguous(monkeypatch) -> None:
     class FakeWindow:
-        def __init__(self, focus: bool, visible: bool, enabled: bool) -> None:
+        def __init__(self, focus: bool, visible: bool, enabled: bool, title: str) -> None:
             self._focus = focus
             self._visible = visible
             self._enabled = enabled
+            self._title = title
 
         def has_focus(self) -> bool:
             return self._focus
@@ -107,21 +107,17 @@ def test_get_window_resolves_ambiguous(monkeypatch) -> None:
         def is_enabled(self) -> bool:
             return self._enabled
 
-    class FakeSpec:
-        def wrapper_object(self):
-            raise ElementAmbiguousError("ambiguous")
+        def window_text(self) -> str:
+            return self._title
 
     class FakeDesktop:
         def __init__(self, *args, **kwargs) -> None:
             return None
 
-        def window(self, *_args, **_kwargs):
-            return FakeSpec()
-
         def windows(self, *_args, **_kwargs):
             return [
-                FakeWindow(False, True, True),
-                FakeWindow(True, True, True),
+                FakeWindow(False, True, True, "APP Monitor"),
+                FakeWindow(True, True, True, "APP Monitor 2"),
             ]
 
     detector = WindowTextDetector("APP", allow_window_restore=True)
@@ -131,6 +127,65 @@ def test_get_window_resolves_ambiguous(monkeypatch) -> None:
 
     assert isinstance(window, FakeWindow)
     assert window.has_focus()
+
+
+def test_get_window_matches_partial_title(monkeypatch) -> None:
+    class FakeWindow:
+        def __init__(self, title: str) -> None:
+            self._title = title
+
+        def window_text(self) -> str:
+            return self._title
+
+        def has_focus(self) -> bool:
+            return True
+
+        def is_visible(self) -> bool:
+            return True
+
+        def is_enabled(self) -> bool:
+            return True
+
+    class FakeDesktop:
+        def __init__(self, *args, **kwargs) -> None:
+            return None
+
+        def windows(self, *_args, **_kwargs):
+            return [FakeWindow("Main Application - Monitor")]
+
+    detector = WindowTextDetector("Monitor", allow_window_restore=True)
+    monkeypatch.setattr("sentineltray.detector.Desktop", FakeDesktop)
+
+    window = detector._get_window()
+
+    assert isinstance(window, FakeWindow)
+
+
+def test_list_matching_window_titles(monkeypatch) -> None:
+    class FakeWindow:
+        def __init__(self, title: str) -> None:
+            self._title = title
+
+        def window_text(self) -> str:
+            return self._title
+
+    class FakeDesktop:
+        def __init__(self, *args, **kwargs) -> None:
+            return None
+
+        def windows(self, *_args, **_kwargs):
+            return [
+                FakeWindow("Alpha"),
+                FakeWindow("Main Monitor"),
+                FakeWindow("Monitor - Secondary"),
+            ]
+
+    detector = WindowTextDetector("Monitor", allow_window_restore=True)
+    monkeypatch.setattr("sentineltray.detector.Desktop", FakeDesktop)
+
+    titles = detector.list_matching_window_titles()
+
+    assert titles == ["Main Monitor", "Monitor - Secondary"]
 
 
 def test_prepare_window_visibility_timeout_accepts_visible() -> None:
