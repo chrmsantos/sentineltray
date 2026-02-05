@@ -6,6 +6,7 @@
 - Console action [W] lists matching window titles per monitor for quick validation.
 - Console header shows last scan timestamp and last error for faster troubleshooting.
 - SMTP auth failures now prompt for updated credentials without restart.
+- Missing pywinauto now reports a clear dependency error instead of a generic lookup failure.
 
 ## Notes
 

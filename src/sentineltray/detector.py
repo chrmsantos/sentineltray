@@ -236,6 +236,11 @@ class WindowTextDetector:
         return candidates
 
     def _get_window(self):
+        if Desktop is None:
+            raise RuntimeError(
+                "pywinauto is required for window detection. "
+                "Install dependencies from requirements.txt."
+            ) from _PYWINAUTO_IMPORT_ERROR
         if self._last_window is not None:
             try:
                 if hasattr(self._last_window, "exists"):
