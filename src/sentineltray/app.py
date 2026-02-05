@@ -22,6 +22,7 @@ from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, EmailSender, build_sender
 from .telemetry import JsonWriter, atomic_write_text
+from .io_utils import read_json_safe
 from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
@@ -69,25 +70,22 @@ def _is_user_idle(min_seconds: int) -> bool:
 def _load_state(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(data, list):
-            items = cast(list[object], data)
-            if all(isinstance(item, str) for item in items):
-                now = _now_iso()
-                return [{"text": str(item), "sent_at": now} for item in items]
-            normalized_items: list[dict[str, str]] = []
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                typed_item = cast(dict[str, object], item)
-                text = typed_item.get("text")
-                sent_at = typed_item.get("sent_at")
-                if isinstance(text, str) and isinstance(sent_at, str):
-                    normalized_items.append({"text": text, "sent_at": sent_at})
-            return normalized_items
-    except Exception:
-        return []
+    data = read_json_safe(path, default=[], context="state file")
+    if isinstance(data, list):
+        items = cast(list[object], data)
+        if all(isinstance(item, str) for item in items):
+            now = _now_iso()
+            return [{"text": str(item), "sent_at": now} for item in items]
+        normalized_items: list[dict[str, str]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            typed_item = cast(dict[str, object], item)
+            text = typed_item.get("text")
+            sent_at = typed_item.get("sent_at")
+            if isinstance(text, str) and isinstance(sent_at, str):
+                normalized_items.append({"text": text, "sent_at": sent_at})
+        return normalized_items
     return []
 
 

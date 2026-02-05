@@ -222,21 +222,29 @@ def _reject_extra_args(args: list[str]) -> None:
 def _setup_boot_logging() -> None:
     if logging.getLogger().handlers:
         return
-    log_root = get_user_log_dir()
-    log_root.mkdir(parents=True, exist_ok=True)
-    boot_log = log_root / "sentineltray_boot.log"
-    setup_logging(
-        str(boot_log),
-        log_level="INFO",
-        log_console_level="INFO",
-        log_console_enabled=True,
-        log_max_bytes=1_000_000,
-        log_backup_count=3,
-        log_run_files_keep=3,
-        app_version=__version_label__,
-        release_date=__release_date__,
-        commit_hash="",
-    )
+    try:
+        log_root = get_user_log_dir()
+        log_root.mkdir(parents=True, exist_ok=True)
+        boot_log = log_root / "sentineltray_boot.log"
+        setup_logging(
+            str(boot_log),
+            log_level="INFO",
+            log_console_level="INFO",
+            log_console_enabled=True,
+            log_max_bytes=1_000_000,
+            log_backup_count=3,
+            log_run_files_keep=3,
+            app_version=__version_label__,
+            release_date=__release_date__,
+            commit_hash="",
+        )
+    except Exception as exc:
+        logging.basicConfig(level=logging.INFO)
+        logging.getLogger(__name__).warning(
+            "Boot logging unavailable; using stderr: %s",
+            exc,
+            extra={"category": "startup"},
+        )
 
 
 def _legacy_data_dir() -> Path | None:
