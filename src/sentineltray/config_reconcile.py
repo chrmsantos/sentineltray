@@ -10,8 +10,7 @@ from typing import Any
 
 import yaml
 
-from .config import decrypt_config_payload, encrypt_config_text, get_encrypted_config_path, get_project_root
-from .security_utils import parse_payload
+from .config import get_project_root
 
 try:
     from ruamel.yaml import YAML  # type: ignore
@@ -110,10 +109,6 @@ def hash_text(text: str) -> str:
 
 
 def load_current_config_text(config_path: Path) -> str:
-    encrypted_path = get_encrypted_config_path(config_path)
-    if encrypted_path.exists():
-        payload = parse_payload(encrypted_path.read_text(encoding="utf-8"))
-        return decrypt_config_payload(payload, config_path=config_path)
     return config_path.read_text(encoding="utf-8")
 
 
@@ -142,9 +137,6 @@ def ensure_local_config_from_template(
     template_text: str | None = None,
     logger: logging.Logger | None = None,
 ) -> bool:
-    encrypted_path = get_encrypted_config_path(config_path)
-    if encrypted_path.exists():
-        return False
     if config_path.exists():
         try:
             if config_path.read_text(encoding="utf-8").strip():
@@ -180,8 +172,7 @@ def reconcile_template_config(
             applied=False,
             skipped_reason="template_missing",
         )
-    encrypted_path = get_encrypted_config_path(config_path)
-    if not config_path.exists() and not encrypted_path.exists():
+    if not config_path.exists():
         return TemplateReconcileSummary(
             added=0,
             changed=0,
@@ -216,11 +207,7 @@ def reconcile_template_config(
             applied=False,
         )
 
-    if encrypted_path.exists():
-        encoded = encrypt_config_text(merged_text, config_path=config_path)
-        encrypted_path.write_text(encoded, encoding="utf-8")
-    else:
-        config_path.write_text(merged_text, encoding="utf-8")
+    config_path.write_text(merged_text, encoding="utf-8")
 
     (logger or LOGGER).info(
         "Config template reconciled",

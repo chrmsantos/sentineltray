@@ -27,8 +27,7 @@ This includes:
 - config.local.yaml (credentials and addresses)
 - state.json (local history)
 
-Encrypted configs (config.local.yaml.enc) are supported via Windows DPAPI to protect sensitive data at rest. On startup, the app attempts to encrypt plaintext configs.
-The tray config editor uses a temporary plaintext file in the local data directory and removes it after re-encrypting.
+The config editor uses a temporary plaintext file in the local data directory and removes it after saving.
 
 Operational data (diagnostics) is stored in:
 

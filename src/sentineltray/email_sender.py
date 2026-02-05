@@ -159,6 +159,34 @@ class SmtpEmailSender(EmailSender):
                     time.sleep(backoff * (2**attempt))
 
 
+def validate_smtp_credentials(config: EmailConfig) -> None:
+    if config.dry_run:
+        return
+    if not config.smtp_host:
+        raise ValueError("smtp_host is required")
+    if not config.smtp_username and not config.smtp_password:
+        raise ValueError("smtp_username or smtp_password is required")
+
+    sender = SmtpEmailSender(config)
+    try:
+        with smtplib.SMTP(
+            config.smtp_host,
+            config.smtp_port,
+            timeout=config.timeout_seconds,
+        ) as client:
+            if config.use_tls:
+                client.starttls()
+            client.login(config.smtp_username, config.smtp_password)
+    except smtplib.SMTPException as exc:
+        if sender._is_auth_error(exc):
+            LOGGER.error(
+                "SMTP authentication failed during startup validation",
+                extra={"category": "startup"},
+            )
+            raise EmailAuthError("SMTP authentication failed") from exc
+        raise RuntimeError(f"SMTP validation failed: {exc}") from exc
+
+
 @dataclass
 class QueueStats:
     queued: int

@@ -416,6 +416,11 @@ class Notifier:
                 monitor.breaker_until = max(
                     monitor.breaker_until, time.monotonic() + backoff_seconds
                 )
+        self.status.set_monitor_state(
+            monitor.key,
+            failure_count=monitor.failure_count,
+            breaker_active=bool(monitor.breaker_until and time.monotonic() < monitor.breaker_until),
+        )
 
     def scan_once(self) -> None:
         scan_id = uuid4().hex
@@ -442,6 +447,11 @@ class Notifier:
                 monitor.failure_count = 0
                 monitor.breaker_until = 0.0
                 monitor.last_window_ok_at = _now_iso()
+                self.status.set_monitor_state(
+                    monitor.key,
+                    failure_count=0,
+                    breaker_active=False,
+                )
             except WindowUnavailableError as exc:
                 message = f"error: window unavailable: {exc}"
                 self._handle_monitor_error(monitor, message)

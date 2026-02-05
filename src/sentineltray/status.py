@@ -17,6 +17,8 @@ class StatusSnapshot:
     uptime_seconds: int
     error_count: int
     email_queue: dict[str, int]
+    monitor_failures: dict[str, int]
+    breaker_active_count: int
 
 
 class StatusStore:
@@ -38,6 +40,8 @@ class StatusStore:
             "deferred": 0,
             "oldest_age_seconds": 0,
         }
+        self._monitor_failures: dict[str, int] = {}
+        self._monitor_breakers_active: dict[str, bool] = {}
 
     def set_running(self, value: bool) -> None:
         with self._lock:
@@ -79,8 +83,14 @@ class StatusStore:
         with self._lock:
             self._email_queue = dict(value)
 
+    def set_monitor_state(self, key: str, *, failure_count: int, breaker_active: bool) -> None:
+        with self._lock:
+            self._monitor_failures[key] = max(0, int(failure_count))
+            self._monitor_breakers_active[key] = bool(breaker_active)
+
     def snapshot(self) -> StatusSnapshot:
         with self._lock:
+            breaker_active_count = sum(1 for active in self._monitor_breakers_active.values() if active)
             return StatusSnapshot(
                 running=self._running,
                 last_scan=self._last_scan,
@@ -92,6 +102,8 @@ class StatusStore:
                 uptime_seconds=self._uptime_seconds,
                 error_count=self._error_count,
                 email_queue=dict(self._email_queue),
+                monitor_failures=dict(self._monitor_failures),
+                breaker_active_count=breaker_active_count,
             )
 
 
@@ -120,6 +132,20 @@ def _format_next_check(last_scan: str, poll_interval_seconds: int | None) -> str
         return ""
 
 
+def _format_failure_summary(failures: dict[str, int]) -> str:
+    if not failures:
+        return ""
+    items = [(key, count) for key, count in failures.items() if count > 0]
+    if not items:
+        return ""
+    items.sort(key=lambda item: item[1], reverse=True)
+    summary_parts = []
+    for key, count in items[:3]:
+        label = key if len(key) <= 32 else f"{key[:29]}..."
+        summary_parts.append(f"{label}={count}")
+    return ", ".join(summary_parts)
+
+
 def format_status(
     snapshot: StatusSnapshot,
     *,
@@ -134,6 +160,7 @@ def format_status(
     next_check = _format_next_check(snapshot.last_scan, poll_interval_seconds)
     last_identification = _format_timestamp(snapshot.last_match) or snapshot.last_match
     last_match_at = _format_timestamp(snapshot.last_match_at)
+    failure_summary = _format_failure_summary(snapshot.monitor_failures) or "none"
     lines = [
         f"Running: {running}",
         f"Monitored window: {window_label}",
@@ -146,6 +173,8 @@ def format_status(
         f"Last error recorded: {_format_timestamp(snapshot.last_error)}",
         f"Last health summary: {_format_timestamp(snapshot.last_healthcheck)}",
         f"Email queue pending: {snapshot.email_queue.get('queued', 0)}",
+        f"Circuit breakers active: {snapshot.breaker_active_count}",
+        f"Monitor failures: {failure_summary}",
         f"Uptime (seconds): {snapshot.uptime_seconds}",
         f"Total errors: {snapshot.error_count}",
     ]

@@ -9,3 +9,13 @@
 - Detector now includes the window title text in scans and treats whitespace-only phrases as empty.
 - Window minimization respects allow_window_restore to reduce desktop disruption.
 - Added unit tests for phrase handling and regex validation.
+
+## 2026-02-05
+- SMTP password prompt now skips when env credentials are already set.
+- Script log retention aligned to keep only the 3 most recent files.
+- Window restore/maximize now retries restore and enforces allow_window_restore.
+- Added a minimal green tray icon using pywin32.
+- Updated pywin32 pin for Python 3.14 compatibility.
+- Encrypted configs may now use stored smtp_password when env is missing.
+- Added startup SMTP validation and runtime checksum sampling.
+- Status now exposes per-monitor failures and breaker counts.

@@ -159,7 +159,7 @@ def test_invalid_config_version_rejected(
         load_config(str(config_path))
 
 
-def test_smtp_password_requires_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_smtp_password_allows_config_value(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -204,7 +204,7 @@ def test_smtp_password_requires_env(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     )
 
     config = load_config(str(config_path))
-    assert config.monitors[0].email.smtp_password == ""
+    assert config.monitors[0].email.smtp_password == "secret"
 
 
 def test_smtp_password_env_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
