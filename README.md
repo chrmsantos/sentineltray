@@ -1,6 +1,6 @@
 # SentinelTray
 
-Release candidate: 3.0.0-rc.1 (02-04-2026)
+Release candidate: 3.0.0-rc.2 (05-02-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
@@ -59,7 +59,7 @@ scripts\activate_venv.cmd
 
 If you run main.py directly, it automatically adds src/ to the import path.
 SentinelTray starts in the foreground console interface. Use the menu to open Config,
-trigger a manual scan, or Exit.
+trigger a manual scan, check matching windows, or Exit.
 
 For a simple start, use the shortcut at the project root: Executar SentinelTray.cmd.
 
@@ -94,6 +94,10 @@ Examples:
 - window_title_regex: '^App\\.Monitor\\..*'
 - phrase_regex: 'PROTOCOLS?\\s+NOT\\s+RECEIVED'
 - phrase_regex: 'ALERT|CRITICAL'
+
+Notes:
+
+- window_title_regex uses regex search (partial match by default). Use ^...$ if you need an exact match.
 
 ## Monitors (title + text + email)
 

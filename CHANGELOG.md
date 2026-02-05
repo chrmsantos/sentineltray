@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-02-05 (3.0.0-rc.2)
+
+- Window detection: title regex now matches partial titles (regex search) to avoid missing dynamic titles.
+- Console: added window match listing action to validate title regex against open windows.
+- Console: header shows last scan timestamp and last error for quicker diagnostics.
+- SMTP: missing passwords prompt at startup and allow auth reset without restarting the app.
+
 ## 2026-02-04 (3.0.0-rc.1)
 
 - Startup: added integrity checks for data/log directories, portable runtime markers, and automatic config template reconciliation.

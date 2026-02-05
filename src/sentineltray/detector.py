@@ -185,8 +185,7 @@ class WindowTextDetector:
         if not self._window_is_maximized(window):
             raise WindowUnavailableError("Target window not maximized")
 
-    def _select_best_window(self, desktop: Desktop):
-        candidates = desktop.windows(title_re=self._window_title_regex)
+    def _select_best_window(self, candidates):
         if not candidates:
             raise ElementAmbiguousError("No window candidates available")
 
@@ -217,12 +216,26 @@ class WindowTextDetector:
         )
         return selected
 
-    def _get_window(self):
+    def _collect_candidate_windows(self) -> list[object]:
         if Desktop is None:
             raise RuntimeError(
                 "pywinauto is required for window detection. "
                 "Install dependencies from requirements.txt."
             ) from _PYWINAUTO_IMPORT_ERROR
+        desktop = Desktop(backend="uia")
+        candidates: list[object] = []
+        for window in desktop.windows():
+            try:
+                title_text = window.window_text()
+            except Exception:
+                continue
+            if not title_text:
+                continue
+            if self._window_title_regex.search(title_text):
+                candidates.append(window)
+        return candidates
+
+    def _get_window(self):
         if self._last_window is not None:
             try:
                 if hasattr(self._last_window, "exists"):
@@ -235,23 +248,15 @@ class WindowTextDetector:
         last_exc: Exception | None = None
         for attempt in range(3):
             try:
-                desktop = Desktop(backend="uia")
-                try:
-                    window_spec = desktop.window(title_re=self._window_title_regex)
-                except ElementAmbiguousError:
-                    return self._select_best_window(desktop)
-
-                try:
-                    window = window_spec.wrapper_object()
-                    self._last_window = window
-                    return window
-                except ElementAmbiguousError:
-                    window = self._select_best_window(desktop)
-                    self._last_window = window
-                    return window
-                except Exception:
-                    self._last_window = window_spec
-                    return window_spec
+                candidates = self._collect_candidate_windows()
+                if not candidates:
+                    raise WindowUnavailableError("Target window not found")
+                if len(candidates) == 1:
+                    self._last_window = candidates[0]
+                    return candidates[0]
+                window = self._select_best_window(candidates)
+                self._last_window = window
+                return window
             except Exception as exc:
                 last_exc = exc
                 self._log_throttled(
@@ -262,7 +267,21 @@ class WindowTextDetector:
                     exc,
                 )
                 time.sleep(0.5 * (2**attempt))
+        if isinstance(last_exc, WindowUnavailableError):
+            raise last_exc
         raise WindowUnavailableError("Target window lookup failed") from last_exc
+
+    def list_matching_window_titles(self) -> list[str]:
+        candidates = self._collect_candidate_windows()
+        titles: list[str] = []
+        for window in candidates:
+            try:
+                title_text = window.window_text()
+            except Exception:
+                continue
+            if title_text:
+                titles.append(title_text)
+        return titles
 
     def check_ready(self) -> None:
         window = self._get_window()
