@@ -6,6 +6,7 @@
 - Console: added window match listing action to validate title regex against open windows.
 - Console: header shows last scan timestamp and last error for quicker diagnostics.
 - SMTP: missing passwords prompt at startup and allow auth reset without restarting the app.
+- Dependencies: clearer error when pywinauto is missing instead of masking it as a lookup failure.
 
 ## 2026-02-04 (3.0.0-rc.1)
 
