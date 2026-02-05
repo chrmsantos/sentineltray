@@ -19,19 +19,19 @@ This application processes personal data only to send alerts and maintain the te
 
 Sensitive data required for operation is stored exclusively in:
 
-- %SENTINELTRAY_DATA_DIR% (when defined)
-- or %LOCALAPPDATA%\Axon\SentinelTray\config (default fallback)
+- config (project folder)
 
 This includes:
 
-- config.local.yaml (credentials and addresses)
+- config.local.yaml (addresses and settings; passwords are stored separately)
+- smtp_password_<index>.dpapi (encrypted SMTP passwords via Windows DPAPI)
 - state.json (local history)
 
-The config editor uses a temporary plaintext file in the local data directory and removes it after saving.
+The config editor uses a temporary plaintext file in config and removes it after saving.
 
 Operational data (diagnostics) is stored in:
 
-- %SENTINELTRAY_DATA_DIR%\logs
+- config\logs
 
 - *.log (diagnostics)
 - telemetry.json (operational state)
@@ -40,7 +40,7 @@ The repository contains only commented templates and fictitious examples.
 
 ## Initial execution
 
-On startup, if %SENTINELTRAY_DATA_DIR%\config.local.yaml does not exist, the application exits with correction guidance. Personal data remains only in that directory; operational logs remain in %SENTINELTRAY_DATA_DIR%\logs.
+On startup, if config\config.local.yaml does not exist, the application exits with correction guidance. Personal data remains only in config; operational logs remain in config\logs.
 
 ## Security and minimization
 
@@ -57,7 +57,7 @@ On startup, if %SENTINELTRAY_DATA_DIR%\config.local.yaml does not exist, the app
 
 ## Data subject rights
 
-The user can remove or correct data at any time by editing or deleting files under %SENTINELTRAY_DATA_DIR%.
+The user can remove or correct data at any time by editing or deleting files under config.
 
 ## Contact
 

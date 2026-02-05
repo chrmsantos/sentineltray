@@ -18,14 +18,8 @@ from .config import (
     get_user_log_dir,
     load_config,
 )
-from .config_reconcile import (
-    TemplateReconcileSummary,
-    apply_template_to_config_text,
-    hash_text,
-    read_template_config_text,
-    reconcile_template_config,
-)
 from .status import StatusStore, format_timestamp
+from .dpapi_utils import save_secret
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,60 +34,6 @@ def _prune_files(path: Path, pattern: str, keep: int = 3) -> None:
             entry.unlink()
         except Exception:
             continue
-
-
-def _run_template_reconcile(
-    config_path: Path,
-    template_text: str,
-    *,
-    dry_run: bool,
-) -> TemplateReconcileSummary | None:
-    try:
-        return reconcile_template_config(
-            config_path,
-            template_text=template_text,
-            dry_run=dry_run,
-            logger=LOGGER,
-        )
-    except Exception as exc:
-        LOGGER.warning("Failed to reconcile config template: %s", exc)
-        print("Falha ao validar a configuração durante a reconciliação.")
-        return None
-
-
-def _print_reconcile_summary(summary: TemplateReconcileSummary | None, *, dry_run: bool) -> None:
-    if summary is None:
-        return
-    if summary.skipped_reason == "template_missing":
-        print("Template oficial não encontrado.")
-        return
-    if summary.skipped_reason == "config_missing":
-        print("Configuração local não encontrada.")
-        return
-    if summary.added == 0 and summary.changed == 0:
-        print("Configuração já está alinhada ao template.")
-        return
-    if dry_run:
-        print("Reconciliação do template (dry-run).")
-    else:
-        print("Reconciliação do template aplicada.")
-    print(f"  Chaves adicionadas: {summary.added}")
-    print(f"  Chaves alteradas: {summary.changed}")
-    if summary.template_sha256:
-        print(f"  Template SHA256: {summary.template_sha256}")
-    if summary.config_sha256:
-        print(f"  Config SHA256: {summary.config_sha256}")
-
-
-def _reconcile_template(*, dry_run: bool) -> None:
-    data_dir = get_user_data_dir()
-    config_path = data_dir / "config.local.yaml"
-    template_text = read_template_config_text()
-    if template_text is None:
-        print("Template oficial não encontrado.")
-        return
-    summary = _run_template_reconcile(config_path, template_text, dry_run=dry_run)
-    _print_reconcile_summary(summary, dry_run=dry_run)
 
 
 def _start_notifier(
@@ -112,7 +52,11 @@ def _start_notifier(
     return thread
 
 
-def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig | None]]:
+def _create_config_editor() -> tuple[
+    Callable[[], None],
+    Callable[[], AppConfig | None],
+    Callable[[], None],
+]:
     edit_process: subprocess.Popen[str] | None = None
 
     def on_open() -> None:
@@ -123,7 +67,6 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig 
             data_dir = get_user_data_dir()
             config_path = data_dir / "config.local.yaml"
             temp_path = data_dir / "config.local.yaml.edit"
-            template_text = read_template_config_text()
 
             _prune_files(data_dir, "config.local.yaml.edit.*", keep=3)
 
@@ -133,22 +76,12 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig 
 
             if config_path.exists():
                 legacy_text = config_path.read_text(encoding="utf-8")
-                merged_text = apply_template_to_config_text(legacy_text, template_text)
-                temp_path.write_text(merged_text, encoding="utf-8")
-            elif template_text is not None:
-                temp_path.write_text(template_text, encoding="utf-8")
+                temp_path.write_text(legacy_text, encoding="utf-8")
             else:
-                LOGGER.warning("Config file not found to edit")
-                return
-
-            if template_text is not None:
-                LOGGER.info(
-                    "Config template synchronized for editor",
-                    extra={
-                        "category": "config",
-                        "template_sha256": hash_text(template_text),
-                        "config_sha256": hash_text(merged_text),
-                    },
+                temp_path.write_text(
+                    "# SentinelTray - configuração local\n"
+                    "# Preencha os campos obrigatórios antes de rodar.\n",
+                    encoding="utf-8",
                 )
 
             edit_process = subprocess.Popen(["notepad.exe", str(temp_path)], text=True)
@@ -182,7 +115,22 @@ def _create_config_editor() -> tuple[Callable[[], None], Callable[[], AppConfig 
             LOGGER.warning("Failed to finalize config edit: %s", exc)
         return None
 
-    return on_open, finalize_config_edit
+    def close_editor() -> None:
+        nonlocal edit_process
+        if edit_process is None:
+            return
+        if edit_process.poll() is None:
+            try:
+                edit_process.terminate()
+                edit_process.wait(timeout=2)
+            except Exception:
+                try:
+                    edit_process.kill()
+                except Exception:
+                    pass
+        edit_process = None
+
+    return on_open, finalize_config_edit, close_editor
 
 
 def _write_config_error_details(message: str) -> Path:
@@ -257,7 +205,7 @@ def run_console(config: AppConfig) -> None:
     notifier_thread = _start_notifier(
         config, status, stop_event, manual_scan_event
     )
-    on_open, finalize_config_edit = _create_config_editor()
+    on_open, finalize_config_edit, close_editor = _create_config_editor()
 
     def save_config_edit() -> AppConfig | None:
         return finalize_config_edit()
@@ -288,7 +236,6 @@ def run_console(config: AppConfig) -> None:
                 print(line)
             print("Comandos:")
             print("  [C] Editar config")
-            print("  [R] Reconciliar template")
             print("  [M] Scan manual")
             print("  [Q] Sair")
             print("")
@@ -300,11 +247,6 @@ def run_console(config: AppConfig) -> None:
                 return
             if command in ("c", "config"):
                 on_open()
-            elif command in ("r", "reconcile", "reconciliar"):
-                _reconcile_template(dry_run=True)
-                apply_now = input("Aplicar reconciliação? (s/N) ").strip().lower()
-                if apply_now in ("s", "sim", "y", "yes"):
-                    _reconcile_template(dry_run=False)
             elif command in ("m", "manual", "scan"):
                 manual_scan_event.set()
                 print("Scan manual solicitado.")
@@ -317,20 +259,21 @@ def run_console(config: AppConfig) -> None:
         try:
             notifier_thread.join(timeout=5)
         finally:
+            close_editor()
             save_config_edit()
 
 
 def run_console_config_error(error_details: str) -> None:
-    on_open, finalize_config_edit = _create_config_editor()
+    on_open, finalize_config_edit, close_editor = _create_config_editor()
     details_path = _write_config_error_details(error_details)
     local_path = get_user_data_dir() / "config.local.yaml"
     supports_smtp_prompt = "SENTINELTRAY_SMTP_PASSWORD" in error_details
-    smtp_usernames: list[str] = []
+    smtp_usernames: list[tuple[int, str]] = []
     try:
         config = load_config(str(local_path))
         smtp_usernames = [
-            monitor.email.smtp_username
-            for monitor in config.monitors
+            (index, monitor.email.smtp_username)
+            for index, monitor in enumerate(config.monitors, start=1)
             if monitor.email.smtp_username
         ]
     except Exception:
@@ -354,6 +297,7 @@ def run_console_config_error(error_details: str) -> None:
             except KeyboardInterrupt:
                 return
             if command in ("q", "quit", "exit", "sair"):
+                close_editor()
                 return
             if command in ("c", "config"):
                 on_open()
@@ -362,13 +306,26 @@ def run_console_config_error(error_details: str) -> None:
             elif supports_smtp_prompt and command in ("p", "smtp"):
                 print("")
                 if smtp_usernames:
-                    for username in smtp_usernames:
-                        print(f"Usuário SMTP: {username}")
+                    for index, username in smtp_usernames:
+                        print(f"Usuário SMTP (monitor {index}): {username}")
+                        password = getpass("Senha SMTP: ").strip()
+                        if not password:
+                            continue
+                        os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
+                        try:
+                            secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
+                            save_secret(secret_path, password)
+                        except Exception as exc:
+                            LOGGER.warning(
+                                "Failed to store SMTP password securely: %s",
+                                exc,
+                                extra={"category": "config"},
+                            )
                 else:
                     print("Usuário SMTP: (não definido no config)")
-                password = getpass("Senha SMTP (SENTINELTRAY_SMTP_PASSWORD): ").strip()
-                if password:
-                    os.environ["SENTINELTRAY_SMTP_PASSWORD"] = password
+                    password = getpass("Senha SMTP: ").strip()
+                    if password:
+                        os.environ["SENTINELTRAY_SMTP_PASSWORD"] = password
                 try:
                     config = load_config(str(local_path))
                 except Exception as exc:
@@ -380,3 +337,5 @@ def run_console_config_error(error_details: str) -> None:
             finalize_config_edit()
     except KeyboardInterrupt:
         return
+    finally:
+        close_editor()

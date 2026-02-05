@@ -10,26 +10,34 @@ def test_prepare_window_restores_minimized(monkeypatch) -> None:
     calls: list[str] = []
 
     class FakeWindow:
+        def __init__(self) -> None:
+            self._minimized = True
+            self._maximized = False
+            self._focused = False
+
         def exists(self, timeout: int = 0) -> bool:
             return True
 
         def is_minimized(self) -> bool:
-            return True
+            return self._minimized
 
         def is_maximized(self) -> bool:
-            return False
+            return self._maximized
 
         def restore(self) -> None:
+            self._minimized = False
             calls.append("restore")
 
         def maximize(self) -> None:
+            self._maximized = True
             calls.append("maximize")
 
-        def minimize(self) -> None:
-            calls.append("minimize")
-
         def set_focus(self) -> None:
+            self._focused = True
             calls.append("focus")
+
+        def has_focus(self) -> bool:
+            return self._focused
 
         def wait(self, *_args, **_kwargs) -> None:
             return None
@@ -41,15 +49,12 @@ def test_prepare_window_restores_minimized(monkeypatch) -> None:
             return []
 
     detector = WindowTextDetector("APP", allow_window_restore=True)
-    monkeypatch.setattr(detector, "_get_window", lambda: FakeWindow())
-    monkeypatch.setattr(detector, "_minimize_all_windows", lambda *args, **kwargs: None)
-
-    detector.find_matches("ALERT")
+    window = FakeWindow()
+    detector._ensure_foreground_and_maximized(window)
 
     assert "restore" in calls
     assert "focus" in calls
     assert "maximize" in calls
-    assert "minimize" in calls
 
 
 def test_find_matches_accent_insensitive(monkeypatch) -> None:
@@ -128,57 +133,27 @@ def test_get_window_resolves_ambiguous(monkeypatch) -> None:
     assert window.has_focus()
 
 
-def test_prepare_window_visibility_timeout_accepts_visible(monkeypatch) -> None:
-    class FakeRect:
-        def width(self) -> int:
-            return 10
-
-        def height(self) -> int:
-            return 10
-
+def test_prepare_window_visibility_timeout_accepts_visible() -> None:
     class FakeWindow:
         def exists(self, timeout: int = 0) -> bool:
-            return True
+            return False
 
         def is_minimized(self) -> bool:
             return False
 
-        def is_maximized(self) -> bool:
-            return False
-
-        def restore(self) -> None:
-            return None
-
-        def maximize(self) -> None:
-            return None
-
-        def set_focus(self) -> None:
-            return None
-
-        def wait(self, *_args, **_kwargs) -> None:
-            raise RuntimeError("wait failed")
-
         def is_visible(self) -> bool:
             return True
 
-        def is_enabled(self) -> bool:
-            return True
-
-        def rectangle(self):
-            return FakeRect()
-
     detector = WindowTextDetector("APP", allow_window_restore=True)
     window = FakeWindow()
-    monkeypatch.setattr(detector, "_get_window", lambda: window)
-    monkeypatch.setattr(detector, "_force_foreground", lambda *_args, **_kwargs: None)
 
-    detector._prepare_window(window)
+    assert detector._window_exists(window, timeout=1.0) is True
 
 
-def test_click_title_bar_ignores_missing_rectangle() -> None:
+def test_window_is_minimized_handles_missing_attrs() -> None:
     detector = WindowTextDetector("APP", allow_window_restore=True)
 
     class FakeWindow:
         pass
 
-    detector._click_title_bar(FakeWindow())
+    assert detector._window_is_minimized(FakeWindow()) is False

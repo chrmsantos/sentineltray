@@ -24,14 +24,14 @@ def test_ensure_local_override_rejects_empty_file(tmp_path: Path) -> None:
         entrypoint._ensure_local_override(local_path)
 
 
-def test_main_creates_local_override_when_missing(
+def test_main_requires_local_override_when_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(sys, "argv", ["main.py"])
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.setenv(
         "SENTINELTRAY_ROOT",
-        str(Path(__file__).resolve().parents[1]),
+        str(tmp_path),
     )
     monkeypatch.setattr(entrypoint, "_setup_boot_logging", lambda: None)
     monkeypatch.setattr(entrypoint, "_ensure_single_instance", lambda: None)
@@ -48,7 +48,7 @@ def test_main_creates_local_override_when_missing(
     with pytest.raises(SystemExit):
         entrypoint.main()
 
-    assert local_path.exists()
+    assert not local_path.exists()
 
 
 def test_main_rejects_extra_args(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

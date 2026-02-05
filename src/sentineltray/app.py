@@ -17,7 +17,7 @@ from typing import Any, cast
 
 from .config import AppConfig, MonitorConfig, get_project_root
 from .detector import WindowTextDetector, WindowUnavailableError
-from .logging_setup import sanitize_text, scan_context, setup_logging
+from .logging_setup import log_context, sanitize_text, scan_context, setup_logging
 from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
 from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, EmailSender, build_sender
@@ -25,6 +25,7 @@ from .telemetry import JsonWriter, atomic_write_text
 from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
+EMAIL_DISABLED_LOG_COOLDOWN_SECONDS = 300
 
 
 class _LASTINPUTINFO(ctypes.Structure):
@@ -39,6 +40,7 @@ class MonitorRuntime:
     sender: EmailSender
     last_sent: dict[str, datetime] = field(default_factory=lambda: cast(dict[str, datetime], {}))
     email_disabled: bool = False
+    last_email_disabled_log_at: float = 0.0
     failure_count: int = 0
     breaker_until: float = 0.0
     last_window_ok_at: str = ""
@@ -323,10 +325,13 @@ class Notifier:
         sent_any = False
 
         if monitor.email_disabled:
-            LOGGER.warning(
-                "Email disabled after authentication failure; skipping send",
-                extra={"category": category},
-            )
+            now = time.monotonic()
+            if now - monitor.last_email_disabled_log_at >= EMAIL_DISABLED_LOG_COOLDOWN_SECONDS:
+                monitor.last_email_disabled_log_at = now
+                LOGGER.warning(
+                    "Email disabled after authentication failure; skipping send",
+                    extra={"category": category},
+                )
         else:
             sender = self._sender or monitor.sender
             try:
@@ -432,51 +437,59 @@ class Notifier:
         any_match = False
         self._last_scan_error = False
         scan_started = time.perf_counter()
-        for monitor in self._monitors:
-            monitor_started = time.perf_counter()
-            monitor_error: str | None = None
-            now_mono = time.monotonic()
-            if monitor.breaker_until and now_mono < monitor.breaker_until:
-                LOGGER.info(
-                    "Skipping scan; circuit breaker active for monitor",
-                    extra={"category": "scan"},
-                )
-                continue
-            try:
-                matches = monitor.detector.find_matches(monitor.config.phrase_regex)
-                monitor.failure_count = 0
-                monitor.breaker_until = 0.0
-                monitor.last_window_ok_at = _now_iso()
-                self.status.set_monitor_state(
-                    monitor.key,
-                    failure_count=0,
-                    breaker_active=False,
-                )
-            except WindowUnavailableError as exc:
-                message = f"error: window unavailable: {exc}"
-                self._handle_monitor_error(monitor, message)
-                self._last_scan_error = True
-                monitor_error = "window_unavailable"
-                continue
-            except Exception as exc:
-                message = f"error: {exc}"
-                self._handle_monitor_error(monitor, message)
-                LOGGER.exception("Scan error: %s", exc, extra={"category": "error"})
-                self._last_scan_error = True
-                monitor_error = "exception"
-                continue
-            finally:
-                duration_ms = (time.perf_counter() - monitor_started) * 1000
-                if LOGGER.isEnabledFor(logging.INFO):
+        for index, monitor in enumerate(self._monitors, start=1):
+            with log_context(
+                monitor_index=index,
+                monitor_key=_summarize_text(monitor.key),
+            ):
+                monitor_started = time.perf_counter()
+                monitor_error: str | None = None
+                now_mono = time.monotonic()
+                if monitor.breaker_until and now_mono < monitor.breaker_until:
                     LOGGER.info(
-                        "Monitor scan duration %.2fms",
-                        duration_ms,
-                        extra={
-                            "category": "perf",
-                            "monitor": _summarize_text(monitor.key),
-                            "error": monitor_error or "",
-                        },
+                        "Skipping scan; circuit breaker active for monitor",
+                        extra={"category": "scan"},
                     )
+                    continue
+                try:
+                    matches = monitor.detector.find_matches(monitor.config.phrase_regex)
+                    monitor.failure_count = 0
+                    monitor.breaker_until = 0.0
+                    monitor.last_window_ok_at = _now_iso()
+                    self.status.set_monitor_state(
+                        monitor.key,
+                        failure_count=0,
+                        breaker_active=False,
+                    )
+                except WindowUnavailableError as exc:
+                    message = f"error: window unavailable: {exc}"
+                    self._handle_monitor_error(monitor, message)
+                    self._last_scan_error = True
+                    monitor_error = "window_unavailable"
+                    continue
+                except Exception as exc:
+                    message = f"error: {exc}"
+                    self._handle_monitor_error(monitor, message)
+                    LOGGER.exception(
+                        "Scan error: %s",
+                        exc,
+                        extra={"category": "error", "event": "scan_error"},
+                    )
+                    self._last_scan_error = True
+                    monitor_error = "exception"
+                    continue
+                finally:
+                    duration_ms = (time.perf_counter() - monitor_started) * 1000
+                    if LOGGER.isEnabledFor(logging.INFO):
+                        LOGGER.info(
+                            "Monitor scan duration %.2fms",
+                            duration_ms,
+                            extra={
+                                "category": "perf",
+                                "monitor": _summarize_text(monitor.key),
+                                "error": monitor_error or "",
+                            },
+                        )
 
             normalized = [_normalize(text) for text in matches if text]
             if normalized:
@@ -903,7 +916,7 @@ class Notifier:
                 LOGGER.info(
                     "Backoff enabled: %s seconds",
                     backoff_seconds,
-                    extra={"category": "error"},
+                    extra={"category": "control"},
                 )
             if _wait_for_next_scan(wait_seconds):
                 continue

@@ -13,4 +13,4 @@ monitors:
       subject: "SentinelTray Alert"
       retry_attempts: 2
       retry_backoff_seconds: 3
-      dry_run: false
+      dry_run: true

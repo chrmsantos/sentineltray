@@ -17,6 +17,10 @@ from uuid import uuid4
 MAX_LOG_FILES = 3
 
 _SCAN_ID: contextvars.ContextVar[str] = contextvars.ContextVar("scan_id", default="")
+_LOG_CONTEXT: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar(
+    "log_context",
+    default={},
+)
 
 
 @contextlib.contextmanager
@@ -26,6 +30,18 @@ def scan_context(scan_id: str) -> None:
         yield
     finally:
         _SCAN_ID.reset(token)
+
+
+@contextlib.contextmanager
+def log_context(**fields: object) -> None:
+    current = dict(_LOG_CONTEXT.get())
+    updated = {key: str(value) for key, value in fields.items() if value is not None}
+    current.update(updated)
+    token = _LOG_CONTEXT.set(current)
+    try:
+        yield
+    finally:
+        _LOG_CONTEXT.reset(token)
 
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 WINDOWS_PATH_RE = re.compile(r"[A-Za-z]:\\[^\s]+")
@@ -66,6 +82,10 @@ class ContextFilter(logging.Filter):
             record.commit_hash = self._commit_hash
         if not hasattr(record, "scan_id"):
             record.scan_id = _SCAN_ID.get()
+        if not hasattr(record, "log_context"):
+            record.log_context = _LOG_CONTEXT.get()
+        if not hasattr(record, "log_context_text"):
+            record.log_context_text = _format_log_context(record.log_context)
         if not hasattr(record, "hostname"):
             record.hostname = self._hostname
         if not hasattr(record, "platform"):
@@ -96,6 +116,23 @@ def sanitize_text(value: str) -> str:
     sanitized = PHONE_RE.sub("<phone>", sanitized)
     sanitized = TOKEN_RE.sub(r"\1=<redacted>", sanitized)
     return sanitized
+
+
+def _sanitize_context_value(value: object) -> str:
+    if value is None:
+        return ""
+    return sanitize_text(str(value))
+
+
+def _sanitize_log_context(context: dict[str, str]) -> dict[str, str]:
+    return {key: _sanitize_context_value(value) for key, value in context.items()}
+
+
+def _format_log_context(context: dict[str, str]) -> str:
+    if not context:
+        return ""
+    parts = [f"{key}={_sanitize_context_value(value)}" for key, value in context.items()]
+    return ";".join(parts)
 
 
 class RedactionFilter(logging.Filter):
@@ -140,6 +177,8 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         message = sanitize_text(record.getMessage())
         timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()
+        context = getattr(record, "log_context", {})
+        sanitized_context = _sanitize_log_context(context) if context else {}
         payload = {
             "timestamp": timestamp,
             "level": record.levelname,
@@ -155,6 +194,8 @@ class JsonFormatter(logging.Formatter):
             "thread_name": record.threadName,
             "session_id": getattr(record, "session_id", ""),
             "scan_id": getattr(record, "scan_id", ""),
+            "event": getattr(record, "event", ""),
+            "context": sanitized_context,
             "app_version": getattr(record, "app_version", ""),
             "release_date": getattr(record, "release_date", ""),
             "commit_hash": getattr(record, "commit_hash", ""),
@@ -270,7 +311,7 @@ def setup_logging(
     formatter = SanitizingFormatter(
         "%(asctime)s %(levelname)s %(category)s %(name)s %(filename)s:%(lineno)d "
         "%(funcName)s %(process)d %(processName)s %(thread)d %(threadName)s "
-        "scan_id=%(scan_id)s %(message)s"
+        "scan_id=%(scan_id)s ctx=%(log_context_text)s %(message)s"
     )
     json_formatter = JsonFormatter()
 

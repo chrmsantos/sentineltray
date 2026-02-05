@@ -4,7 +4,7 @@ import os
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from sentineltray.logging_setup import sanitize_text, setup_logging
+from sentineltray.logging_setup import log_context, sanitize_text, setup_logging
 
 
 def test_setup_logging_creates_run_log_and_prunes(tmp_path: Path) -> None:
@@ -106,6 +106,35 @@ def test_json_log_contains_context(tmp_path: Path) -> None:
     assert payload["app_version"] == "9.9.9"
     assert payload["release_date"] == "2026-01-22"
     assert payload["session_id"]
+
+    for handler in logging.getLogger().handlers:
+        handler.close()
+
+
+def test_json_log_includes_context_and_event(tmp_path: Path) -> None:
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    base_log = log_dir / "sentineltray.log"
+
+    setup_logging(str(base_log), app_version="9.9.9", release_date="2026-01-22")
+    logger = logging.getLogger("sentineltray.test")
+    logger.setLevel(logging.INFO)
+    with log_context(monitor_index=1, note="test@example.com"):
+        logger.info("context entry", extra={"category": "test", "event": "scan_error"})
+
+    for handler in logging.getLogger().handlers:
+        try:
+            handler.flush()
+        except Exception:
+            continue
+
+    json_path = log_dir / "sentineltray.jsonl"
+    assert json_path.exists()
+    line = json_path.read_text(encoding="utf-8").splitlines()[-1]
+    payload = json.loads(line)
+    assert payload["event"] == "scan_error"
+    assert payload["context"]["monitor_index"] == "1"
+    assert "<email>" in payload["context"]["note"]
 
     for handler in logging.getLogger().handlers:
         handler.close()

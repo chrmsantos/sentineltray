@@ -4,6 +4,7 @@ import atexit
 import ctypes
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -11,21 +12,11 @@ from builtins import input as input
 from getpass import getpass
 from pathlib import Path
 
-from .config import (
-    AppConfig,
-    get_user_data_dir,
-    get_user_log_dir,
-    get_project_root,
-    load_config,
-)
+from .config import AppConfig, get_user_data_dir, get_user_log_dir, load_config
 from .console_app import run_console, run_console_config_error
 from .email_sender import EmailAuthError, validate_smtp_credentials
-from .config_reconcile import (
-    ensure_local_config_from_template,
-    read_template_config_text,
-    reconcile_template_config,
-)
 from .logging_setup import setup_logging
+from .dpapi_utils import save_secret
 from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
@@ -188,7 +179,7 @@ def _ensure_local_override(path: Path) -> None:
         raise SystemExit(
             "Local configuration not found.\n"
             f"Expected file: {path}\n"
-            "Create it from templates/local/config.local.yaml, "
+            "Create it inside the project config folder, "
             "fill the required fields, and run again."
         )
 
@@ -248,37 +239,57 @@ def _setup_boot_logging() -> None:
     )
 
 
+def _legacy_data_dir() -> Path | None:
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata:
+        return Path(local_appdata) / "Axon" / "SentinelTray" / "config"
+    user_root = os.environ.get("USERPROFILE")
+    if user_root:
+        return (
+            Path(user_root)
+            / "AppData"
+            / "Local"
+            / "Axon"
+            / "SentinelTray"
+            / "config"
+        )
+    return None
+
+
+def _migrate_legacy_config(local_path: Path) -> None:
+    legacy_dir = _legacy_data_dir()
+    if legacy_dir is None:
+        return
+    legacy_config = legacy_dir / "config.local.yaml"
+    if not legacy_config.exists():
+        return
+    if local_path.exists():
+        try:
+            if local_path.read_text(encoding="utf-8").strip():
+                return
+        except Exception:
+            return
+    local_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copy2(legacy_config, local_path)
+        LOGGER.info(
+            "Migrated legacy config to project scope",
+            extra={"category": "config", "legacy_path": str(legacy_config)},
+        )
+    except Exception as exc:
+        LOGGER.warning(
+            "Failed to migrate legacy config: %s",
+            exc,
+            extra={"category": "config"},
+        )
+
+
 def _run_startup_integrity_checks(local_path: Path) -> None:
     data_dir = local_path.parent
     data_dir.mkdir(parents=True, exist_ok=True)
     log_root = get_user_log_dir()
     log_root.mkdir(parents=True, exist_ok=True)
-
-    template_text = read_template_config_text(get_project_root())
-    if template_text is None:
-        LOGGER.warning(
-            "Config template not found; startup integrity limited",
-            extra={"category": "startup"},
-        )
-    else:
-        ensure_local_config_from_template(
-            local_path,
-            template_text=template_text,
-            logger=LOGGER,
-        )
-        try:
-            reconcile_template_config(
-                local_path,
-                template_text=template_text,
-                dry_run=False,
-                logger=LOGGER,
-            )
-        except Exception as exc:
-            LOGGER.warning(
-                "Failed to reconcile config template: %s",
-                exc,
-                extra={"category": "config"},
-            )
+    _migrate_legacy_config(local_path)
 
 
 
@@ -355,6 +366,15 @@ def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
             password = getpass("Senha SMTP: ").strip()
             if password:
                 os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
+                try:
+                    secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
+                    save_secret(secret_path, password)
+                except Exception as exc:
+                    LOGGER.warning(
+                        "Failed to store SMTP password securely: %s",
+                        exc,
+                        extra={"category": "config"},
+                    )
                 break
             choice = input("Senha vazia. [T]entar novamente ou [Q] Sair: ").strip().lower()
             if choice in ("q", "sair", "exit"):

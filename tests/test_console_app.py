@@ -69,7 +69,10 @@ def test_run_console_exit(
         def finalize() -> None:
             calls["finalize"] += 1
 
-        return on_open, finalize
+        def close_editor() -> None:
+            return None
+
+        return on_open, finalize, close_editor
 
     class DummyThread:
         def join(self, timeout: float | None = None) -> None:
@@ -102,7 +105,11 @@ def test_run_console_config_error_details(
 ) -> None:
     monkeypatch.setenv("SENTINELTRAY_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(console_app, "clear_screen", lambda: None)
-    monkeypatch.setattr(console_app, "_create_config_editor", lambda: (lambda: None, lambda: None))
+    monkeypatch.setattr(
+        console_app,
+        "_create_config_editor",
+        lambda: (lambda: None, lambda: None, lambda: None),
+    )
 
     opened: dict[str, Path] = {}
 
@@ -129,7 +136,11 @@ def test_run_console_config_error_smtp_prompt(
 ) -> None:
     monkeypatch.setenv("SENTINELTRAY_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(console_app, "clear_screen", lambda: None)
-    monkeypatch.setattr(console_app, "_create_config_editor", lambda: (lambda: None, lambda: None))
+    monkeypatch.setattr(
+        console_app,
+        "_create_config_editor",
+        lambda: (lambda: None, lambda: None, lambda: None),
+    )
 
     inputs: Iterator[str] = iter(["p"])
 
