@@ -8,6 +8,8 @@ from typing import Any, Callable, cast
 
 import yaml
 
+from .dpapi_utils import load_secret
+
 from .path_utils import ensure_under_root, resolve_log_path, resolve_sensitive_path
 from .validation_utils import validate_email_address, validate_regex
 
@@ -79,37 +81,8 @@ def _get_project_root_from_file() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _get_data_root_override() -> Path | None:
-    override = os.environ.get("SENTINELTRAY_DATA_DIR")
-    if override:
-        return Path(override)
-    return None
-
-
-def _get_default_user_data_dir() -> Path:
-    local_appdata = os.environ.get("LOCALAPPDATA")
-    if local_appdata:
-        return Path(local_appdata) / "Axon" / "SentinelTray" / "config"
-
-    user_root = os.environ.get("USERPROFILE")
-    if user_root:
-        return (
-            Path(user_root)
-            / "AppData"
-            / "Local"
-            / "Axon"
-            / "SentinelTray"
-            / "config"
-        )
-
-    return get_project_root() / "config"
-
-
 def get_user_data_dir() -> Path:
-    override = _get_data_root_override()
-    if override is not None:
-        return override
-    return _get_default_user_data_dir()
+    return get_project_root() / "config"
 
 
 def get_user_log_dir() -> Path:
@@ -225,6 +198,7 @@ def _build_email_config(
     *,
     monitor_index: int | None,
 ) -> EmailConfig:
+    dry_run = bool(_get_required(email_data, "dry_run"))
     to_raw = _get_required(email_data, "to_addresses")
     if isinstance(to_raw, str):
         to_addresses = [item.strip() for item in to_raw.split(",") if item.strip()]
@@ -238,10 +212,26 @@ def _build_email_config(
         raise ValueError("email.to_addresses must be a list or comma-separated string")
 
     smtp_username = str(_get_required(email_data, "smtp_username"))
-    smtp_password = str(_get_required(email_data, "smtp_password"))
+    if "smtp_password" in email_data:
+        smtp_password = str(email_data.get("smtp_password") or "")
+    elif dry_run:
+        smtp_password = ""
+    else:
+        raise ValueError("Missing required config key: smtp_password")
     env_password = _env_override("SMTP_PASSWORD", monitor_index)
     if env_password:
         smtp_password = env_password
+    if not smtp_password:
+        index = monitor_index or 0
+        secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
+        try:
+            stored_password = load_secret(secret_path)
+        except Exception:
+            stored_password = None
+        if stored_password:
+            smtp_password = stored_password
+    if not dry_run and not smtp_password.strip():
+        raise ValueError("smtp_password is required when dry_run=false")
 
     return EmailConfig(
         smtp_host=str(_get_required(email_data, "smtp_host")),
@@ -255,7 +245,7 @@ def _build_email_config(
         subject=str(_get_required(email_data, "subject")),
         retry_attempts=int(_get_required(email_data, "retry_attempts")),
         retry_backoff_seconds=int(_get_required(email_data, "retry_backoff_seconds")),
-        dry_run=bool(_get_required(email_data, "dry_run")),
+        dry_run=dry_run,
     )
 
 

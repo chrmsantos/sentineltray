@@ -25,7 +25,7 @@ Edit config.local.yaml and set:
 - monitors[].email.retry_backoff_seconds
 - monitors[].email.dry_run = true on first run; set false after validation
 - monitors[].email.smtp_username (no config local)
-- monitors[].email.smtp_password is prompted at startup when missing and no env override is set (per monitor)
+- monitors[].email.smtp_password: leave empty; SentinelTray prompts on startup and stores it encrypted (DPAPI)
 - allow_window_restore, send_repeated_matches
 - log_only_mode
 - log_level, log_console_level, log_console_enabled
@@ -37,14 +37,15 @@ Edit config.local.yaml and set:
 - email_queue_max_attempts, email_queue_retry_base_seconds
 - config_version (optional, default 1)
 
-The application always reads the local config file. Default location is driven by
-`SENTINELTRAY_DATA_DIR` when set. Otherwise it falls back to:
+The application always reads the local config file at:
 
-- %LOCALAPPDATA%\Axon\SentinelTray\config\config.local.yaml
+- config\config.local.yaml (inside the project folder)
 
 If config.local.yaml is missing or invalid, the app opens the console error view with guidance.
 
-Local documentation for sample state files lives under templates/local/.
+SMTP passwords are stored using Windows DPAPI in:
+
+- config\smtp_password_<index>.dpapi
 
 ## Run
 
@@ -109,6 +110,7 @@ monitors:
          smtp_host: 'smtp.local'
          smtp_port: 587
          smtp_username: ''
+         # Deixe vazio; a senha e solicitada no startup e salva via DPAPI.
          smtp_password: ''
          from_address: 'alerts1@example.com'
          to_addresses: ['ops1@example.com']
@@ -124,6 +126,7 @@ monitors:
          smtp_host: 'smtp.local'
          smtp_port: 587
          smtp_username: ''
+         # Deixe vazio; a senha e solicitada no startup e salva via DPAPI.
          smtp_password: ''
          from_address: 'alerts2@example.com'
          to_addresses: ['ops2@example.com']
@@ -137,12 +140,11 @@ monitors:
 
 ## Notes
 
-- Logs are written per execution with detailed fields and kept with a max of 3 files in %SENTINELTRAY_DATA_DIR%\logs (values above 3 are capped).
+- Logs are written per execution with detailed fields and kept with a max of 3 files in config\logs (values above 3 are capped).
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - JSON logs are written alongside text logs in sentineltray.jsonl and per-run sentineltray_*.jsonl.
 - If the config is missing or invalid, SentinelTray still starts in "Config Error" mode and exposes the error details in the console.
 - When another instance is already running, the previous instance is terminated before startup (logged in sentineltray_boot.log).
-- On startup, SentinelTray reconciles config.local.yaml with the official template and creates the local config from the template if missing.
 - Third-party debug logs are suppressed to keep logs actionable.
 - Logs and telemetry redact sensitive strings (emails and local paths) and store match summaries as hashes.
 - state.json stores the last sent messages to avoid duplicates.
@@ -162,7 +164,7 @@ monitors:
 - Runtime artifacts are ignored by git via .gitignore.
 - License: GPL-3.0-only.
 - Logs include a structured category field.
-- Local telemetry file captures last activity for quick diagnostics and lives in %SENTINELTRAY_DATA_DIR%\logs.
+- Local telemetry file captures last activity for quick diagnostics and lives in config\logs.
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
 - Match alert emails use subject "SentinelTray Match Alert"; error alerts use "SentinelTray Error Alert".
@@ -170,7 +172,7 @@ monitors:
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.
-- Sensitive data is always stored under %SENTINELTRAY_DATA_DIR%; operational logs stay in %SENTINELTRAY_DATA_DIR%\logs.
+- Sensitive data is stored under config; operational logs stay in config\logs.
 - Privacy policy in PRIVACY.md.
 - Security policy in SECURITY.md.
 - Licenses and third parties in docs/licenses.md.

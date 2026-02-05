@@ -13,7 +13,7 @@ monitors:
       subject: "SentinelTray Alert"
       retry_attempts: 2
       retry_backoff_seconds: 3
-      dry_run: false
+      dry_run: true
 poll_interval_seconds: 180
 healthcheck_interval_seconds: 900
 error_backoff_base_seconds: 5
