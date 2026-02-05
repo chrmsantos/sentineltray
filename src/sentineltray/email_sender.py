@@ -20,6 +20,7 @@ from .email_queue_utils import (
     prune_items,
 )
 from .telemetry import atomic_write_text
+from .io_utils import read_json_safe
 
 LOGGER = logging.getLogger(__name__)
 
@@ -218,10 +219,7 @@ class DiskEmailQueue:
     def _load_items(self) -> list[dict[str, object]]:
         if not self._path.exists():
             return []
-        try:
-            data = json.loads(self._path.read_text(encoding="utf-8"))
-        except Exception:
-            return []
+        data = read_json_safe(self._path, default=[], context="email queue")
         if not isinstance(data, list):
             return []
         items: list[dict[str, object]] = []
@@ -236,7 +234,15 @@ class DiskEmailQueue:
 
     def _save_items(self, items: list[dict[str, object]]) -> None:
         payload = json.dumps(items, ensure_ascii=False, indent=2)
-        atomic_write_text(self._path, payload, encoding="utf-8")
+        try:
+            atomic_write_text(self._path, payload, encoding="utf-8")
+        except Exception as exc:
+            LOGGER.error(
+                "Failed to persist email queue: %s",
+                exc,
+                extra={"category": "send"},
+            )
+            raise
 
     def enqueue(self, message: str) -> None:
         items = self._load_items()
@@ -347,7 +353,15 @@ class QueueingEmailSender(EmailSender):
                 exc,
                 extra={"category": "send"},
             )
-            self.queue.enqueue(message)
+            try:
+                self.queue.enqueue(message)
+            except Exception as queue_exc:
+                LOGGER.error(
+                    "Failed to enqueue message after send failure: %s",
+                    queue_exc,
+                    extra={"category": "send"},
+                )
+                raise
             raise EmailQueued("Message queued for retry") from exc
 
     def drain(self) -> QueueStats:

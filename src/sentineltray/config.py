@@ -165,7 +165,14 @@ def _get_required(data: dict[str, Any], key: str) -> Any:
 def _load_yaml(path: Path) -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"Config file not found: {path}")
-    raw: object = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ValueError(f"Failed to read config file: {path}") from exc
+    try:
+        raw: object = yaml.safe_load(text) or {}
+    except yaml.YAMLError as exc:
+        raise ValueError(f"Invalid YAML in config file: {path}: {exc}") from exc
     if not isinstance(raw, dict):
         raise ValueError("Config must be a mapping")
     return cast(dict[str, Any], raw)
