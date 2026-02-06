@@ -1,6 +1,6 @@
 # SentinelTray
 
-Release candidate: 3.0.0-rc.2 (05-02-2026)
+Release candidate: 3.0.0-rc.3 (06-02-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
@@ -61,6 +61,12 @@ If you run main.py directly, it automatically adds src/ to the import path.
 SentinelTray starts in the foreground console interface. Use the menu to open Config,
 trigger a manual scan, check matching windows, or Exit.
 
+To keep the console menu stable, interactive mode suppresses console logging and
+routes logs to the configured files only.
+
+While running, SentinelTray prevents automatic sleep or display power-down to keep
+the monitored window available for scans.
+
 For a simple start, use the shortcut at the project root: Executar SentinelTray.cmd.
 
 ## Named executable (no admin)
@@ -75,8 +81,8 @@ SentinelTray.exe instead of python.exe/pythonw.exe.
 
 ## Config editing
 
-Use the console menu Config option to edit settings. It opens a temporary file, validates
-it, and writes it back to config.local.yaml on save.
+Use the console menu Config option to edit settings directly in config.local.yaml.
+The editor validates changes after closing.
 
 ## Regex (wildcards) and examples
 
@@ -103,6 +109,7 @@ Notes:
 
 Use `monitors` for all monitoring entries.
 Each item must include its own email configuration.
+Only the first monitor is used; additional entries are ignored.
 
 Exemplo:
 

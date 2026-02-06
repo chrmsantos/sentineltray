@@ -9,6 +9,7 @@ from threading import Lock
 class StatusSnapshot:
     running: bool
     last_scan: str
+    last_scan_result: str
     last_match: str
     last_match_at: str
     last_send: str
@@ -26,6 +27,7 @@ class StatusStore:
         self._lock = Lock()
         self._running = False
         self._last_scan = ""
+        self._last_scan_result = ""
         self._last_match = ""
         self._last_match_at = ""
         self._last_send = ""
@@ -50,6 +52,10 @@ class StatusStore:
     def set_last_scan(self, value: str) -> None:
         with self._lock:
             self._last_scan = value
+
+    def set_last_scan_result(self, value: str) -> None:
+        with self._lock:
+            self._last_scan_result = value
 
     def set_last_match(self, value: str) -> None:
         with self._lock:
@@ -94,6 +100,7 @@ class StatusStore:
             return StatusSnapshot(
                 running=self._running,
                 last_scan=self._last_scan,
+                last_scan_result=self._last_scan_result,
                 last_match=self._last_match,
                 last_match_at=self._last_match_at,
                 last_send=self._last_send,

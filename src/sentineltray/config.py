@@ -265,7 +265,13 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
     monitors_data = data.get("monitors")
     if not isinstance(monitors_data, list) or not monitors_data:
         raise ValueError("monitors must be a non-empty list")
-    for index, entry in enumerate(cast(list[object], monitors_data), start=1):
+    monitors_list = cast(list[object], monitors_data)
+    if len(monitors_list) > 1:
+        LOGGER.warning(
+            "Multiple monitors configured; only monitor 1 will be used",
+            extra={"category": "config"},
+        )
+    for index, entry in enumerate(monitors_list[:1], start=1):
         if not isinstance(entry, dict):
             raise ValueError("monitors entries must be objects")
         entry_map = cast(dict[str, Any], entry)
