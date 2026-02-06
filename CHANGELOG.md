@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-02-06 (3.0.0-rc.3)
+
+- Console: last scan result is now shown in the header.
+- Console: config editor now edits the project config file directly.
+- Monitoring: only monitor 1 is used; extra monitors are ignored.
+- Runtime: prevents sleep/display power-down while running.
+- Console: suppresses console logs to keep the UI stable.
+
 ## 2026-02-05 (3.0.0-rc.2)
 
 - Window detection: title regex now matches partial titles (regex search) to avoid missing dynamic titles.

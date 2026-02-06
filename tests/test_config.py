@@ -105,13 +105,14 @@ def test_load_config_with_monitors(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
 
     config = load_config(str(config_path))
 
-    assert len(config.monitors) == 2
+    assert len(config.monitors) == 1
     assert config.monitors[0].window_title_regex == "APP1"
-    assert config.monitors[1].phrase_regex == "ALERT2"
 
 
 def test_smtp_password_dpapi_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.delenv("SENTINELTRAY_SMTP_PASSWORD", raising=False)
+    monkeypatch.delenv("SENTINELTRAY_SMTP_PASSWORD_1", raising=False)
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
         "\n".join(

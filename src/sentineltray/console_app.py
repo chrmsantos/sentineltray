@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from builtins import input as input
+from dataclasses import replace
 
 import logging
 import os
@@ -14,6 +15,7 @@ from typing import Callable
 from .app import Notifier
 from .config import (
     AppConfig,
+    get_project_root,
     get_user_data_dir,
     get_user_log_dir,
     load_config,
@@ -71,6 +73,12 @@ def _start_notifier(
     return thread
 
 
+def _apply_console_logging_policy(config: AppConfig) -> AppConfig:
+    if not config.log_console_enabled:
+        return config
+    return replace(config, log_console_enabled=False)
+
+
 def _create_config_editor() -> tuple[
     Callable[[], None],
     Callable[[], AppConfig | None],
@@ -78,32 +86,23 @@ def _create_config_editor() -> tuple[
 ]:
     edit_process: subprocess.Popen[str] | None = None
 
+    def config_path() -> Path:
+        return get_project_root() / "config" / "config.local.yaml"
+
     def on_open() -> None:
         nonlocal edit_process
         if edit_process is not None and edit_process.poll() is None:
             return
         try:
-            data_dir = get_user_data_dir()
-            config_path = data_dir / "config.local.yaml"
-            temp_path = data_dir / "config.local.yaml.edit"
-
-            _prune_files(data_dir, "config.local.yaml.edit.*", keep=3)
-
-            if temp_path.exists():
-                edit_process = subprocess.Popen(["notepad.exe", str(temp_path)], text=True)
-                return
-
-            if config_path.exists():
-                legacy_text = config_path.read_text(encoding="utf-8")
-                temp_path.write_text(legacy_text, encoding="utf-8")
-            else:
-                temp_path.write_text(
+            target_path = config_path()
+            if not target_path.exists():
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                target_path.write_text(
                     "# SentinelTray - configuração local\n"
                     "# Preencha os campos obrigatórios antes de rodar.\n",
                     encoding="utf-8",
                 )
-
-            edit_process = subprocess.Popen(["notepad.exe", str(temp_path)], text=True)
+            edit_process = subprocess.Popen(["notepad.exe", str(target_path)], text=True)
         except Exception as exc:
             LOGGER.warning("Failed to open config editor: %s", exc)
 
@@ -115,20 +114,14 @@ def _create_config_editor() -> tuple[
             return
         edit_process = None
         try:
-            data_dir = get_user_data_dir()
-            config_path = data_dir / "config.local.yaml"
-            temp_path = data_dir / "config.local.yaml.edit"
-            if not temp_path.exists():
+            target_path = config_path()
+            if not target_path.exists():
                 return
             try:
-                new_config = load_config(str(temp_path))
+                new_config = load_config(str(target_path))
             except Exception as exc:
                 LOGGER.warning("Config validation failed after edit: %s", exc)
                 return None
-
-            plaintext = temp_path.read_text(encoding="utf-8")
-            config_path.write_text(plaintext, encoding="utf-8")
-            temp_path.unlink(missing_ok=True)
             return new_config
         except Exception as exc:
             LOGGER.warning("Failed to finalize config edit: %s", exc)
@@ -186,6 +179,8 @@ def _menu_header(status: StatusStore) -> list[str]:
     last_message = f"ENVIADA ({last_send_at})" if last_send_at else "NENHUMA"
     last_scan_at = format_timestamp(snapshot.last_scan)
     last_scan_line = f"Ultimo scan: {last_scan_at or 'NENHUM'}"
+    last_scan_result = snapshot.last_scan_result or "NENHUM"
+    last_scan_result_line = f"Resultado ultimo scan: {last_scan_result}"
     last_error_line = f"Ultimo erro: {snapshot.last_error or 'NENHUM'}"
     queue = snapshot.email_queue
     queue_line = (
@@ -213,6 +208,7 @@ def _menu_header(status: StatusStore) -> list[str]:
         f"Status atual: {state}",
         f"ERROS: {snapshot.error_count}",
         last_scan_line,
+        last_scan_result_line,
         f"Última mensagem: {last_message}",
         last_error_line,
         queue_line,
@@ -257,6 +253,7 @@ def run_console(config: AppConfig) -> None:
     status = StatusStore()
     stop_event = Event()
     manual_scan_event = Event()
+    config = _apply_console_logging_policy(config)
     notifier_thread = _start_notifier(
         config, status, stop_event, manual_scan_event
     )

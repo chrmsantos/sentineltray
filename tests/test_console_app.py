@@ -61,6 +61,7 @@ def test_run_console_exit(
     monkeypatch.setenv("SENTINELTRAY_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(console_app, "clear_screen", lambda: None)
     calls: dict[str, Any] = {"finalize": 0, "opened": 0, "joined": False}
+    notifier_configs: list[AppConfig] = []
 
     def fake_create_editor():
         def on_open() -> None:
@@ -79,7 +80,8 @@ def test_run_console_exit(
             calls["joined"] = True
 
     monkeypatch.setattr(console_app, "_create_config_editor", fake_create_editor)
-    def fake_start_notifier(*_args: object, **_kwargs: object) -> DummyThread:
+    def fake_start_notifier(config: AppConfig, *_args: object, **_kwargs: object) -> DummyThread:
+        notifier_configs.append(config)
         return DummyThread()
 
     monkeypatch.setattr(console_app, "_start_notifier", fake_start_notifier)
@@ -97,6 +99,8 @@ def test_run_console_exit(
     console_app.run_console(_make_config(tmp_path))
 
     assert calls["joined"] is True
+    assert notifier_configs
+    assert notifier_configs[0].log_console_enabled is False
 
 
 def test_run_console_config_error_details(

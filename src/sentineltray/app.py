@@ -67,6 +67,22 @@ def _is_user_idle(min_seconds: int) -> bool:
     return idle_seconds >= min_seconds
 
 
+def _apply_execution_state(prevent_sleep: bool) -> bool:
+    try:
+        kernel32 = ctypes.windll.kernel32
+    except Exception:
+        return False
+    try:
+        continuous = 0x80000000
+        if prevent_sleep:
+            flags = continuous | 0x00000001 | 0x00000002
+        else:
+            flags = continuous
+        return bool(kernel32.SetThreadExecutionState(flags))
+    except Exception:
+        return False
+
+
 def _load_state(path: Path) -> list[dict[str, str]]:
     if not path.exists():
         return []
@@ -444,6 +460,8 @@ class Notifier:
                 monitor_error: str | None = None
                 now_mono = time.monotonic()
                 if monitor.breaker_until and now_mono < monitor.breaker_until:
+                    if index == 1:
+                        self.status.set_last_scan_result("PAUSADO (breaker)")
                     LOGGER.info(
                         "Skipping scan; circuit breaker active for monitor",
                         extra={"category": "scan"},
@@ -464,6 +482,8 @@ class Notifier:
                     self._handle_monitor_error(monitor, message)
                     self._last_scan_error = True
                     monitor_error = "window_unavailable"
+                    if index == 1:
+                        self.status.set_last_scan_result("ERRO")
                     continue
                 except Exception as exc:
                     message = f"error: {exc}"
@@ -475,6 +495,8 @@ class Notifier:
                     )
                     self._last_scan_error = True
                     monitor_error = "exception"
+                    if index == 1:
+                        self.status.set_last_scan_result("ERRO")
                     continue
                 finally:
                     duration_ms = (time.perf_counter() - monitor_started) * 1000
@@ -490,6 +512,11 @@ class Notifier:
                         )
 
             normalized = [_normalize(text) for text in matches if text]
+            if index == 1:
+                if normalized:
+                    self.status.set_last_scan_result(_summarize_text(normalized[0]))
+                else:
+                    self.status.set_last_scan_result("NENHUM")
             if normalized:
                 normalized, removed = dedupe_items(normalized)
                 if removed:
@@ -813,113 +840,120 @@ class Notifier:
             release_date=self._release_date,
             commit_hash=self._commit_hash,
         )
-        LOGGER.info(
-            "SentinelTray started (beta %s, %s)",
-            self._app_version,
-            self._release_date,
-            extra={"category": "startup"},
-        )
-        self.status.set_running(True)
-        self.status.set_uptime_seconds(0)
-        self._send_startup_test()
-        self._update_telemetry()
-        error_count = 0
-
-        def _wait_for_next_scan(wait_seconds: int) -> bool:
-            if wait_seconds <= 0:
-                return False
-            deadline = time.monotonic() + wait_seconds
-            while not stop_event.is_set():
-                if manual_scan_event is not None and manual_scan_event.is_set():
-                    return True
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
+        if not _apply_execution_state(True):
+            LOGGER.warning(
+                "Failed to apply execution state to prevent sleep",
+                extra={"category": "startup"},
+            )
+        try:
+            LOGGER.info(
+                "SentinelTray started (beta %s, %s)",
+                self._app_version,
+                self._release_date,
+                extra={"category": "startup"},
+            )
+            self.status.set_running(True)
+            self.status.set_uptime_seconds(0)
+            self._send_startup_test()
+            self._update_telemetry()
+            error_count = 0
+            def _wait_for_next_scan(wait_seconds: int) -> bool:
+                if wait_seconds <= 0:
                     return False
-                stop_event.wait(min(0.5, remaining))
-            return False
+                deadline = time.monotonic() + wait_seconds
+                while not stop_event.is_set():
+                    if manual_scan_event is not None and manual_scan_event.is_set():
+                        return True
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return False
+                    stop_event.wait(min(0.5, remaining))
+                return False
 
-        while not stop_event.is_set():
-            loop_started = time.perf_counter()
-            started_at = time.monotonic()
-            try:
-                manual_requested = False
-                if manual_scan_event is not None and manual_scan_event.is_set():
-                    manual_scan_event.clear()
-                    manual_requested = True
-                    LOGGER.info("Manual scan requested", extra={"category": "control"})
-                disk_started = time.perf_counter()
-                self._ensure_free_disk()
-                LOGGER.info(
-                    "Disk check duration %.2fms",
-                    (time.perf_counter() - disk_started) * 1000,
-                    extra={"category": "perf"},
-                )
-                now = time.monotonic()
-                if now >= self._next_queue_drain:
-                    queue_started = time.perf_counter()
-                    self._drain_queues()
+            while not stop_event.is_set():
+                loop_started = time.perf_counter()
+                started_at = time.monotonic()
+                try:
+                    manual_requested = False
+                    if manual_scan_event is not None and manual_scan_event.is_set():
+                        manual_scan_event.clear()
+                        manual_requested = True
+                        LOGGER.info("Manual scan requested", extra={"category": "control"})
+                    disk_started = time.perf_counter()
+                    self._ensure_free_disk()
                     LOGGER.info(
-                        "Queue drain duration %.2fms",
-                        (time.perf_counter() - queue_started) * 1000,
+                        "Disk check duration %.2fms",
+                        (time.perf_counter() - disk_started) * 1000,
                         extra={"category": "perf"},
                     )
-                    self._next_queue_drain = now + 30
-                if manual_requested or _is_user_idle(120):
-                    self.scan_once()
-                    if self._last_scan_error:
-                        error_count += 1
-                        self.status.increment_error_count()
+                    now = time.monotonic()
+                    if now >= self._next_queue_drain:
+                        queue_started = time.perf_counter()
+                        self._drain_queues()
+                        LOGGER.info(
+                            "Queue drain duration %.2fms",
+                            (time.perf_counter() - queue_started) * 1000,
+                            extra={"category": "perf"},
+                        )
+                        self._next_queue_drain = now + 30
+                    if manual_requested or _is_user_idle(120):
+                        self.scan_once()
+                        if self._last_scan_error:
+                            error_count += 1
+                            self.status.increment_error_count()
+                        else:
+                            self.status.set_last_error("")
+                            error_count = 0
                     else:
-                        self.status.set_last_error("")
-                        error_count = 0
-                else:
+                        LOGGER.info(
+                            "Skipping scan; user active",
+                            extra={"category": "scan"},
+                        )
+                except WindowUnavailableError as exc:
+                    self._handle_error(f"error: window unavailable: {exc}")
                     LOGGER.info(
-                        "Skipping scan; user active",
+                        "Skipping scan; %s",
+                        exc,
                         extra={"category": "scan"},
                     )
-            except WindowUnavailableError as exc:
-                self._handle_error(f"error: window unavailable: {exc}")
-                LOGGER.info(
-                    "Skipping scan; %s",
-                    exc,
-                    extra={"category": "scan"},
+                except Exception as exc:
+                    message = f"error: {exc}"
+                    self._handle_error(message)
+                    LOGGER.exception("Loop error: %s", exc, extra={"category": "error"})
+                    error_count += 1
+                    self.status.increment_error_count()
+                finally:
+                    duration = time.monotonic() - started_at
+                    LOGGER.info(
+                        "Loop iteration duration %.2fms",
+                        (time.perf_counter() - loop_started) * 1000,
+                        extra={"category": "perf"},
+                    )
+
+                self.status.set_uptime_seconds(
+                    int((datetime.now(timezone.utc) - self._started_at).total_seconds())
                 )
-            except Exception as exc:
-                message = f"error: {exc}"
-                self._handle_error(message)
-                LOGGER.exception("Loop error: %s", exc, extra={"category": "error"})
-                error_count += 1
-                self.status.increment_error_count()
-            finally:
-                duration = time.monotonic() - started_at
-                LOGGER.info(
-                    "Loop iteration duration %.2fms",
-                    (time.perf_counter() - loop_started) * 1000,
-                    extra={"category": "perf"},
-                )
+                now = time.monotonic()
+                if now >= self._next_healthcheck:
+                    self._send_healthcheck()
+                    self._next_healthcheck = now + self.config.healthcheck_interval_seconds
 
-            self.status.set_uptime_seconds(
-                int((datetime.now(timezone.utc) - self._started_at).total_seconds())
-            )
-            now = time.monotonic()
-            if now >= self._next_healthcheck:
-                self._send_healthcheck()
-                self._next_healthcheck = now + self.config.healthcheck_interval_seconds
+                self._update_telemetry()
 
-            self._update_telemetry()
+                backoff_seconds = self._compute_backoff_seconds(error_count)
+                wait_seconds = max(self.config.poll_interval_seconds, backoff_seconds)
+                if backoff_seconds:
+                    LOGGER.info(
+                        "Backoff enabled: %s seconds",
+                        backoff_seconds,
+                        extra={"category": "control"},
+                    )
+                if _wait_for_next_scan(wait_seconds):
+                    continue
 
-            backoff_seconds = self._compute_backoff_seconds(error_count)
-            wait_seconds = max(self.config.poll_interval_seconds, backoff_seconds)
-            if backoff_seconds:
-                LOGGER.info(
-                    "Backoff enabled: %s seconds",
-                    backoff_seconds,
-                    extra={"category": "control"},
-                )
-            if _wait_for_next_scan(wait_seconds):
-                continue
-
-        self.status.set_running(False)
+            self.status.set_running(False)
+        finally:
+            _apply_execution_state(False)
 
 
 def run(config: AppConfig) -> None:
