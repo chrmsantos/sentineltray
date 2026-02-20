@@ -29,10 +29,6 @@ LOGGER = logging.getLogger(__name__)
 EMAIL_DISABLED_LOG_COOLDOWN_SECONDS = 300
 
 
-class _LASTINPUTINFO(ctypes.Structure):
-    _fields_ = [("cbSize", ctypes.c_uint), ("dwTime", ctypes.c_uint)]
-
-
 @dataclass
 class MonitorRuntime:
     key: str
@@ -50,21 +46,6 @@ class MonitorRuntime:
     last_send_queued: bool = False
     last_scan_text: str = ""
     last_scan_number: int | None = None
-
-
-def _get_idle_seconds() -> float:
-    info = _LASTINPUTINFO()
-    info.cbSize = ctypes.sizeof(_LASTINPUTINFO)
-    if ctypes.windll.user32.GetLastInputInfo(ctypes.byref(info)) == 0:
-        raise RuntimeError("GetLastInputInfo failed")
-    tick = ctypes.windll.kernel32.GetTickCount()
-    elapsed_ms = tick - info.dwTime
-    return max(0.0, float(elapsed_ms) / 1000.0)
-
-
-def _is_user_idle(min_seconds: int) -> bool:
-    idle_seconds = _get_idle_seconds()
-    return idle_seconds >= min_seconds
 
 
 def _apply_execution_state(prevent_sleep: bool) -> bool:
@@ -874,10 +855,8 @@ class Notifier:
                 loop_started = time.perf_counter()
                 started_at = time.monotonic()
                 try:
-                    manual_requested = False
                     if manual_scan_event is not None and manual_scan_event.is_set():
                         manual_scan_event.clear()
-                        manual_requested = True
                         LOGGER.info("Manual scan requested", extra={"category": "control"})
                     disk_started = time.perf_counter()
                     self._ensure_free_disk()
@@ -896,19 +875,13 @@ class Notifier:
                             extra={"category": "perf"},
                         )
                         self._next_queue_drain = now + 30
-                    if manual_requested or _is_user_idle(120):
-                        self.scan_once()
-                        if self._last_scan_error:
-                            error_count += 1
-                            self.status.increment_error_count()
-                        else:
-                            self.status.set_last_error("")
-                            error_count = 0
+                    self.scan_once()
+                    if self._last_scan_error:
+                        error_count += 1
+                        self.status.increment_error_count()
                     else:
-                        LOGGER.info(
-                            "Skipping scan; user active",
-                            extra={"category": "scan"},
-                        )
+                        self.status.set_last_error("")
+                        error_count = 0
                 except WindowUnavailableError as exc:
                     self._handle_error(f"error: window unavailable: {exc}")
                     LOGGER.info(

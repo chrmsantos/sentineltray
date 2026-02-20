@@ -66,7 +66,6 @@ def test_run_loop_skips_window_unavailable(
         raise WindowUnavailableError("Target window not enabled")
 
     notifier.scan_once = fake_scan_once  # type: ignore[assignment]
-    monkeypatch.setattr(app_module, "_is_user_idle", lambda _: True)
 
     sends = {"count": 0}
 
