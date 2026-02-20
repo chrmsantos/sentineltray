@@ -212,3 +212,108 @@ def test_window_is_minimized_handles_missing_attrs() -> None:
         pass
 
     assert detector._window_is_minimized(FakeWindow()) is False
+
+
+# ---------------------------------------------------------------------------
+# Non-intrusive scan tests: window state is restored after reading
+# ---------------------------------------------------------------------------
+
+class _MinimizableWindow:
+    """Fake window that starts minimized and tracks state changes."""
+
+    def __init__(self) -> None:
+        self._minimized = True
+        self._maximized = False
+        self._focused = False
+        self.handle = 9999
+
+    def exists(self, timeout: float = 0.0) -> bool:
+        return True
+
+    def is_minimized(self) -> bool:
+        return self._minimized
+
+    def is_maximized(self) -> bool:
+        return self._maximized
+
+    def is_visible(self) -> bool:
+        return True
+
+    def has_focus(self) -> bool:
+        return self._focused
+
+    def restore(self) -> None:
+        self._minimized = False
+
+    def maximize(self) -> None:
+        self._maximized = True
+
+    def set_focus(self) -> None:
+        self._focused = True
+
+    def window_text(self) -> str:
+        return "App"
+
+    def descendants(self):
+        return []
+
+
+def test_iter_texts_minimizes_window_back_after_scan(monkeypatch) -> None:
+    """A window that was minimized must be minimized again after the scan."""
+    fake_window = _MinimizableWindow()
+    detector = WindowTextDetector("App", allow_window_restore=True)
+    monkeypatch.setattr(detector, "_get_window", lambda: fake_window)
+    monkeypatch.setattr(detector, "_get_foreground_handle", lambda: 1234)
+
+    minimize_calls: list[tuple[int, int]] = []
+
+    def fake_show_window(handle: int, cmd: int) -> None:
+        minimize_calls.append((handle, cmd))
+        if cmd == 6:
+            fake_window._minimized = True
+
+    monkeypatch.setattr(detector, "_show_window", fake_show_window)
+
+    restored: list[int | None] = []
+    monkeypatch.setattr(
+        detector,
+        "_restore_prior_foreground",
+        lambda h: restored.append(h),
+    )
+
+    detector._iter_texts()
+
+    assert any(cmd == 6 for _h, cmd in minimize_calls), "SW_MINIMIZE must be issued"
+    assert fake_window._minimized, "Window must end up minimized"
+    assert restored == [1234], "Prior foreground must be restored"
+
+
+def test_iter_texts_restores_foreground_when_not_minimized(monkeypatch) -> None:
+    """When the window was already visible, only the foreground is restored."""
+    fake_window = _MinimizableWindow()
+    fake_window._minimized = False
+    fake_window._maximized = True
+    fake_window._focused = True
+
+    detector = WindowTextDetector("App", allow_window_restore=True)
+    monkeypatch.setattr(detector, "_get_window", lambda: fake_window)
+    monkeypatch.setattr(detector, "_get_foreground_handle", lambda: 5678)
+
+    minimize_calls: list[tuple[int, int]] = []
+    monkeypatch.setattr(
+        detector,
+        "_show_window",
+        lambda h, cmd: minimize_calls.append((h, cmd)),
+    )
+
+    restored: list[int | None] = []
+    monkeypatch.setattr(
+        detector,
+        "_restore_prior_foreground",
+        lambda h: restored.append(h),
+    )
+
+    detector._iter_texts()
+
+    assert not any(cmd == 6 for _h, cmd in minimize_calls), "SW_MINIMIZE must NOT be issued"
+    assert restored == [5678], "Prior foreground must still be restored"

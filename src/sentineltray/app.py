@@ -139,6 +139,22 @@ def _leading_number(text: str) -> int | None:
         return None
 
 
+def _build_alert_message(text: str, previous_number: int | None) -> str:
+    """Enrich alert text with a change indicator relative to the previous scan's count.
+
+    When a leading counter is detected (e.g. "10 PROPOSITURAS NÃO RECEBIDAS"),
+    the delta versus *previous_number* is appended so the recipient immediately
+    knows how many new items arrived since the last notification.
+    """
+    current_number = _leading_number(text)
+    if current_number is None or previous_number is None:
+        return text
+    delta = current_number - previous_number
+    if delta == 0:
+        return text
+    delta_label = f"+{delta}" if delta > 0 else str(delta)
+    return f"{text}\nVariação desde o último scan: {delta_label}"
+
 
 def _get_version() -> str:
     try:
@@ -304,7 +320,7 @@ class Notifier:
         category: str,
         force_send: bool = False,
     ) -> bool:
-        if category not in {"send", "error"}:
+        if category not in {"send", "error", "healthcheck"}:
             LOGGER.info(
                 "Email notification suppressed for category %s",
                 category,
@@ -577,7 +593,8 @@ class Notifier:
                 self.status.set_last_match_at(_now_iso())
 
             for text in send_items:
-                if self._send_message(monitor, text, category="send", force_send=True):
+                alert_message = _build_alert_message(text, monitor.last_scan_number)
+                if self._send_message(monitor, alert_message, category="send", force_send=True):
                     self.status.set_last_send(_now_iso())
                     if monitor.last_send_queued:
                         LOGGER.info("Queued message", extra={"category": "send"})
@@ -652,13 +669,13 @@ class Notifier:
             )
 
     def _send_startup_test(self) -> None:
-        message = "info: startup test message"
+        message = "SentinelTray iniciado — monitoramento ativo"
         try:
             sent_any = False
             sent_direct = False
             queued_any = False
             for monitor in self._monitors:
-                if self._send_message(monitor, message, category="info", force_send=True):
+                if self._send_message(monitor, message, category="send", force_send=True):
                     sent_any = True
                     if monitor.last_send_queued:
                         queued_any = True
@@ -685,14 +702,14 @@ class Notifier:
             phrase_regex=primary.phrase_regex,
             poll_interval_seconds=self.config.poll_interval_seconds,
         )
-        message = f"info: Em execução\n{status_text}"
+        message = f"status: Em execução\n{status_text}"
         safe_message = _safe_status_text(message)
         try:
             sent_any = False
             sent_direct = False
             queued_any = False
             for monitor in self._monitors:
-                if self._send_message(monitor, safe_message, category="info"):
+                if self._send_message(monitor, safe_message, category="healthcheck"):
                     sent_any = True
                     if monitor.last_send_queued:
                         queued_any = True

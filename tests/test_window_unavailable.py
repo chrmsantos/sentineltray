@@ -89,4 +89,5 @@ def test_run_loop_skips_window_unavailable(
     snapshot = notifier.status.snapshot()
     assert snapshot.error_count == 0
     assert snapshot.last_error
-    assert sends["count"] == 1
+    # startup test (1) + window-unavailable error notification (1)
+    assert sends["count"] == 2

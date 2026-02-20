@@ -1,5 +1,4 @@
 from __future__ import annotations
-from __future__ import annotations
 
 
 def main() -> int:
@@ -7,7 +6,5 @@ def main() -> int:
     return 1
 
 
-if __name__ == "__main__":
-    raise SystemExit(main())
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -5,7 +5,6 @@ import logging
 import re
 import time
 import unicodedata
-from typing import Iterable
 
 try:
     from pywinauto import Desktop
@@ -156,6 +155,39 @@ class WindowTextDetector:
         except Exception:
             LOGGER.debug("Failed to restore window via handle", exc_info=True)
 
+    def _get_foreground_handle(self) -> int | None:
+        """Return the Win32 handle of the current foreground window."""
+        try:
+            handle = ctypes.windll.user32.GetForegroundWindow()
+            return int(handle) if handle else None
+        except Exception:
+            return None
+
+    def _minimize_window(self, window) -> None:
+        """Minimize *window* without activating another window (SW_MINIMIZE=6)."""
+        try:
+            if hasattr(window, "handle"):
+                handle = window.handle
+                if handle:
+                    self._show_window(handle, 6)
+                    return
+        except Exception:
+            LOGGER.debug("Failed to minimize window via handle", exc_info=True)
+        try:
+            if hasattr(window, "minimize"):
+                window.minimize()
+        except Exception:
+            LOGGER.debug("Failed to minimize window via pywinauto", exc_info=True)
+
+    def _restore_prior_foreground(self, handle: int | None) -> None:
+        """Set focus back to the window that was active before the scan."""
+        if not handle:
+            return
+        try:
+            ctypes.windll.user32.SetForegroundWindow(handle)
+        except Exception:
+            LOGGER.debug("Failed to restore prior foreground window", exc_info=True)
+
     def _ensure_foreground_and_maximized(self, window) -> None:
         if self._window_is_minimized(window):
             if not self._allow_window_restore:
@@ -294,30 +326,38 @@ class WindowTextDetector:
             raise WindowUnavailableError("Target window not found")
         self._ensure_foreground_and_maximized(window)
 
-    def _iter_texts(self) -> Iterable[str]:
+    def _iter_texts(self) -> list[str]:
         window = self._get_window()
         if not self._window_exists(window, timeout=1.0):
             raise WindowUnavailableError("Target window not found")
-        self._ensure_foreground_and_maximized(window)
-
+        was_minimized = self._window_is_minimized(window)
+        prior_foreground = self._get_foreground_handle()
         texts: list[str] = []
         try:
+            self._ensure_foreground_and_maximized(window)
             try:
-                if hasattr(window, "window_text"):
-                    title_text = window.window_text()
-                    if title_text:
-                        texts.append(title_text)
-            except Exception:
-                LOGGER.debug("Failed to read window title text", exc_info=True)
-            for element in window.descendants():
                 try:
-                    text = element.window_text()
+                    if hasattr(window, "window_text"):
+                        title_text = window.window_text()
+                        if title_text:
+                            texts.append(title_text)
                 except Exception:
-                    continue
-                if text:
-                    texts.append(text)
-        except Exception as exc:
-            raise RuntimeError("Failed to read window texts") from exc
+                    LOGGER.debug("Failed to read window title text", exc_info=True)
+                for element in window.descendants():
+                    try:
+                        text = element.window_text()
+                    except Exception:
+                        continue
+                    if text:
+                        texts.append(text)
+            except Exception as exc:
+                raise RuntimeError("Failed to read window texts") from exc
+        finally:
+            # Non-intrusive: restore the original window state and active focus
+            # so the user's workflow is not disrupted by the scan.
+            if was_minimized:
+                self._minimize_window(window)
+            self._restore_prior_foreground(prior_foreground)
         return texts
 
     def find_matches(self, phrase_regex: str) -> list[str]:

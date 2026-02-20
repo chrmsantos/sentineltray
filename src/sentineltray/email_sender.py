@@ -38,6 +38,8 @@ def _build_subject(subject: str, category: str) -> str:
         return "SentinelTray Match Alert"
     if category == "Error":
         return "SentinelTray Error Alert"
+    if category == "Status":
+        return "SentinelTray — Status do sistema"
     base = (subject or "").strip()
     if base:
         cleaned = base
@@ -62,6 +64,9 @@ def _build_body(message: str) -> tuple[str, str]:
     elif text.lower().startswith("info:"):
         category = "Info"
         details = text.split(":", 1)[1].strip() or "System update."
+    elif text.lower().startswith("status:"):
+        category = "Status"
+        details = text.split(":", 1)[1].strip() or "Sistema em execução."
 
     if not details:
         details = "No additional details."

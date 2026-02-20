@@ -59,5 +59,6 @@ def test_send_startup_test_message_sends_and_updates_status() -> None:
     notifier._send_startup_test()
 
     snapshot = status.snapshot()
-    assert sent == []
-    assert snapshot.last_send == ""
+    assert len(sent) == 1, "startup test should produce one email"
+    assert "iniciado" in sent[0].lower()
+    assert snapshot.last_send != "", "last_send should be set after startup test"

@@ -149,4 +149,7 @@ def test_allows_higher_leading_number(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(WindowTextDetector, "find_matches", _second_matches)
     notifier.scan_once()
 
-    assert sender.sent == ["100 ALERT", "101 ALERT"]
+    # Higher leading number must be sent; delta enrichment adds context line.
+    assert len(sender.sent) == 2
+    assert sender.sent[0] == "100 ALERT"
+    assert sender.sent[1].startswith("101 ALERT")
