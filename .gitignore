@@ -1,12 +1,59 @@
+# =============================================================================
+# Python
+# =============================================================================
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.Python
+runtime/
+
+# =============================================================================
+# Testing / coverage
+# =============================================================================
 .pytest_cache/
 .mypy_cache/
 .coverage
 htmlcov/
-.venv/
-*.egg-info/
-*.lnk
+.tox/
+
+# =============================================================================
+# SentinelTray - runtime data (NEVER commit these)
+# =============================================================================
+
+# User config (contains email addresses, SMTP settings)
+config/config.local.yaml
+config/config.local.yaml.edit
+
+# Allow the committed example/template file
+!config/config.local.yaml.example
+
+# Encrypted config and the symmetric key that unlocks it
+config/config.local.key
+config/config.local.yaml.enc
+
+# DPAPI-encrypted SMTP passwords
+config/smtp_password_*.dpapi
+
+# Runtime state and PID file
+config/state.json
+config/sentineltray.pid
+
+# Logs, telemetry, email queue, and error snapshots
+config/logs/
+
+# =============================================================================
+# Legacy paths
+# =============================================================================
 state.json
 logs/*.log
 logs/telemetry.json
@@ -14,9 +61,16 @@ config.local.yaml.edit
 config.local.yaml
 config.local.key
 *.local.yaml
-runtime/
-config/
-tmp/AppData/Local/Axon/SentinelTray/config/
-tmp/AppData/Local/Axon/SentinelTray/config/logs/
-tmp/config/
-tmp/config/logs/
+tmp/
+
+# =============================================================================
+# Editors / OS
+# =============================================================================
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+Thumbs.db
+.DS_Store
+*.lnk

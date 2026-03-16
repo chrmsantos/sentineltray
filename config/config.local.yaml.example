@@ -1,0 +1,58 @@
+# SentinelTray — example configuration (safe to commit).
+# Copy this file to config.local.yaml and fill in your values.
+# Do NOT store smtp_password here — leave it empty and enter it at the first
+# launch prompt; it will be saved encrypted to smtp_password_<n>.dpapi.
+
+monitors:
+- window_title_regex: 'YourApp\.ExeName'     # regex matched against window title
+  phrase_regex: 'ALERT PHRASE'               # regex matched against window text
+  email:
+    smtp_host: 'smtp.gmail.com'
+    smtp_port: 587
+    smtp_username: 'sender@example.com'
+    smtp_password: ''                        # leave empty — use DPAPI prompt
+    from_address: 'sender@example.com'
+    to_addresses: ['recipient@example.com']
+    use_tls: true
+    timeout_seconds: 10
+    subject: SentinelTray
+    retry_attempts: 2
+    retry_backoff_seconds: 3
+    dry_run: false
+
+poll_interval_seconds: 60
+healthcheck_interval_seconds: 900
+error_backoff_base_seconds: 5
+error_backoff_max_seconds: 300
+debounce_seconds: 600
+max_history: 50
+
+state_file: state.json
+log_file: logs/sentineltray.log
+log_level: INFO
+log_console_level: WARNING
+log_console_enabled: true
+log_max_bytes: 5000000
+log_backup_count: 3
+log_run_files_keep: 3
+telemetry_file: logs/telemetry.json
+
+allow_window_restore: true
+log_only_mode: false
+send_repeated_matches: true
+min_repeat_seconds: 0
+error_notification_cooldown_seconds: 300
+
+window_error_backoff_base_seconds: 5
+window_error_backoff_max_seconds: 120
+window_error_circuit_threshold: 3
+window_error_circuit_seconds: 300
+
+email_queue_file: logs/email_queue.json
+email_queue_max_items: 500
+email_queue_max_age_seconds: 86400
+email_queue_max_attempts: 10
+email_queue_retry_base_seconds: 30
+
+pause_on_user_active: true
+pause_idle_threshold_seconds: 120
