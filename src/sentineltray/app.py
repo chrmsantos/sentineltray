@@ -5,6 +5,7 @@ import hashlib
 import importlib.metadata
 import json
 import logging
+import shutil
 import socket
 import re
 import time
@@ -789,7 +790,19 @@ class Notifier:
             LOGGER.exception("Telemetry write failed: %s", exc, extra={"category": "error"})
 
     def _ensure_free_disk(self) -> None:
-        return None
+        try:
+            log_dir = Path(self._config.log_file).parent
+            usage = shutil.disk_usage(log_dir)
+            free_mb = usage.free / (1024 * 1024)
+            if free_mb < 50:
+                LOGGER.warning(
+                    "Low disk space: %.0f MB free in %s",
+                    free_mb,
+                    log_dir,
+                    extra={"category": "error"},
+                )
+        except Exception as exc:
+            LOGGER.warning("Disk check failed: %s", exc, extra={"category": "error"})
 
     def _drain_queues(self) -> None:
         total = {
@@ -877,7 +890,7 @@ class Notifier:
                         LOGGER.info("Manual scan requested", extra={"category": "control"})
                     disk_started = time.perf_counter()
                     self._ensure_free_disk()
-                    LOGGER.info(
+                    LOGGER.debug(
                         "Disk check duration %.2fms",
                         (time.perf_counter() - disk_started) * 1000,
                         extra={"category": "perf"},

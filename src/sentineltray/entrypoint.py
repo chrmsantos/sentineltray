@@ -139,14 +139,26 @@ def _terminate_existing_instance() -> bool:
             extra={"category": "startup"},
         )
         return False
+    try:
+        pid_value = int(prior_pid)
+        if pid_value < 2:
+            raise ValueError(f"PID {pid_value!r} is implausibly low")
+    except ValueError as exc:
+        LOGGER.warning(
+            "PID file contains invalid value %r: %s",
+            prior_pid,
+            exc,
+            extra={"category": "startup"},
+        )
+        return False
     LOGGER.info(
         "Existing instance detected; terminating PID %s",
-        prior_pid,
+        pid_value,
         extra={"category": "startup"},
     )
     try:
         result = subprocess.run(
-            ["taskkill", "/PID", prior_pid, "/F"],
+            ["taskkill", "/PID", str(pid_value), "/F"],
             check=False,
             capture_output=True,
             text=True,
@@ -213,6 +225,19 @@ def _handle_config_error(path: Path, exc: Exception) -> str:
 def _reject_extra_args(args: list[str]) -> None:
     if not args:
         return
+    if args[0] in ("--version", "-V"):
+        from . import __version_label__, __release_date__
+        print(f"SentinelTray {__version_label__}  ({__release_date__})")
+        raise SystemExit(0)
+    if args[0] in ("--help", "-h"):
+        print(
+            "SentinelTray — monitor de janelas com alertas por e-mail.\n"
+            "\n"
+            "Uso: python main.py [--version | --help]\n"
+            "  --version, -V   Exibe versão e encerra.\n"
+            "  --help,    -h   Exibe esta ajuda e encerra.\n"
+        )
+        raise SystemExit(0)
     raise SystemExit(
         "Usage: run SentinelTray without arguments.\n"
         f"Arguments received: {' '.join(args)}"
@@ -416,7 +441,7 @@ def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
                 raise SystemExit("Senha SMTP não informada.")
             print("")
     print("")
-    print("Senha SMTP registrada para a sessão.")
+    print("Senha SMTP registrada.")
 
 
 def main() -> int:

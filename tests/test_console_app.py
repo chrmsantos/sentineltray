@@ -76,6 +76,9 @@ def test_run_console_exit(
         return on_open, finalize, close_editor
 
     class DummyThread:
+        def is_alive(self) -> bool:
+            return True
+
         def join(self, timeout: float | None = None) -> None:
             calls["joined"] = True
 
@@ -172,7 +175,8 @@ def test_run_console_config_error_smtp_prompt(
     assert calls["config"] is config
 
 
-def test_menu_header_status_lines() -> None:
+def test_menu_header_status_lines(tmp_path: Path) -> None:
+    config = _make_config(tmp_path)
     status = StatusStore()
     status.set_running(True)
     status.increment_error_count()
@@ -187,7 +191,7 @@ def test_menu_header_status_lines() -> None:
         }
     )
 
-    header = console_app._menu_header(status)
+    header = console_app._menu_header(status, config)
 
     assert "Status atual: EXECUTANDO" in header
     assert "ERROS: 1" in header

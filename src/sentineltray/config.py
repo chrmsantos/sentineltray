@@ -221,6 +221,13 @@ def _build_email_config(
     smtp_username = str(_get_required(email_data, "smtp_username"))
     if "smtp_password" in email_data:
         smtp_password = str(email_data.get("smtp_password") or "")
+        if smtp_password:
+            LOGGER.warning(
+                "Plaintext smtp_password found in config for monitor %s; "
+                "remove it and use the DPAPI-encrypted store instead",
+                monitor_index or 0,
+                extra={"category": "config"},
+            )
     elif dry_run:
         smtp_password = ""
     else:
@@ -266,12 +273,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
     if not isinstance(monitors_data, list) or not monitors_data:
         raise ValueError("monitors must be a non-empty list")
     monitors_list = cast(list[object], monitors_data)
-    if len(monitors_list) > 1:
-        LOGGER.warning(
-            "Multiple monitors configured; only monitor 1 will be used",
-            extra={"category": "config"},
-        )
-    for index, entry in enumerate(monitors_list[:1], start=1):
+    for index, entry in enumerate(monitors_list, start=1):
         if not isinstance(entry, dict):
             raise ValueError("monitors entries must be objects")
         entry_map = cast(dict[str, Any], entry)
@@ -471,6 +473,10 @@ def _validate_config(config: AppConfig) -> None:
                 validate_regex("monitors.window_title_regex", monitor.window_title_regex)
             if monitor.phrase_regex:
                 validate_regex("monitors.phrase_regex", monitor.phrase_regex)
+            if not (1 <= monitor.email.smtp_port <= 65535):
+                raise ValueError(
+                    "monitors.email.smtp_port must be between 1 and 65535"
+                )
             if not monitor.email.dry_run:
                 if not monitor.email.smtp_host:
                     raise ValueError("monitors.email.smtp_host is required")

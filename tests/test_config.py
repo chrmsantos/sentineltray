@@ -105,8 +105,9 @@ def test_load_config_with_monitors(monkeypatch: pytest.MonkeyPatch, tmp_path: Pa
 
     config = load_config(str(config_path))
 
-    assert len(config.monitors) == 1
+    assert len(config.monitors) == 2
     assert config.monitors[0].window_title_regex == "APP1"
+    assert config.monitors[1].window_title_regex == "APP2"
 
 
 def test_smtp_password_dpapi_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

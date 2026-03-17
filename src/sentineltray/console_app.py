@@ -7,6 +7,7 @@ import logging
 import os
 import subprocess
 import time
+import webbrowser
 from getpass import getpass
 from pathlib import Path
 from threading import Event, Thread
@@ -25,6 +26,8 @@ from .status import StatusStore, format_timestamp
 from .dpapi_utils import save_secret
 
 LOGGER = logging.getLogger(__name__)
+
+_PROJECT_REPO_URL = "https://github.com/chrmsantos/sentineltray"
 
 
 def _clear_stored_smtp_password(index: int) -> None:
@@ -172,7 +175,16 @@ def clear_screen() -> None:
     os.system("cls" if os.name == "nt" else "clear")
 
 
-def _menu_header(status: StatusStore) -> list[str]:
+def _email_address_lines(config: AppConfig) -> list[str]:
+    lines = []
+    for index, monitor in enumerate(config.monitors, start=1):
+        sender_addr = monitor.email.from_address or monitor.email.smtp_username or "??"
+        recipients = ", ".join(monitor.email.to_addresses) if monitor.email.to_addresses else "??"
+        lines.append(f"Monitor {index}: {sender_addr} → {recipients}")
+    return lines
+
+
+def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
     snapshot = status.snapshot()
     state = "EXECUTANDO" if snapshot.running else "PARADO"
     last_send_at = format_timestamp(snapshot.last_send)
@@ -207,6 +219,7 @@ def _menu_header(status: StatusStore) -> list[str]:
         "SentinelTray - Console",
         f"Status atual: {state}",
         f"ERROS: {snapshot.error_count}",
+        *_email_address_lines(config),
         last_scan_line,
         last_scan_result_line,
         f"Última mensagem: {last_message}",
@@ -275,6 +288,7 @@ def run_console(config: AppConfig) -> None:
         except Exception as exc:
             LOGGER.warning("Failed to stop notifier for config reload: %s", exc)
         stop_event = Event()
+        status.set_last_error("")
         notifier_thread = _start_notifier(
             config,
             status,
@@ -285,6 +299,19 @@ def run_console(config: AppConfig) -> None:
     try:
         while True:
             snapshot = status.snapshot()
+            if not notifier_thread.is_alive() and not stop_event.is_set():
+                LOGGER.warning(
+                    "Notifier thread died unexpectedly; restarting",
+                    extra={"category": "startup"},
+                )
+                status.set_last_error("")
+                stop_event = Event()
+                notifier_thread = _start_notifier(
+                    config,
+                    status,
+                    stop_event,
+                    manual_scan_event,
+                )
             if "smtp auth failed" in snapshot.last_error and snapshot.last_error != last_auth_error:
                 last_auth_error = snapshot.last_error
                 stop_event.set()
@@ -324,6 +351,7 @@ def run_console(config: AppConfig) -> None:
                         print(f"Falha ao validar config: {exc}")
                         time.sleep(2)
                 stop_event = Event()
+                status.set_last_error("")
                 notifier_thread = _start_notifier(
                     config,
                     status,
@@ -331,12 +359,13 @@ def run_console(config: AppConfig) -> None:
                     manual_scan_event,
                 )
             clear_screen()
-            for line in _menu_header(status):
+            for line in _menu_header(status, config):
                 print(line)
             print("Comandos:")
             print("  [C] Editar config")
             print("  [M] Scan manual")
             print("  [W] Ver janelas")
+            print("  [R] Repositório")
             print("  [Q] Sair")
             print("")
             try:
@@ -354,6 +383,8 @@ def run_console(config: AppConfig) -> None:
             elif command in ("w", "window", "windows", "janela", "janelas"):
                 LOGGER.info("Window match check requested", extra={"category": "control"})
                 _print_window_matches(config)
+            elif command in ("r", "repo", "repositório", "repositorio"):
+                webbrowser.open(_PROJECT_REPO_URL)
             apply_config_edit()
     except KeyboardInterrupt:
         return

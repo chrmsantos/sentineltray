@@ -92,7 +92,8 @@ class EmailSender:
 class SmtpEmailSender(EmailSender):
     config: EmailConfig
 
-    def _is_auth_error(self, exc: smtplib.SMTPException) -> bool:
+    @staticmethod
+    def _is_auth_error(exc: smtplib.SMTPException) -> bool:
         if isinstance(exc, smtplib.SMTPAuthenticationError):
             return True
         if isinstance(exc, smtplib.SMTPResponseException):
@@ -142,7 +143,7 @@ class SmtpEmailSender(EmailSender):
                     client.send_message(email)
                 return
             except smtplib.SMTPException as exc:
-                if self._is_auth_error(exc):
+                if SmtpEmailSender._is_auth_error(exc):
                     LOGGER.error(
                         "SMTP authentication failed (check app password)",
                         extra={"category": "send"},
@@ -173,7 +174,6 @@ def validate_smtp_credentials(config: EmailConfig) -> None:
     if not config.smtp_username and not config.smtp_password:
         raise ValueError("smtp_username or smtp_password is required")
 
-    sender = SmtpEmailSender(config)
     try:
         with smtplib.SMTP(
             config.smtp_host,
@@ -184,7 +184,7 @@ def validate_smtp_credentials(config: EmailConfig) -> None:
                 client.starttls()
             client.login(config.smtp_username, config.smtp_password)
     except smtplib.SMTPException as exc:
-        if sender._is_auth_error(exc):
+        if SmtpEmailSender._is_auth_error(exc):
             LOGGER.error(
                 "SMTP authentication failed during startup validation",
                 extra={"category": "startup"},

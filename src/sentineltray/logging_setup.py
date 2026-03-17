@@ -3,6 +3,7 @@ import contextvars
 import json
 import logging
 import os
+from collections.abc import Iterator
 import platform
 import re
 import sys
@@ -24,7 +25,7 @@ _LOG_CONTEXT: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar(
 
 
 @contextlib.contextmanager
-def scan_context(scan_id: str) -> None:
+def scan_context(scan_id: str) -> Iterator[None]:
     token = _SCAN_ID.set(scan_id)
     try:
         yield
@@ -33,7 +34,7 @@ def scan_context(scan_id: str) -> None:
 
 
 @contextlib.contextmanager
-def log_context(**fields: object) -> None:
+def log_context(**fields: object) -> Iterator[None]:
     current = dict(_LOG_CONTEXT.get())
     updated = {key: str(value) for key, value in fields.items() if value is not None}
     current.update(updated)
@@ -269,7 +270,7 @@ def _cleanup_old_logs(log_dir: Path, stem: str, suffix: str, keep: int) -> None:
 
 def _resolve_level(level: str, default: int) -> int:
     name = str(level).upper()
-    return logging._nameToLevel.get(name, default)
+    return logging.getLevelNamesMapping().get(name, default)
 
 
 def setup_logging(
