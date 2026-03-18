@@ -94,10 +94,10 @@ def test_run_console_exit(
     monkeypatch.setattr(console_app.time, "sleep", noop_sleep)
 
     inputs: Iterator[str] = iter(["q"])
-    def fake_input(_prompt: str) -> str:
+    def fake_read_command(_prompt: str, _refresh_event: object) -> str | None:
         return next(inputs)
 
-    monkeypatch.setattr(console_app, "input", fake_input)
+    monkeypatch.setattr(console_app, "_read_command", fake_read_command)
 
     console_app.run_console(_make_config(tmp_path))
 

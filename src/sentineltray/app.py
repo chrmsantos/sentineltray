@@ -838,7 +838,7 @@ class Notifier:
         self._queue_stats = total
         self.status.set_email_queue_stats(total)
 
-    def run_loop(self, stop_event: Event, manual_scan_event: Event | None = None) -> None:
+    def run_loop(self, stop_event: Event, manual_scan_event: Event | None = None, scan_complete_event: Event | None = None) -> None:
         setup_logging(
             self.config.log_file,
             log_level=self.config.log_level,
@@ -942,6 +942,9 @@ class Notifier:
                     self._next_healthcheck = now + self.config.healthcheck_interval_seconds
 
                 self._update_telemetry()
+
+                if scan_complete_event is not None:
+                    scan_complete_event.set()
 
                 backoff_seconds = self._compute_backoff_seconds(error_count)
                 wait_seconds = max(self.config.poll_interval_seconds, backoff_seconds)

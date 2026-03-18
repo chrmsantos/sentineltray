@@ -4,8 +4,10 @@ from builtins import input as input
 from dataclasses import replace
 
 import logging
+import msvcrt
 import os
 import subprocess
+import sys
 import time
 import webbrowser
 from getpass import getpass
@@ -65,11 +67,12 @@ def _start_notifier(
     status: StatusStore,
     stop_event: Event,
     manual_scan_event: Event,
+    scan_complete_event: Event | None = None,
 ) -> Thread:
     notifier = Notifier(config=config, status=status)
     thread = Thread(
         target=notifier.run_loop,
-        args=(stop_event, manual_scan_event),
+        args=(stop_event, manual_scan_event, scan_complete_event),
         daemon=True,
     )
     thread.start()
@@ -262,13 +265,53 @@ def _print_window_matches(config: AppConfig) -> None:
     input("Enter para voltar...")
 
 
+def _read_command(prompt: str, refresh_event: Event) -> str | None:
+    """Read a command from the console with auto-refresh support.
+
+    Returns the typed command string, or None if the display should refresh
+    (scan_complete_event fired before the user started typing).
+    """
+    sys.stdout.write(prompt)
+    sys.stdout.flush()
+    buf: list[str] = []
+    while True:
+        if refresh_event.is_set():
+            refresh_event.clear()
+            if not buf:
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                return None
+        if msvcrt.kbhit():
+            ch = msvcrt.getwch()
+            if ch in ("\x00", "\xe0"):
+                msvcrt.getwch()  # consume second byte of extended key sequence
+            elif ch in ("\r", "\n"):
+                sys.stdout.write("\n")
+                sys.stdout.flush()
+                return "".join(buf)
+            elif ch == "\x03":  # Ctrl+C
+                raise KeyboardInterrupt
+            elif ch == "\x08":  # Backspace
+                if buf:
+                    buf.pop()
+                    sys.stdout.write("\b \b")
+                    sys.stdout.flush()
+            elif ch >= " ":
+                buf.append(ch)
+                sys.stdout.write(ch)
+                sys.stdout.flush()
+        else:
+            time.sleep(0.05)
+
+
 def run_console(config: AppConfig) -> None:
     status = StatusStore()
     stop_event = Event()
     manual_scan_event = Event()
+    scan_complete_event = Event()
     config = _apply_console_logging_policy(config)
     notifier_thread = _start_notifier(
-        config, status, stop_event, manual_scan_event
+        config, status, stop_event, manual_scan_event, scan_complete_event
     )
     on_open, finalize_config_edit, close_editor = _create_config_editor()
     last_auth_error = ""
@@ -294,6 +337,7 @@ def run_console(config: AppConfig) -> None:
             status,
             stop_event,
             manual_scan_event,
+            scan_complete_event,
         )
 
     try:
@@ -311,6 +355,7 @@ def run_console(config: AppConfig) -> None:
                     status,
                     stop_event,
                     manual_scan_event,
+                    scan_complete_event,
                 )
             if "smtp auth failed" in snapshot.last_error and snapshot.last_error != last_auth_error:
                 last_auth_error = snapshot.last_error
@@ -357,6 +402,7 @@ def run_console(config: AppConfig) -> None:
                     status,
                     stop_event,
                     manual_scan_event,
+                    scan_complete_event,
                 )
             clear_screen()
             for line in _menu_header(status, config):
@@ -369,9 +415,13 @@ def run_console(config: AppConfig) -> None:
             print("  [Q] Sair")
             print("")
             try:
-                command = input("Comando: ").strip().lower()
+                raw_command = _read_command("Comando: ", scan_complete_event)
             except KeyboardInterrupt:
                 return
+            if raw_command is None:
+                apply_config_edit()
+                continue
+            command = raw_command.strip().lower()
             if command in ("q", "quit", "exit", "sair"):
                 return
             if command in ("c", "config"):

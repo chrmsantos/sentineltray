@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-03-18 (3.0.0)
+
+- CLI: console redesenhado automaticamente após cada scan sem interação do usuário.
+- Scan não intrusivo: janela é restaurada ao estado original após a leitura.
+- Múltiplos monitores: limite de monitor único removido.
+- Alertas com delta: variação numérica (+N/-N) incluída nas mensagens de alerta.
+- Healthcheck e startup test ativos com e-mail de confirmação.
+- Verificação de espaço em disco (aviso abaixo de 50 MB).
+- Flags `--version` e `--help` disponíveis na linha de comando.
+- Validação de porta SMTP e aviso de senha plaintext no YAML.
+- PID validado antes de `taskkill`.
+- Dependência `ruamel.yaml` removida.
+- `.gitignore` endurecido; template de config comitado.
+
 ## 2026-02-06 (3.0.0-rc.3)
 
 - Console: last scan result is now shown in the header.
