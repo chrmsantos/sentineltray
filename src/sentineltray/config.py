@@ -35,6 +35,8 @@ _DEFAULT_CONFIG_VALUES: dict[str, Any] = {
     "email_queue_max_attempts": 10,
     "email_queue_retry_base_seconds": 30,
     "config_version": CURRENT_CONFIG_VERSION,
+    "pause_on_user_active": True,
+    "pause_idle_threshold_seconds": 180,
 }
 
 
@@ -150,6 +152,8 @@ class AppConfig:
     email_queue_max_age_seconds: int = 86400
     email_queue_max_attempts: int = 10
     email_queue_retry_base_seconds: int = 30
+    pause_on_user_active: bool = True
+    pause_idle_threshold_seconds: int = 180
     monitors: list[MonitorConfig] = field(
         default_factory=lambda: cast(list[MonitorConfig], [])
     )
@@ -331,6 +335,10 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         defaults_applied.append("email_queue_max_attempts")
     if "email_queue_retry_base_seconds" not in data:
         defaults_applied.append("email_queue_retry_base_seconds")
+    if "pause_on_user_active" not in data:
+        defaults_applied.append("pause_on_user_active")
+    if "pause_idle_threshold_seconds" not in data:
+        defaults_applied.append("pause_idle_threshold_seconds")
 
     config = AppConfig(
         poll_interval_seconds=int(_get_required(data, "poll_interval_seconds")),
@@ -378,6 +386,8 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         email_queue_max_age_seconds=int(data.get("email_queue_max_age_seconds", 86400)),
         email_queue_max_attempts=int(data.get("email_queue_max_attempts", 10)),
         email_queue_retry_base_seconds=int(data.get("email_queue_retry_base_seconds", 30)),
+        pause_on_user_active=bool(data.get("pause_on_user_active", True)),
+        pause_idle_threshold_seconds=int(data.get("pause_idle_threshold_seconds", 180)),
         monitors=monitors,
         config_version=int(data.get("config_version", 1)),
     )
@@ -465,6 +475,8 @@ def _validate_config(config: AppConfig) -> None:
         raise ValueError("email_queue_max_attempts must be >= 0")
     if config.email_queue_retry_base_seconds < 0:
         raise ValueError("email_queue_retry_base_seconds must be >= 0")
+    if config.pause_on_user_active and config.pause_idle_threshold_seconds < 1:
+        raise ValueError("pause_idle_threshold_seconds must be >= 1 when pause_on_user_active is enabled")
     if config.config_version < 1:
         raise ValueError("config_version must be >= 1")
     if config.monitors:

@@ -50,6 +50,7 @@ def test_run_loop_skips_window_unavailable(
         allow_window_restore=True,
         log_only_mode=False,
         send_repeated_matches=True,
+        pause_on_user_active=False,
         monitors=[
             MonitorConfig(
                 window_title_regex="APP",

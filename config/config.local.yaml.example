@@ -55,4 +55,4 @@ email_queue_max_attempts: 10
 email_queue_retry_base_seconds: 30
 
 pause_on_user_active: true
-pause_idle_threshold_seconds: 120
+pause_idle_threshold_seconds: 180
