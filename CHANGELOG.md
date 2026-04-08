@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-04-08 (3.1.0-rc.1)
+
+- Scan: pausado automaticamente quando o usuário está ativo (idle < threshold).
+- Config: novas opções `pause_on_user_active` (padrão: true) e `pause_idle_threshold_seconds` (padrão: 180).
+- Scan manual: ignora a pausa por atividade do usuário.
+
 ## 2026-03-18 (3.0.0)
 
 - CLI: console redesenhado automaticamente após cada scan sem interação do usuário.
