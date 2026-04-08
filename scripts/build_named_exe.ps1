@@ -51,7 +51,7 @@ $distPath = Join-Path $root "dist"
 $workPath = Join-Path $root "build\pyinstaller"
 
 try {
-    & $python -m PyInstaller --noconfirm --clean --name "SentinelTray" --windowed --onefile `
+    & $python -m PyInstaller --noconfirm --clean --name "SentinelTray" --onefile `
         (Join-Path $root "main.py") --distpath $distPath --workpath $workPath | ForEach-Object { Write-Log "INFO" $_ }
 } catch {
     Write-Log "ERROR" "PyInstaller build failed."

@@ -88,13 +88,22 @@ def test_run_console_exit(
         return DummyThread()
 
     monkeypatch.setattr(console_app, "_start_notifier", fake_start_notifier)
+
+    class DummyTray:
+        def start(self) -> None:
+            pass
+        def stop(self) -> None:
+            pass
+
+    monkeypatch.setattr(console_app, "TrayIcon", lambda **_kwargs: DummyTray())
+
     def noop_sleep(_seconds: float) -> None:
         return None
 
     monkeypatch.setattr(console_app.time, "sleep", noop_sleep)
 
     inputs: Iterator[str] = iter(["q"])
-    def fake_read_command(_prompt: str, _refresh_event: object) -> str | None:
+    def fake_read_command(_prompt: str, _refresh_event: object, _exit_event: object = None) -> str | None:
         return next(inputs)
 
     monkeypatch.setattr(console_app, "_read_command", fake_read_command)

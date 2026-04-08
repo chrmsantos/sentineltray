@@ -792,7 +792,7 @@ class Notifier:
 
     def _ensure_free_disk(self) -> None:
         try:
-            log_dir = Path(self._config.log_file).parent
+            log_dir = Path(self.config.log_file).parent
             usage = shutil.disk_usage(log_dir)
             free_mb = usage.free / (1024 * 1024)
             if free_mb < 50:

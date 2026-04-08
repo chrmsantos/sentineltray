@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import atexit
 import ctypes
+import hashlib
 import logging
 import os
 import shutil
@@ -12,7 +13,7 @@ from builtins import input as input
 from getpass import getpass
 from pathlib import Path
 
-from .config import AppConfig, get_user_data_dir, get_user_log_dir, load_config
+from .config import AppConfig, get_project_root, get_user_data_dir, get_user_log_dir, load_config
 from .console_app import run_console, run_console_config_error
 from .email_sender import EmailAuthError, validate_smtp_credentials
 from .logging_setup import setup_logging
@@ -50,7 +51,12 @@ def _ensure_single_instance_mutex() -> bool:
         kernel32 = ctypes.windll.kernel32
     except Exception:
         return True
-    for name in ("Global\\SentinelTrayMutex", "Local\\SentinelTrayMutex"):
+    # Incorporate the project root into the mutex name so that different
+    # installations (e.g. separate test sandboxes) don't interfere with
+    # each other while still preventing two instances from the same root.
+    root_hash = hashlib.sha256(str(get_project_root()).encode()).hexdigest()[:8]
+    for scope in ("Global", "Local"):
+        name = f"{scope}\\SentinelTrayMutex_{root_hash}"
         try:
             mutex = kernel32.CreateMutexW(None, False, name)
             _mutex_handle = mutex

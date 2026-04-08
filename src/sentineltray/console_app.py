@@ -26,6 +26,7 @@ from .config import (
 from .detector import WindowTextDetector
 from .status import StatusStore, format_timestamp
 from .dpapi_utils import save_secret
+from .tray_app import TrayIcon
 
 LOGGER = logging.getLogger(__name__)
 
@@ -183,7 +184,7 @@ def _email_address_lines(config: AppConfig) -> list[str]:
     for index, monitor in enumerate(config.monitors, start=1):
         sender_addr = monitor.email.from_address or monitor.email.smtp_username or "??"
         recipients = ", ".join(monitor.email.to_addresses) if monitor.email.to_addresses else "??"
-        lines.append(f"Monitor {index}: {sender_addr} → {recipients}")
+        lines.append(f"Monitor {index}: {sender_addr} -> {recipients}")
     return lines
 
 
@@ -265,16 +266,21 @@ def _print_window_matches(config: AppConfig) -> None:
     input("Enter para voltar...")
 
 
-def _read_command(prompt: str, refresh_event: Event) -> str | None:
+def _read_command(prompt: str, refresh_event: Event, exit_event: Event | None = None) -> str | None:
     """Read a command from the console with auto-refresh support.
 
     Returns the typed command string, or None if the display should refresh
     (scan_complete_event fired before the user started typing).
+    Returns "q" immediately if exit_event is set (e.g. from the tray icon).
     """
     sys.stdout.write(prompt)
     sys.stdout.flush()
     buf: list[str] = []
     while True:
+        if exit_event is not None and exit_event.is_set():
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            return "q"
         if refresh_event.is_set():
             refresh_event.clear()
             if not buf:
@@ -309,10 +315,13 @@ def run_console(config: AppConfig) -> None:
     stop_event = Event()
     manual_scan_event = Event()
     scan_complete_event = Event()
+    _tray_exit_event = Event()
     config = _apply_console_logging_policy(config)
     notifier_thread = _start_notifier(
         config, status, stop_event, manual_scan_event, scan_complete_event
     )
+    tray = TrayIcon(on_exit_requested=_tray_exit_event.set)
+    tray.start()
     on_open, finalize_config_edit, close_editor = _create_config_editor()
     last_auth_error = ""
 
@@ -415,7 +424,7 @@ def run_console(config: AppConfig) -> None:
             print("  [Q] Sair")
             print("")
             try:
-                raw_command = _read_command("Comando: ", scan_complete_event)
+                raw_command = _read_command("Comando: ", scan_complete_event, _tray_exit_event)
             except KeyboardInterrupt:
                 return
             if raw_command is None:
@@ -445,6 +454,7 @@ def run_console(config: AppConfig) -> None:
         finally:
             close_editor()
             save_config_edit()
+            tray.stop()
 
 
 def run_console_config_error(error_details: str) -> None:

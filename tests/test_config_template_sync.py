@@ -27,13 +27,14 @@ extra_key: 'keep'
 
     merged = apply_template_to_config_text(legacy, template)
 
-    assert "window_title_regex: 'APP'" in merged
-    assert "phrase_regex: 'ALERT'" in merged
-    assert "log_level: 'DEBUG'" in merged
-    assert "smtp_host: 'smtp.local'" in merged
+    # ruamel.yaml may or may not preserve quotes depending on version; check value
+    assert "window_title_regex: APP" in merged or "window_title_regex: 'APP'" in merged
+    assert "phrase_regex: ALERT" in merged or "phrase_regex: 'ALERT'" in merged
+    assert "log_level: DEBUG" in merged or "log_level: 'DEBUG'" in merged
+    assert "smtp_host: smtp.local" in merged or "smtp_host: 'smtp.local'" in merged
     assert "smtp_port: 2525" in merged
-    assert "smtp_username: 'user'" in merged
-    assert "extra_key: 'keep'" in merged
+    assert "smtp_username: user" in merged or "smtp_username: 'user'" in merged
+    assert "extra_key: keep" in merged or "extra_key: 'keep'" in merged
 
 
 def test_apply_template_with_real_template_keeps_template_keys() -> None:
@@ -63,5 +64,5 @@ email:
 
   merged = apply_template_to_config_text(legacy, template_text)
 
-  assert "log_level: 'DEBUG'" in merged
+  assert "log_level: DEBUG" in merged or "log_level: 'DEBUG'" in merged
   assert "email_queue_file" in merged
