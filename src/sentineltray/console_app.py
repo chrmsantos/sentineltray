@@ -26,7 +26,7 @@ from .config import (
 from .detector import WindowTextDetector
 from .status import StatusStore, format_timestamp
 from .dpapi_utils import save_secret
-from .tray_app import TrayIcon
+from .tray_app import TrayIcon, set_console_visible
 
 LOGGER = logging.getLogger(__name__)
 
@@ -311,6 +311,7 @@ def _read_command(prompt: str, refresh_event: Event, exit_event: Event | None = 
 
 
 def run_console(config: AppConfig) -> None:
+    set_console_visible(False)  # ensure hidden before tray icon is even created
     status = StatusStore()
     stop_event = Event()
     manual_scan_event = Event()

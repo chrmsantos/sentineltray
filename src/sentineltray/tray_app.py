@@ -35,7 +35,7 @@ def _console_hwnd() -> int:
         return 0
 
 
-def _set_console_visible(visible: bool) -> None:
+def set_console_visible(visible: bool) -> None:
     hwnd = _console_hwnd()
     if not hwnd:
         return
@@ -43,6 +43,33 @@ def _set_console_visible(visible: bool) -> None:
         ctypes.windll.user32.ShowWindow(hwnd, _SW_SHOW if visible else _SW_HIDE)  # type: ignore[attr-defined]
     except Exception:
         pass
+
+
+_CTRL_CLOSE_EVENT = 2
+_HandlerRoutine = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)  # type: ignore[attr-defined]
+
+
+def _install_close_to_tray_handler(tray: "TrayIcon") -> object:
+    """Register a SetConsoleCtrlHandler that hides the console on [X] instead of terminating."""
+
+    @_HandlerRoutine
+    def _handler(ctrl_type: int) -> bool:
+        if ctrl_type == _CTRL_CLOSE_EVENT:
+            tray._console_visible = False
+            set_console_visible(False)
+            if tray._icon is not None:
+                try:
+                    tray._icon.update_menu()
+                except Exception:
+                    pass
+            return True  # suppress default close / terminate
+        return False
+
+    try:
+        ctypes.windll.kernel32.SetConsoleCtrlHandler(_handler, True)  # type: ignore[attr-defined]
+    except Exception as exc:
+        LOGGER.debug("SetConsoleCtrlHandler install failed: %s", exc)
+    return _handler
 
 
 class TrayIcon:
@@ -53,6 +80,7 @@ class TrayIcon:
         self._icon: pystray.Icon | None = None
         self._thread: threading.Thread | None = None
         self._console_visible = False
+        self._close_handler: object = None
 
     # ------------------------------------------------------------------
     # Menu callbacks (called from the pystray thread)
@@ -63,7 +91,7 @@ class TrayIcon:
 
     def _toggle_console(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
         self._console_visible = not self._console_visible
-        _set_console_visible(self._console_visible)
+        set_console_visible(self._console_visible)
         icon.update_menu()
 
     def _on_exit(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
@@ -76,7 +104,7 @@ class TrayIcon:
 
     def start(self) -> None:
         """Hide the console window and show the tray icon."""
-        _set_console_visible(False)
+        set_console_visible(False)
         self._console_visible = False
 
         menu = pystray.Menu(
@@ -95,12 +123,19 @@ class TrayIcon:
             name="tray-icon",
         )
         self._thread.start()
+        self._close_handler = _install_close_to_tray_handler(self)
         LOGGER.info("Tray icon started", extra={"category": "startup"})
 
     def stop(self) -> None:
         """Stop the tray icon and restore the console window."""
+        if self._close_handler is not None:
+            try:
+                ctypes.windll.kernel32.SetConsoleCtrlHandler(self._close_handler, False)  # type: ignore[attr-defined]
+            except Exception as exc:
+                LOGGER.debug("SetConsoleCtrlHandler uninstall failed: %s", exc)
+            self._close_handler = None
         if self._icon is not None:
-            _set_console_visible(True)
+            set_console_visible(True)
             try:
                 self._icon.stop()
             except Exception as exc:
