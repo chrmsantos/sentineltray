@@ -79,7 +79,7 @@ class TrayIcon:
         self._on_exit_requested = on_exit_requested
         self._icon: pystray.Icon | None = None
         self._thread: threading.Thread | None = None
-        self._console_visible = False
+        self._console_visible = True
         self._close_handler: object = None
 
     # ------------------------------------------------------------------
@@ -103,9 +103,8 @@ class TrayIcon:
     # ------------------------------------------------------------------
 
     def start(self) -> None:
-        """Hide the console window and show the tray icon."""
-        set_console_visible(False)
-        self._console_visible = False
+        """Show the tray icon without hiding the console window."""
+        self._console_visible = True
 
         menu = pystray.Menu(
             pystray.MenuItem(self._console_menu_label, self._toggle_console),

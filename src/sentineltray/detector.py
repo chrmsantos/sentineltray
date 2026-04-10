@@ -20,6 +20,15 @@ except Exception as exc:  # pragma: no cover - optional dependency
 
 LOGGER = logging.getLogger(__name__)
 
+# Win32 window class names for Windows Shell overlays that grab the foreground
+# and block SetForegroundWindow from succeeding while they are open.
+_SHELL_OVERLAY_CLASSES = frozenset({
+    "Windows.UI.Core.CoreWindow",   # Start menu host (Windows 10/11)
+    "Shell_TrayWnd",                # Taskbar
+    "Shell_SecondaryTrayWnd",       # Secondary-monitor taskbar
+    "NotifyIconOverflowWindow",     # System tray overflow
+})
+
 
 class WindowUnavailableError(RuntimeError):
     """Raised when the target window is temporarily unavailable or disabled."""
@@ -188,6 +197,40 @@ class WindowTextDetector:
         except Exception:
             LOGGER.debug("Failed to restore prior foreground window", exc_info=True)
 
+    def _get_foreground_class(self) -> str:
+        """Return the Win32 class name of the current foreground window."""
+        try:
+            hwnd = ctypes.windll.user32.GetForegroundWindow()
+            if not hwnd:
+                return ""
+            buf = ctypes.create_unicode_buffer(256)
+            ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
+            return buf.value
+        except Exception:
+            return ""
+
+    def _dismiss_shell_overlay(self) -> bool:
+        """Send Escape to dismiss a shell overlay (e.g. Start menu) blocking the foreground.
+
+        Returns True if an overlay was detected and Escape was sent.
+        """
+        class_name = self._get_foreground_class()
+        if class_name not in _SHELL_OVERLAY_CLASSES:
+            return False
+        try:
+            _VK_ESCAPE = 0x1B
+            _KEYEVENTF_KEYUP = 0x0002
+            ctypes.windll.user32.keybd_event(_VK_ESCAPE, 0, 0, 0)
+            ctypes.windll.user32.keybd_event(_VK_ESCAPE, 0, _KEYEVENTF_KEYUP, 0)
+            time.sleep(0.3)
+            LOGGER.debug(
+                "Dismissed shell overlay: %s", class_name, extra={"category": "scan"}
+            )
+            return True
+        except Exception:
+            LOGGER.debug("Failed to dismiss shell overlay", exc_info=True)
+            return False
+
     def _ensure_foreground_and_maximized(self, window) -> None:
         if self._window_is_minimized(window):
             if not self._allow_window_restore:
@@ -212,6 +255,11 @@ class WindowTextDetector:
                         self._show_window(handle, 3)
             except Exception:
                 LOGGER.debug("Failed to maximize window via handle", exc_info=True)
+        if not self._window_is_foreground(window):
+            # A shell overlay (e.g. Start menu) may be holding the foreground and
+            # preventing SetForegroundWindow from succeeding.  Dismiss it and retry.
+            if self._dismiss_shell_overlay():
+                self._force_foreground(window)
         if not self._window_is_foreground(window):
             raise WindowUnavailableError("Target window not in foreground")
         if not self._window_is_maximized(window):

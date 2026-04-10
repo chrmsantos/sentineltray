@@ -311,7 +311,6 @@ def _read_command(prompt: str, refresh_event: Event, exit_event: Event | None = 
 
 
 def run_console(config: AppConfig) -> None:
-    set_console_visible(False)  # ensure hidden before tray icon is even created
     status = StatusStore()
     stop_event = Event()
     manual_scan_event = Event()

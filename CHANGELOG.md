@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 2026-04-10 (3.3.0)
+
+- Console: janela não é mais minimizada automaticamente ao iniciar; o app abre normalmente na barra de tarefas.
+- Scan: monitoramento executa continuamente independente da atividade do usuário (`pause_on_user_active` agora é `false` por padrão).
+- Scan: menu Iniciar do Windows (Start menu) não causa mais o erro "Target window not in foreground"; o app detecta e descarta o overlay do shell antes de retomar o foco.
+
 ## 2026-04-09 (3.2.0-rc.2)
 
 - Tray: app inicia sempre minimizado na bandeja do sistema (sem flash do console).

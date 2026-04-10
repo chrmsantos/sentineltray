@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['main.py'],
+    ['C:\\Users\\csantos\\Aur79\\sentineltray\\main.py'],
     pathex=[],
     binaries=[],
     datas=[],
