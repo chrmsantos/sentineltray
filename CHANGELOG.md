@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## 2026-04-14 (3.4.5)
+
+- CLI: endereço de e-mail do remetente agora é atualizado corretamente quando alterado no editor de configuração.
+
 ## 2026-04-14 (3.3.0)
 
 - Console: janela não é mais minimizada automaticamente ao iniciar; o app abre normalmente na barra de tarefas.

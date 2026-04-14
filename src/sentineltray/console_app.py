@@ -440,6 +440,7 @@ def run_console(config: AppConfig) -> None:
             if command in ("q", "quit", "exit", "sair"):
                 return
             if command in ("c", "config"):
+                apply_config_edit()
                 on_open()
             elif command in ("m", "manual", "scan"):
                 manual_scan_event.set()
