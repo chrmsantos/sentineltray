@@ -17,7 +17,6 @@ def test_auth_failure_disables_email_sends() -> None:
         subject="SentinelTray Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=False,
     )
     config = AppConfig(
         poll_interval_seconds=1,

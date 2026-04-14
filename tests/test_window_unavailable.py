@@ -29,7 +29,6 @@ def test_run_loop_skips_window_unavailable(
         subject="SentinelTray Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=True,
     )
     config = AppConfig(
         poll_interval_seconds=1,

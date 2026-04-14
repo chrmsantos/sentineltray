@@ -69,11 +69,12 @@ def _start_notifier(
     stop_event: Event,
     manual_scan_event: Event,
     scan_complete_event: Event | None = None,
+    test_message_event: Event | None = None,
 ) -> Thread:
     notifier = Notifier(config=config, status=status)
     thread = Thread(
         target=notifier.run_loop,
-        args=(stop_event, manual_scan_event, scan_complete_event),
+        args=(stop_event, manual_scan_event, scan_complete_event, test_message_event),
         daemon=True,
     )
     thread.start()
@@ -315,10 +316,11 @@ def run_console(config: AppConfig) -> None:
     stop_event = Event()
     manual_scan_event = Event()
     scan_complete_event = Event()
+    test_message_event = Event()
     _tray_exit_event = Event()
     config = _apply_console_logging_policy(config)
     notifier_thread = _start_notifier(
-        config, status, stop_event, manual_scan_event, scan_complete_event
+        config, status, stop_event, manual_scan_event, scan_complete_event, test_message_event
     )
     tray = TrayIcon(on_exit_requested=_tray_exit_event.set)
     tray.start()
@@ -347,6 +349,7 @@ def run_console(config: AppConfig) -> None:
             stop_event,
             manual_scan_event,
             scan_complete_event,
+            test_message_event,
         )
 
     try:
@@ -365,6 +368,7 @@ def run_console(config: AppConfig) -> None:
                     stop_event,
                     manual_scan_event,
                     scan_complete_event,
+                    test_message_event,
                 )
             if "smtp auth failed" in snapshot.last_error and snapshot.last_error != last_auth_error:
                 last_auth_error = snapshot.last_error
@@ -412,6 +416,7 @@ def run_console(config: AppConfig) -> None:
                     stop_event,
                     manual_scan_event,
                     scan_complete_event,
+                    test_message_event,
                 )
             clear_screen()
             for line in _menu_header(status, config):
@@ -419,6 +424,7 @@ def run_console(config: AppConfig) -> None:
             print("Comandos:")
             print("  [C] Editar config")
             print("  [M] Scan manual")
+            print("  [T] Mensagem teste")
             print("  [W] Ver janelas")
             print("  [R] Repositório")
             print("  [Q] Sair")
@@ -438,6 +444,10 @@ def run_console(config: AppConfig) -> None:
             elif command in ("m", "manual", "scan"):
                 manual_scan_event.set()
                 print("Scan manual solicitado.")
+                time.sleep(1)
+            elif command in ("t", "test", "teste"):
+                test_message_event.set()
+                print("Mensagem de teste solicitada.")
                 time.sleep(1)
             elif command in ("w", "window", "windows", "janela", "janelas"):
                 LOGGER.info("Window match check requested", extra={"category": "control"})

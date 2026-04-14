@@ -43,7 +43,6 @@ monitors:
     subject: 'SmokeTest'
     retry_attempts: 0
     retry_backoff_seconds: 1
-    dry_run: true
 
 poll_interval_seconds: 2
 healthcheck_interval_seconds: 3600
@@ -63,7 +62,7 @@ log_run_files_keep: 3
 telemetry_file: logs/telemetry.json
 
 allow_window_restore: false
-log_only_mode: false
+log_only_mode: true
 send_repeated_matches: true
 min_repeat_seconds: 0
 error_notification_cooldown_seconds: 0
@@ -304,20 +303,6 @@ def test_exe_startup_no_unexpected_errors(tmp_path: Path) -> None:
     assert not unexpected, (
         f"Found {len(unexpected)} unexpected ERROR log entries:\n"
         + "\n".join(unexpected[:10])
-    )
-
-
-@pytest.mark.skipif(not _exe_available(), reason=f"Executable not found: {EXE_PATH}")
-def test_exe_startup_dry_run_confirmed(tmp_path: Path) -> None:
-    """With dry_run: true the log must show 'Dry run enabled' for the startup test."""
-    root = _setup_root(tmp_path)
-    _run_exe(root, kill_after=4.0)
-    log_files = _collect_run_logs(root)
-    assert log_files, f"No log files found under {root / 'config' / 'logs'}"
-    all_text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in log_files)
-    assert "Dry run" in all_text, (
-        "Expected 'Dry run' in logs (startup test with dry_run=true).\n"
-        "Log content:\n" + all_text[:2000]
     )
 
 

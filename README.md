@@ -23,7 +23,6 @@ Edit config.local.yaml and set:
 - monitors[].email.subject
 - monitors[].email.retry_attempts
 - monitors[].email.retry_backoff_seconds
-- monitors[].email.dry_run = true on first run; set false after validation
 - monitors[].email.smtp_username (no config local)
 - monitors[].email.smtp_password: leave empty; SentinelTray prompts on startup and stores it encrypted (DPAPI)
 - allow_window_restore, send_repeated_matches
@@ -130,7 +129,6 @@ monitors:
          subject: 'SentinelTray Notification'
          retry_attempts: 0
          retry_backoff_seconds: 0
-         dry_run: true
    - window_title_regex: 'APP2'
       phrase_regex: 'ALERT2'
       email:
@@ -146,7 +144,6 @@ monitors:
          subject: 'SentinelTray Notification'
          retry_attempts: 0
          retry_backoff_seconds: 0
-         dry_run: true
 ```
 
 ## Notes

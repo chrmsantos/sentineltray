@@ -19,7 +19,6 @@ def test_debounce_skips_recent_messages(monkeypatch) -> None:
         subject="SentinelTray Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=True,
     )
     config = AppConfig(
         poll_interval_seconds=1,

@@ -22,7 +22,6 @@ def test_build_sender_returns_queue_sender(tmp_path) -> None:
         subject="SentinelTray Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=True,
     )
 
     sender = build_sender(config, queue_path=tmp_path / "queue.json")
@@ -42,7 +41,6 @@ def test_email_sender_retries(monkeypatch) -> None:
         subject="SentinelTray Notification",
         retry_attempts=2,
         retry_backoff_seconds=0,
-        dry_run=False,
     )
 
     attempts = {"count": 0}
@@ -88,7 +86,6 @@ def test_email_sender_auth_failure_no_retry(monkeypatch) -> None:
         subject="SentinelTray Notification",
         retry_attempts=2,
         retry_backoff_seconds=0,
-        dry_run=False,
     )
 
     attempts = {"count": 0}
@@ -137,7 +134,6 @@ def test_email_sender_subject_and_body(monkeypatch) -> None:
         subject="Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=False,
     )
 
     captured = {"message": None}
@@ -183,7 +179,6 @@ def test_email_sender_match_subject(monkeypatch) -> None:
         subject="Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=False,
     )
 
     captured = {"message": None}
@@ -214,7 +209,7 @@ def test_email_sender_match_subject(monkeypatch) -> None:
 
     msg = captured["message"]
     assert msg is not None
-    assert msg["Subject"] == "SentinelTray Match Alert"
+    assert msg["Subject"] == "SentinelTray — Correspondência Detectada"
 
 
 def test_email_sender_error_subject(monkeypatch) -> None:
@@ -230,7 +225,6 @@ def test_email_sender_error_subject(monkeypatch) -> None:
         subject="Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=False,
     )
 
     captured = {"message": None}
@@ -261,4 +255,4 @@ def test_email_sender_error_subject(monkeypatch) -> None:
 
     msg = captured["message"]
     assert msg is not None
-    assert msg["Subject"] == "SentinelTray Error Alert"
+    assert msg["Subject"] == "SentinelTray — Erro Detectado"

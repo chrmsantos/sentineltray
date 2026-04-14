@@ -111,7 +111,6 @@ class EmailConfig:
     subject: str
     retry_attempts: int
     retry_backoff_seconds: int
-    dry_run: bool
 
 
 @dataclass(frozen=True)
@@ -209,7 +208,6 @@ def _build_email_config(
     *,
     monitor_index: int | None,
 ) -> EmailConfig:
-    dry_run = bool(_get_required(email_data, "dry_run"))
     to_raw = _get_required(email_data, "to_addresses")
     if isinstance(to_raw, str):
         to_addresses = [item.strip() for item in to_raw.split(",") if item.strip()]
@@ -232,8 +230,6 @@ def _build_email_config(
                 monitor_index or 0,
                 extra={"category": "config"},
             )
-    elif dry_run:
-        smtp_password = ""
     else:
         smtp_password = ""
     env_password = _env_override("SMTP_PASSWORD", monitor_index)
@@ -248,7 +244,7 @@ def _build_email_config(
             stored_password = None
         if stored_password:
             smtp_password = stored_password
-    if not dry_run and not smtp_password.strip():
+    if not smtp_password.strip():
         LOGGER.info(
             "SMTP password missing for monitor %s; will prompt in CLI",
             monitor_index or 0,
@@ -266,7 +262,6 @@ def _build_email_config(
         subject=str(_get_required(email_data, "subject")),
         retry_attempts=int(_get_required(email_data, "retry_attempts")),
         retry_backoff_seconds=int(_get_required(email_data, "retry_backoff_seconds")),
-        dry_run=dry_run,
     )
 
 
@@ -489,18 +484,17 @@ def _validate_config(config: AppConfig) -> None:
                 raise ValueError(
                     "monitors.email.smtp_port must be between 1 and 65535"
                 )
-            if not monitor.email.dry_run:
-                if not monitor.email.smtp_host:
-                    raise ValueError("monitors.email.smtp_host is required")
-                if not monitor.email.smtp_username:
-                    raise ValueError("monitors.email.smtp_username is required")
-                if not monitor.email.from_address:
-                    raise ValueError("monitors.email.from_address is required")
-                if not monitor.email.to_addresses:
-                    raise ValueError("monitors.email.to_addresses is required")
-                validate_email_address("monitors.email.from_address", monitor.email.from_address)
-                for address in monitor.email.to_addresses:
-                    validate_email_address("monitors.email.to_addresses", address)
+            if not monitor.email.smtp_host:
+                raise ValueError("monitors.email.smtp_host is required")
+            if not monitor.email.smtp_username:
+                raise ValueError("monitors.email.smtp_username is required")
+            if not monitor.email.from_address:
+                raise ValueError("monitors.email.from_address is required")
+            if not monitor.email.to_addresses:
+                raise ValueError("monitors.email.to_addresses is required")
+            validate_email_address("monitors.email.from_address", monitor.email.from_address)
+            for address in monitor.email.to_addresses:
+                validate_email_address("monitors.email.to_addresses", address)
 
 
 def load_config(path: str) -> AppConfig:

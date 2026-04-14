@@ -26,7 +26,6 @@ def test_invalid_regex_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
                 "      subject: 'SentinelTray Notification'",
                 "      retry_attempts: 0",
                 "      retry_backoff_seconds: 0",
-                "      dry_run: true",
                 "poll_interval_seconds: 1",
                 "healthcheck_interval_seconds: 60",
                 "error_backoff_base_seconds: 5",

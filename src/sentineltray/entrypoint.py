@@ -23,6 +23,67 @@ from . import __release_date__, __version_label__
 LOGGER = logging.getLogger(__name__)
 _mutex_handle = None
 
+_CONFIG_TEMPLATE = """\
+# SentinelTray — local configuration
+# Fill in your values and save before running SentinelTray.
+#
+# Do NOT store smtp_password here — leave it empty and enter it at the first
+# launch prompt; it will be saved encrypted to smtp_password_<n>.dpapi.
+
+monitors:
+- window_title_regex: 'YourApp\\.ExeName'     # regex matched against window title
+  phrase_regex: 'ALERT PHRASE'               # regex matched against window text
+  email:
+    smtp_host: 'smtp.gmail.com'
+    smtp_port: 587
+    smtp_username: 'sender@example.com'
+    smtp_password: ''                        # leave empty — use DPAPI prompt
+    from_address: 'sender@example.com'
+    to_addresses: ['recipient@example.com']
+    use_tls: true
+    timeout_seconds: 10
+    subject: SentinelTray
+    retry_attempts: 2
+    retry_backoff_seconds: 3
+
+poll_interval_seconds: 60
+healthcheck_interval_seconds: 900
+error_backoff_base_seconds: 5
+error_backoff_max_seconds: 300
+debounce_seconds: 600
+max_history: 50
+
+state_file: state.json
+log_file: logs/sentineltray.log
+log_level: INFO
+log_console_level: WARNING
+log_console_enabled: true
+log_max_bytes: 5000000
+log_backup_count: 3
+log_run_files_keep: 3
+telemetry_file: logs/telemetry.json
+
+allow_window_restore: true
+log_only_mode: false
+send_repeated_matches: true
+min_repeat_seconds: 0
+error_notification_cooldown_seconds: 300
+
+window_error_backoff_base_seconds: 5
+window_error_backoff_max_seconds: 120
+window_error_circuit_threshold: 3
+window_error_circuit_seconds: 300
+
+email_queue_file: logs/email_queue.json
+email_queue_max_items: 500
+email_queue_max_age_seconds: 86400
+email_queue_max_attempts: 10
+email_queue_retry_base_seconds: 30
+
+pause_on_user_active: true
+pause_idle_threshold_seconds: 180
+"""
+
 
 def _pid_file_path() -> Path:
     base = get_user_data_dir()
@@ -194,21 +255,31 @@ def _terminate_existing_instance() -> bool:
 
 def _ensure_local_override(path: Path) -> None:
     if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(_CONFIG_TEMPLATE, encoding="utf-8")
+        LOGGER.info(
+            "Config template created at %s",
+            path,
+            extra={"category": "config"},
+        )
+        try:
+            subprocess.Popen(["notepad.exe", str(path)])
+        except Exception:
+            pass
         raise SystemExit(
-            "Local configuration not found.\n"
-            f"Expected file: {path}\n"
-            "Create it inside the project config folder, "
-            "fill the required fields, and run again."
+            "Configuration template created.\n"
+            f"File: {path}\n"
+            "Fill in your values (SMTP host, credentials, window title, etc.), "
+            "save, and restart SentinelTray."
         )
 
-    if path.exists():
-        content = path.read_text(encoding="utf-8").strip()
-        if not content:
-            raise SystemExit(
-                "Local configuration is empty.\n"
-                f"File: {path}\n"
-                "Fill the required fields, save, and run again."
-            )
+    content = path.read_text(encoding="utf-8").strip()
+    if not content:
+        raise SystemExit(
+            "Local configuration is empty.\n"
+            f"File: {path}\n"
+            "Fill the required fields, save, and run again."
+        )
 
 
 def _handle_config_error(path: Path, exc: Exception) -> str:
@@ -359,10 +430,10 @@ def _validate_smtp_config(config: AppConfig) -> tuple[list[tuple[int, str]], lis
     auth_failures: list[tuple[int, str]] = []
     auth_messages: list[str] = []
     failures: list[str] = []
+    if config.log_only_mode:
+        return auth_failures, auth_messages
     for index, monitor in enumerate(config.monitors, start=1):
         email = monitor.email
-        if email.dry_run:
-            continue
         try:
             validate_smtp_credentials(email)
         except EmailAuthError as exc:
@@ -384,22 +455,6 @@ def _ensure_windows() -> None:
         extra={"category": "startup"},
     )
     raise SystemExit("SentinelTray requires Windows.")
-
-
-def _require_dry_run_on_first_use(config) -> None:
-    try:
-        state_path = Path(config.state_file)
-    except Exception:
-        return
-    if state_path.exists():
-        return
-    if config.log_only_mode:
-        return
-    for monitor in config.monitors:
-        if not monitor.email.dry_run:
-            raise ValueError(
-                "First run requires dry_run=true to validate configuration safely."
-            )
 
 
 def _missing_smtp_passwords(config: AppConfig) -> list[tuple[int, str]]:
@@ -468,7 +523,6 @@ def main() -> int:
         if missing_passwords:
             _prompt_smtp_passwords(missing_passwords)
             config = load_config(str(local_path))
-        _require_dry_run_on_first_use(config)
         auth_failures, auth_messages = _validate_smtp_config(config)
         if auth_failures:
             for index, _ in auth_failures:

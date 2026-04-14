@@ -59,7 +59,6 @@ email:
   subject: 'SentinelTray'
   retry_attempts: 1
   retry_backoff_seconds: 1
-  dry_run: true
 """
 
   merged = apply_template_to_config_text(legacy, template_text)

@@ -21,7 +21,6 @@ def _make_config(username: str) -> AppConfig:
         subject="SentinelTray",
         retry_attempts=1,
         retry_backoff_seconds=1,
-        dry_run=True,
     )
     monitor = MonitorConfig(
         window_title_regex="APP",

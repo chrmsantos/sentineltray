@@ -16,7 +16,6 @@ def test_send_healthcheck_updates_status_and_sends() -> None:
         subject="SentinelTray Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=True,
     )
     config = AppConfig(
         poll_interval_seconds=1,

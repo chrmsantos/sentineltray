@@ -1,10 +1,13 @@
 ﻿# Changelog
 
-## 2026-04-10 (3.3.0)
+## 2026-04-14 (3.3.0)
 
 - Console: janela não é mais minimizada automaticamente ao iniciar; o app abre normalmente na barra de tarefas.
 - Scan: monitoramento executa continuamente independente da atividade do usuário (`pause_on_user_active` agora é `false` por padrão).
 - Scan: menu Iniciar do Windows (Start menu) não causa mais o erro "Target window not in foreground"; o app detecta e descarta o overlay do shell antes de retomar o foco.
+- CLI: novo comando `[T] Mensagem teste` — envia uma mensagem de teste sob demanda (funcionalidade antes executada automáticamente no startup).
+- Config: arquivo `config.local.yaml` é criado automaticamente a partir de um template comentado caso não exista; o Bloco de Notas abre o arquivo para preenchimento.
+- E-mail: todos os textos das mensagens enviadas traduzidos para português do Brasil.
 
 ## 2026-04-09 (3.2.0-rc.2)
 

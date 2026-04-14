@@ -33,11 +33,18 @@ class EmailQueued(RuntimeError):
     """Raised when a message is queued after a transient failure."""
 
 
+_CATEGORY_LABEL: dict[str, str] = {
+    "Alert": "Alerta",
+    "Error": "Erro",
+    "Status": "Status",
+}
+
+
 def _build_subject(subject: str, category: str) -> str:
     if category == "Alert":
-        return "SentinelTray Match Alert"
+        return "SentinelTray — Correspondência Detectada"
     if category == "Error":
-        return "SentinelTray Error Alert"
+        return "SentinelTray — Erro Detectado"
     if category == "Status":
         return "SentinelTray — Status do sistema"
     base = (subject or "").strip()
@@ -60,25 +67,26 @@ def _build_body(message: str) -> tuple[str, str]:
     details = text
     if text.lower().startswith("error:"):
         category = "Error"
-        details = text.split(":", 1)[1].strip() or "An error occurred."
+        details = text.split(":", 1)[1].strip() or "Ocorreu um erro."
     elif text.lower().startswith("info:"):
         category = "Info"
-        details = text.split(":", 1)[1].strip() or "System update."
+        details = text.split(":", 1)[1].strip() or "Atualização do sistema."
     elif text.lower().startswith("status:"):
         category = "Status"
         details = text.split(":", 1)[1].strip() or "Sistema em execução."
 
     if not details:
-        details = "No additional details."
+        details = "Sem detalhes adicionais."
 
     if category == "Alert" and details == text:
-        details = "The following text was found on screen:\n" + details
+        details = "O seguinte texto foi encontrado na tela:\n" + details
 
+    label = _CATEGORY_LABEL.get(category, category)
     body = (
         "SentinelTray\n\n"
-        f"{category}:\n"
+        f"{label}:\n"
         f"{details}\n\n"
-        "This is an automated message from SentinelTray."
+        "Esta é uma mensagem automática do SentinelTray."
     )
     return category, body
 
@@ -101,10 +109,6 @@ class SmtpEmailSender(EmailSender):
         return False
 
     def send(self, message: str) -> None:
-        if self.config.dry_run:
-            LOGGER.info("Dry run enabled, skipping send", extra={"category": "send"})
-            return
-
         if not self.config.smtp_host:
             raise ValueError("smtp_host is required")
         if not self.config.from_address:
@@ -167,8 +171,6 @@ class SmtpEmailSender(EmailSender):
 
 
 def validate_smtp_credentials(config: EmailConfig) -> None:
-    if config.dry_run:
-        return
     if not config.smtp_host:
         raise ValueError("smtp_host is required")
     if not config.smtp_username and not config.smtp_password:

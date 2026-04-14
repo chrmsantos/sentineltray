@@ -7,13 +7,21 @@ from sentineltray import entrypoint
 from sentineltray.config import get_user_data_dir
 
 
-def test_ensure_local_override_requires_file(tmp_path: Path) -> None:
+def test_ensure_local_override_creates_template_when_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     local_path = tmp_path / "config.local.yaml"
+    monkeypatch.setattr(entrypoint.subprocess, "Popen", lambda *_a, **_k: None)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc_info:
         entrypoint._ensure_local_override(local_path)
 
-    assert not local_path.exists()
+    assert local_path.exists(), "template file should have been created"
+    content = local_path.read_text(encoding="utf-8")
+    assert "monitors:" in content
+    assert "smtp_host" in content
+    assert "window_title_regex" in content
+    assert "template created" in str(exc_info.value).lower()
 
 
 def test_ensure_local_override_rejects_empty_file(tmp_path: Path) -> None:
@@ -36,6 +44,7 @@ def test_main_requires_local_override_when_missing(
     monkeypatch.setattr(entrypoint, "_setup_boot_logging", lambda: None)
     monkeypatch.setattr(entrypoint, "_ensure_single_instance", lambda: None)
     monkeypatch.setattr(entrypoint, "_ensure_windows", lambda: None)
+    monkeypatch.setattr(entrypoint.subprocess, "Popen", lambda *_a, **_k: None)
     monkeypatch.setattr(
         entrypoint,
         "run_console_config_error",
@@ -48,7 +57,7 @@ def test_main_requires_local_override_when_missing(
     with pytest.raises(SystemExit):
         entrypoint.main()
 
-    assert not local_path.exists()
+    assert local_path.exists(), "template file should have been created"
 
 
 def test_main_rejects_extra_args(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

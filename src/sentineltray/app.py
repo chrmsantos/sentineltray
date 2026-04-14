@@ -189,8 +189,6 @@ def _check_smtp_health(config: AppConfig) -> None:
     if not config.monitors:
         return
     email = config.monitors[0].email
-    if email.dry_run:
-        return
     host = email.smtp_host
     port = email.smtp_port
     if not host or not port:
@@ -839,7 +837,7 @@ class Notifier:
         self._queue_stats = total
         self.status.set_email_queue_stats(total)
 
-    def run_loop(self, stop_event: Event, manual_scan_event: Event | None = None, scan_complete_event: Event | None = None) -> None:
+    def run_loop(self, stop_event: Event, manual_scan_event: Event | None = None, scan_complete_event: Event | None = None, test_message_event: Event | None = None) -> None:
         setup_logging(
             self.config.log_file,
             log_level=self.config.log_level,
@@ -866,7 +864,6 @@ class Notifier:
             )
             self.status.set_running(True)
             self.status.set_uptime_seconds(0)
-            self._send_startup_test()
             self._update_telemetry()
             error_count = 0
             def _wait_for_next_scan(wait_seconds: int) -> bool:
@@ -890,6 +887,10 @@ class Notifier:
                     if is_manual:
                         manual_scan_event.clear()
                         LOGGER.info("Manual scan requested", extra={"category": "control"})
+                    if test_message_event is not None and test_message_event.is_set():
+                        test_message_event.clear()
+                        LOGGER.info("Test message requested", extra={"category": "control"})
+                        self._send_startup_test()
                     disk_started = time.perf_counter()
                     self._ensure_free_disk()
                     LOGGER.debug(

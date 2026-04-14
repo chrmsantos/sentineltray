@@ -22,7 +22,6 @@ def _config() -> AppConfig:
         subject="SentinelTray",
         retry_attempts=0,
         retry_backoff_seconds=0,
-        dry_run=True,
     )
     return AppConfig(
         poll_interval_seconds=1,
