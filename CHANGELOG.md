@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## 2026-04-15 (3.6.0)
+
+- Ícone: ícone verde em formato de olho criado em `assets/icon.ico` (multi-resolução: 16–256 px) com supersampling 4× e antialiasing LANCZOS.
+- Tray: ícone da bandeja do sistema substituído por olho verde com íris multicamada, pupila e reflexo de luz.
+- Build: `SentinelTray.spec` atualizado para embutir o novo ícone no executável.
+- Config: comentários detalhados em português do Brasil adicionados em `config.local.yaml.example` para todas as variáveis.
+- Scripts: `scripts/generate_icon.py` adicionado para regenerar os ativos de ícone a qualquer momento.
+
 ## 2026-04-15 (3.5.7)
 
 - Config: diretório de dados do usuário movido para `%LOCALAPPDATA%\ZWave\Tmp\SentinelTray\Config` (anteriormente `%USERPROFILE%\ZWave\Apps\Tmp`).
