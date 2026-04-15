@@ -353,7 +353,7 @@ def _legacy_data_dir() -> Path | None:
     candidates: list[Path] = []
     local_appdata = os.environ.get("LOCALAPPDATA")
     if local_appdata:
-        candidates.append(Path(local_appdata) / "Axon" / "SentinelTray" / "config")
+        candidates.append(Path(local_appdata) / "ZWave" / "SentinelTray" / "config")
     else:
         user_root = os.environ.get("USERPROFILE")
         if user_root:
