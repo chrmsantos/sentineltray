@@ -361,9 +361,10 @@ def _legacy_data_dir() -> Path | None:
                 Path(user_root)
                 / "AppData"
                 / "Local"
-                / "Axon"
+                / "ZWave"
+                / "Tmp"
                 / "SentinelTray"
-                / "config"
+                / "Config"
             )
     candidates.append(get_project_root() / "config")
     for candidate in candidates:

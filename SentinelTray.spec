@@ -3,7 +3,7 @@
 
 a = Analysis(
     ['C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\main.py'],
-    pathex=[],
+    pathex=['C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\src'],
     binaries=[],
     datas=[],
     hiddenimports=[],
