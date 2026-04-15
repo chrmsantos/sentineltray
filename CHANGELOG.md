@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## 2026-04-15 (3.5.7)
+
+- Config: diretório de dados do usuário movido para `%LOCALAPPDATA%\ZWave\Tmp\SentinelTray\Config` (anteriormente `%USERPROFILE%\ZWave\Apps\Tmp`).
+- Config: senhas SMTP, state, logs e fila de e-mail armazenados exclusivamente no novo caminho.
+
 ## 2026-04-14 (3.4.5)
 
 - CLI: endereço de e-mail do remetente agora é atualizado corretamente quando alterado no editor de configuração.
