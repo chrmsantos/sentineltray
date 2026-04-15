@@ -35,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\assets\\icon.ico',
 )

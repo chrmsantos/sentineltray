@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import logging
+import math
 import threading
 from typing import Callable
 
@@ -14,18 +15,85 @@ _SW_HIDE = 0
 _SW_SHOW = 5
 
 
-def _make_green_ball(size: int = 64) -> Image.Image:
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    margin = 4
-    # Light green fill with a slightly darker green outline for definition
-    draw.ellipse(
-        [margin, margin, size - margin, size - margin],
-        fill="#90EE90",
-        outline="#4CAF50",
-        width=2,
+def _make_green_eye(size: int = 64) -> Image.Image:
+    """Draw a green eye icon at *size* x *size* using 4x supersampling."""
+    scale = 4
+    s = size * scale
+    cx, cy = s // 2, s // 2
+
+    # Eye-shape bounding box (horizontal lens / almond)
+    ew = int(s * 0.88)
+    eh = int(s * 0.52)
+    ex0, ey0 = cx - ew // 2, cy - eh // 2
+    ex1, ey1 = ex0 + ew, ey0 + eh
+
+    # Content layer
+    content = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    cd = ImageDraw.Draw(content)
+
+    # Sclera (eye-white)
+    cd.ellipse([ex0, ey0, ex1, ey1], fill=(255, 255, 255, 255))
+
+    # Outer iris ring — deep forest green
+    iris_r = int(s * 0.21)
+    cd.ellipse(
+        [cx - iris_r, cy - iris_r, cx + iris_r, cy + iris_r],
+        fill=(27, 94, 32, 255),
     )
-    return img
+    # Mid iris — vibrant green
+    mid_r = int(s * 0.17)
+    cd.ellipse(
+        [cx - mid_r, cy - mid_r, cx + mid_r, cy + mid_r],
+        fill=(46, 204, 113, 255),
+    )
+    # Inner iris ring
+    inner_r = int(s * 0.13)
+    cd.ellipse(
+        [cx - inner_r, cy - inner_r, cx + inner_r, cy + inner_r],
+        fill=(39, 174, 96, 255),
+    )
+    # Pupil
+    pupil_r = int(s * 0.085)
+    cd.ellipse(
+        [cx - pupil_r, cy - pupil_r, cx + pupil_r, cy + pupil_r],
+        fill=(10, 10, 10, 255),
+    )
+    # Catchlight highlight
+    hl_r = max(3, int(s * 0.038))
+    hl_x = cx + int(s * 0.07)
+    hl_y = cy - int(s * 0.07)
+    cd.ellipse(
+        [hl_x - hl_r, hl_y - hl_r, hl_x + hl_r, hl_y + hl_r],
+        fill=(255, 255, 255, 255),
+    )
+
+    # Alpha mask — only the eye-lens shape is visible
+    mask = Image.new("L", (s, s), 0)
+    md = ImageDraw.Draw(mask)
+    md.ellipse([ex0, ey0, ex1, ey1], fill=255)
+
+    result = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    result.paste(content, mask=mask)
+
+    # Eyelid border
+    border = ImageDraw.Draw(result)
+    border_w = max(2, int(s * 0.025))
+    border.ellipse([ex0, ey0, ex1, ey1], outline=(13, 77, 13, 255), width=border_w)
+
+    # Upper eyelash accent lines
+    lash_color = (13, 77, 13, 200)
+    lash_len = int(s * 0.07)
+    lash_w = max(2, int(s * 0.018))
+    for i in range(5):
+        angle_deg = 210 + i * 30
+        angle_rad = math.radians(angle_deg)
+        sx = int(cx + (ew // 2) * math.cos(angle_rad))
+        sy = int(cy + (eh // 2) * math.sin(angle_rad))
+        ex_end = int(sx + lash_len * math.cos(angle_rad))
+        ey_end = int(sy + lash_len * math.sin(angle_rad))
+        border.line([sx, sy, ex_end, ey_end], fill=lash_color, width=lash_w)
+
+    return result.resize((size, size), Image.LANCZOS)
 
 
 def _console_hwnd() -> int:
@@ -112,7 +180,7 @@ class TrayIcon:
         )
         self._icon = pystray.Icon(
             "SentinelTray",
-            _make_green_ball(),
+            _make_green_eye(),
             "SentinelTray",
             menu,
         )
