@@ -189,6 +189,26 @@ def _email_address_lines(config: AppConfig) -> list[str]:
     return lines
 
 
+def _format_next_scan_remaining(last_scan: str, poll_interval_seconds: int) -> str:
+    if not last_scan or not poll_interval_seconds:
+        return "NENHUM"
+    try:
+        from datetime import datetime, timedelta, timezone
+        last = datetime.fromisoformat(last_scan)
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        remaining = (last + timedelta(seconds=poll_interval_seconds) - now).total_seconds()
+        if remaining <= 0:
+            return "iminente"
+        minutes, seconds = divmod(int(remaining), 60)
+        if minutes > 0:
+            return f"{minutes}m {seconds:02d}s"
+        return f"{seconds}s"
+    except (ValueError, TypeError):
+        return "NENHUM"
+
+
 def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
     snapshot = status.snapshot()
     state = "EXECUTANDO" if snapshot.running else "PARADO"
@@ -198,6 +218,8 @@ def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
     last_scan_line = f"Ultimo scan: {last_scan_at or 'NENHUM'}"
     last_scan_result = snapshot.last_scan_result or "NENHUM"
     last_scan_result_line = f"Resultado ultimo scan: {last_scan_result}"
+    next_scan_remaining = _format_next_scan_remaining(snapshot.last_scan, config.poll_interval_seconds)
+    next_scan_line = f"Proximo scan em: {next_scan_remaining}"
     last_error_line = f"Ultimo erro: {snapshot.last_error or 'NENHUM'}"
     queue = snapshot.email_queue
     queue_line = (
@@ -227,6 +249,7 @@ def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
         *_email_address_lines(config),
         last_scan_line,
         last_scan_result_line,
+        next_scan_line,
         f"Última mensagem: {last_message}",
         last_error_line,
         queue_line,
@@ -423,9 +446,6 @@ def run_console(config: AppConfig) -> None:
                 print(line)
             print("Comandos:")
             print("  [C] Editar config")
-            print("  [M] Scan manual")
-            print("  [T] Mensagem teste")
-            print("  [W] Ver janelas")
             print("  [R] Repositório")
             print("  [Q] Sair")
             print("")
@@ -442,17 +462,6 @@ def run_console(config: AppConfig) -> None:
             if command in ("c", "config"):
                 apply_config_edit()
                 on_open()
-            elif command in ("m", "manual", "scan"):
-                manual_scan_event.set()
-                print("Scan manual solicitado.")
-                time.sleep(1)
-            elif command in ("t", "test", "teste"):
-                test_message_event.set()
-                print("Mensagem de teste solicitada.")
-                time.sleep(1)
-            elif command in ("w", "window", "windows", "janela", "janelas"):
-                LOGGER.info("Window match check requested", extra={"category": "control"})
-                _print_window_matches(config)
             elif command in ("r", "repo", "repositório", "repositorio"):
                 webbrowser.open(_PROJECT_REPO_URL)
             apply_config_edit()
