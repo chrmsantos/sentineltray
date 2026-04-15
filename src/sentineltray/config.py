@@ -87,10 +87,13 @@ def get_user_data_dir() -> Path:
     override = os.environ.get("SENTINELTRAY_DATA_DIR")
     if override:
         return Path(override)
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata:
+        return Path(local_appdata) / "ZWave" / "Tmp" / "SentinelTray" / "Config"
     user_profile = os.environ.get("USERPROFILE")
     if user_profile:
-        return Path(user_profile) / "ZWave" / "Apps" / "Tmp"
-    return Path.home() / "ZWave" / "Apps" / "Tmp"
+        return Path(user_profile) / "AppData" / "Local" / "ZWave" / "Tmp" / "SentinelTray" / "Config"
+    return Path.home() / "AppData" / "Local" / "ZWave" / "Tmp" / "SentinelTray" / "Config"
 
 
 def get_user_log_dir() -> Path:

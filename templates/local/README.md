@@ -9,7 +9,7 @@ The installer copies templates/local/config.local.yaml to the data folder when t
 
 1. Create the configuration file at:
    %SENTINELTRAY_DATA_DIR%\config.local.yaml (when defined)
-   or %USERPROFILE%\ZWave\Apps\Tmp\config.local.yaml
+   or %LOCALAPPDATA%\ZWave\Tmp\SentinelTray\Config\config.local.yaml
 2. Fill the required fields and restart the application.
 3. state.json is only an example of the local history format.
 4. The editor always syncs with the official template, merging existing values into the latest structure.
