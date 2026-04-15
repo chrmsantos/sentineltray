@@ -95,7 +95,7 @@ def _create_config_editor() -> tuple[
     edit_process: subprocess.Popen[str] | None = None
 
     def config_path() -> Path:
-        return get_project_root() / "config" / "config.local.yaml"
+        return get_user_data_dir() / "config.local.yaml"
 
     def on_open() -> None:
         nonlocal edit_process

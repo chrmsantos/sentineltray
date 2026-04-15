@@ -350,19 +350,25 @@ def _setup_boot_logging() -> None:
 
 
 def _legacy_data_dir() -> Path | None:
+    candidates: list[Path] = []
     local_appdata = os.environ.get("LOCALAPPDATA")
     if local_appdata:
-        return Path(local_appdata) / "Axon" / "SentinelTray" / "config"
-    user_root = os.environ.get("USERPROFILE")
-    if user_root:
-        return (
-            Path(user_root)
-            / "AppData"
-            / "Local"
-            / "Axon"
-            / "SentinelTray"
-            / "config"
-        )
+        candidates.append(Path(local_appdata) / "Axon" / "SentinelTray" / "config")
+    else:
+        user_root = os.environ.get("USERPROFILE")
+        if user_root:
+            candidates.append(
+                Path(user_root)
+                / "AppData"
+                / "Local"
+                / "Axon"
+                / "SentinelTray"
+                / "config"
+            )
+    candidates.append(get_project_root() / "config")
+    for candidate in candidates:
+        if (candidate / "config.local.yaml").exists():
+            return candidate
     return None
 
 

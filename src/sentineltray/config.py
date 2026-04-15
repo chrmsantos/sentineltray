@@ -84,7 +84,13 @@ def _get_project_root_from_file() -> Path:
 
 
 def get_user_data_dir() -> Path:
-    return get_project_root() / "config"
+    override = os.environ.get("SENTINELTRAY_DATA_DIR")
+    if override:
+        return Path(override)
+    user_profile = os.environ.get("USERPROFILE")
+    if user_profile:
+        return Path(user_profile) / "ZWave" / "Apps" / "Tmp"
+    return Path.home() / "ZWave" / "Apps" / "Tmp"
 
 
 def get_user_log_dir() -> Path:
