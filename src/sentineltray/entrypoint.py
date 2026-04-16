@@ -9,13 +9,11 @@ import shutil
 import subprocess
 import sys
 import time
-from builtins import input as input
-from getpass import getpass
 from pathlib import Path
 
 from .config import AppConfig, get_project_root, get_user_data_dir, get_user_log_dir, load_config
 from .console_app import run_console_config_error
-from .gui_app import run_gui
+from .gui_app import prompt_smtp_password_gui, run_gui
 from .email_sender import EmailAuthError, validate_smtp_credentials
 from .logging_setup import setup_logging
 from .dpapi_utils import save_secret
@@ -484,15 +482,12 @@ def _missing_smtp_passwords(config: AppConfig) -> list[tuple[int, str]]:
 def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
     if not missing:
         return
-    print("SentinelTray - Login SMTP")
-    print("")
-    print("Informe a senha SMTP para continuar.")
-    print("Opções: [Q] Sair")
-    print("")
     for index, username in missing:
         while True:
-            print(f"Usuário SMTP (monitor {index}): {username}")
-            password = getpass("Senha SMTP: ").strip()
+            password = prompt_smtp_password_gui(username, index)
+            if password is None:
+                raise SystemExit("Senha SMTP não informada.")
+            password = password.strip()
             if password:
                 os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
                 try:
@@ -505,12 +500,6 @@ def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
                         extra={"category": "config"},
                     )
                 break
-            choice = input("Senha vazia. [T]entar novamente ou [Q] Sair: ").strip().lower()
-            if choice in ("q", "sair", "exit"):
-                raise SystemExit("Senha SMTP não informada.")
-            print("")
-    print("")
-    print("Senha SMTP registrada.")
 
 
 def main() -> int:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from __future__ import annotations
+
 from builtins import input as input
 from dataclasses import replace
 
@@ -10,7 +12,6 @@ import subprocess
 import sys
 import time
 import webbrowser
-from getpass import getpass
 from pathlib import Path
 from threading import Event, Thread
 from typing import Callable
@@ -24,6 +25,7 @@ from .config import (
     load_config,
 )
 from .detector import WindowTextDetector
+from .gui_app import prompt_smtp_password_gui
 from .status import StatusStore, format_timestamp
 from .dpapi_utils import save_secret
 from .tray_app import TrayIcon, set_console_visible
@@ -408,10 +410,10 @@ def run_console(config: AppConfig) -> None:
                     if not username:
                         continue
                     _clear_stored_smtp_password(index)
-                    print(f"Usuário SMTP (monitor {index}): {username}")
-                    password = getpass("Senha SMTP: ").strip()
-                    if not password:
+                    password = prompt_smtp_password_gui(username, index)
+                    if not password or not password.strip():
                         continue
+                    password = password.strip()
                     os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
                     updated_any = True
                     try:
@@ -521,10 +523,10 @@ def run_console_config_error(error_details: str) -> None:
                 print("")
                 if smtp_usernames:
                     for index, username in smtp_usernames:
-                        print(f"Usuário SMTP (monitor {index}): {username}")
-                        password = getpass("Senha SMTP: ").strip()
-                        if not password:
+                        password = prompt_smtp_password_gui(username, index)
+                        if not password or not password.strip():
                             continue
+                        password = password.strip()
                         os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
                         try:
                             secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
@@ -536,10 +538,9 @@ def run_console_config_error(error_details: str) -> None:
                                 extra={"category": "config"},
                             )
                 else:
-                    print("Usuário SMTP: (não definido no config)")
-                    password = getpass("Senha SMTP: ").strip()
-                    if password:
-                        os.environ["SENTINELTRAY_SMTP_PASSWORD"] = password
+                    password = prompt_smtp_password_gui("(não definido no config)", 0)
+                    if password and password.strip():
+                        os.environ["SENTINELTRAY_SMTP_PASSWORD"] = password.strip()
                 try:
                     config = load_config(str(local_path))
                 except Exception as exc:

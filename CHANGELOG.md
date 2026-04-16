@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 2026-04-16 (4.0.0-rc.2)
+
+- GUI: prompt de senha SMTP migrado para diálogo gráfico tkinter (substitui `getpass` no console).
+- Entrypoint: `_prompt_smtp_passwords` usa `prompt_smtp_password_gui`; sem mais impressão no console.
+- Console: todos os sites de `getpass` em `console_app.py` substituídos por `prompt_smtp_password_gui`.
+
 ## 2026-04-16 (4.0.0-rc.1)
 
 - GUI: janela de status completa com tema GitHub-dark substituindo a interface de console.

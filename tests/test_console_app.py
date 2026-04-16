@@ -163,7 +163,7 @@ def test_run_console_config_error_smtp_prompt(
         return next(inputs)
 
     monkeypatch.setattr(console_app, "input", fake_input)
-    monkeypatch.setattr(console_app, "getpass", lambda _prompt: "smtp-pass")
+    monkeypatch.setattr(console_app, "prompt_smtp_password_gui", lambda _user, _idx: "smtp-pass")
 
     config = _make_config(tmp_path)
     calls: dict[str, Any] = {"config": None}

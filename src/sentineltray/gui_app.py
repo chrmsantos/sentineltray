@@ -35,6 +35,106 @@ _BTN_DIM = "#21262d"   # dim button bg
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SMTP password dialog
+# ─────────────────────────────────────────────────────────────────────────────
+
+def prompt_smtp_password_gui(username: str, monitor_index: int) -> str | None:
+    """Show a modal dialog to collect the SMTP password.
+
+    Returns the entered password, or ``None`` if the user cancelled.
+    """
+    result: list[str | None] = [None]
+
+    root = tk.Tk()
+    root.withdraw()
+
+    dialog = tk.Toplevel(root)
+    dialog.title("SentinelTray — Senha SMTP")
+    dialog.configure(bg=_BG)
+    dialog.resizable(False, False)
+    dialog.grab_set()
+    dialog.focus_force()
+
+    dialog.update_idletasks()
+    width, height = 380, 200
+    x = (dialog.winfo_screenwidth() - width) // 2
+    y = (dialog.winfo_screenheight() - height) // 2
+    dialog.geometry(f"{width}x{height}+{x}+{y}")
+
+    tk.Label(
+        dialog,
+        text=f"Usuário SMTP (monitor {monitor_index}):",
+        bg=_BG,
+        fg=_MUTED,
+        font=("Segoe UI", 9),
+    ).pack(pady=(18, 2))
+    tk.Label(
+        dialog,
+        text=username,
+        bg=_BG,
+        fg=_WHITE,
+        font=("Segoe UI", 10, "bold"),
+    ).pack()
+    tk.Label(
+        dialog,
+        text="Senha SMTP:",
+        bg=_BG,
+        fg=_MUTED,
+        font=("Segoe UI", 9),
+    ).pack(pady=(12, 2))
+    entry = tk.Entry(
+        dialog,
+        show="*",
+        bg=_SURFACE,
+        fg=_TEXT,
+        insertbackground=_TEXT,
+        relief="flat",
+        font=("Segoe UI", 10),
+        width=32,
+    )
+    entry.pack(padx=24)
+    entry.focus_set()
+
+    def on_ok() -> None:
+        result[0] = entry.get()
+        dialog.destroy()
+
+    def on_cancel() -> None:
+        dialog.destroy()
+
+    btn_frame = tk.Frame(dialog, bg=_BG)
+    btn_frame.pack(pady=14)
+    tk.Button(
+        btn_frame,
+        text="OK",
+        command=on_ok,
+        bg=_GREEN2,
+        fg=_WHITE,
+        relief="flat",
+        padx=20,
+        font=("Segoe UI", 9),
+    ).pack(side="left", padx=6)
+    tk.Button(
+        btn_frame,
+        text="Cancelar",
+        command=on_cancel,
+        bg=_BTN_DIM,
+        fg=_TEXT,
+        relief="flat",
+        padx=10,
+        font=("Segoe UI", 9),
+    ).pack(side="left", padx=6)
+
+    entry.bind("<Return>", lambda _e: on_ok())
+    dialog.bind("<Escape>", lambda _e: on_cancel())
+    dialog.protocol("WM_DELETE_WINDOW", on_cancel)
+
+    root.wait_window(dialog)
+    root.destroy()
+    return result[0]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # In-app YAML config editor
 # ─────────────────────────────────────────────────────────────────────────────
 
