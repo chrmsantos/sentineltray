@@ -1,5 +1,17 @@
 ﻿# Changelog
 
+## 2026-04-16 (4.0.0-rc.1)
+
+- GUI: janela de status completa com tema GitHub-dark substituindo a interface de console.
+- GUI: layout de duas colunas para monitores widescreen (1080×580, redimensionável).
+- GUI: título da janela exibe versão e data de build.
+- GUI: app inicia sempre minimizado, acessível apenas pela bandeja do sistema.
+- GUI: interface totalmente em português do Brasil.
+- Config: editor de configuração YAML integrado à janela de status (sem dependência do Bloco de Notas).
+- Config: validação em tempo real antes de salvar; aplicação imediata sem reiniciar.
+- Tray: modo GUI com "Abrir Status" como ação padrão da bandeja.
+- Build: `console=False` no spec elimina flash do console ao iniciar.
+
 ## 2026-04-15 (3.6.0)
 
 - Ícone: ícone verde em formato de olho criado em `assets/icon.ico` (multi-resolução: 16–256 px) com supersampling 4× e antialiasing LANCZOS.
