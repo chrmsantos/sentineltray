@@ -1,0 +1,579 @@
+from __future__ import annotations
+
+import logging
+import os
+import subprocess
+import time
+import webbrowser
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from threading import Event, Thread
+from typing import Callable
+
+import tkinter as tk
+
+from .app import Notifier
+from .config import AppConfig, get_user_data_dir, load_config
+from .dpapi_utils import save_secret
+from .status import StatusStore, format_timestamp
+from .tray_app import TrayIcon, set_console_visible
+
+LOGGER = logging.getLogger(__name__)
+_PROJECT_REPO_URL = "https://github.com/chrmsantos/sentineltray"
+
+# ── GitHub-dark-inspired palette ─────────────────────────────────────────────
+_BG      = "#0d1117"   # main background
+_SURFACE = "#161b22"   # header / footer surface
+_CARD    = "#1c2128"   # card background
+_BORDER  = "#30363d"   # borders
+_GREEN   = "#3fb950"   # primary accent (running)
+_GREEN2  = "#196127"   # dark green
+_RED     = "#f85149"   # error / stopped
+_AMBER   = "#d29922"   # warning
+_BLUE    = "#58a6ff"   # scan button
+_TEXT    = "#c9d1d9"   # primary text
+_MUTED   = "#8b949e"   # secondary text
+_WHITE   = "#e6edf3"   # bright text
+_BTN_DIM = "#21262d"   # dim button bg
+
+
+class StatusWindow:
+    """Beautiful tkinter status window for SentinelTray."""
+
+    _REFRESH_MS = 1000
+
+    def __init__(
+        self,
+        root: tk.Tk,
+        status: StatusStore,
+        config: AppConfig,
+        *,
+        get_config: Callable[[], AppConfig],
+        on_manual_scan: Callable[[], None],
+        on_open_config: Callable[[], None],
+        on_exit: Callable[[], None],
+    ) -> None:
+        self._root = root
+        self._status = status
+        self._get_config = get_config
+        self._on_manual_scan = on_manual_scan
+        self._on_open_config = on_open_config
+        self._on_exit = on_exit
+        self._visible = False
+        self._after_id: str | None = None
+        self._vars: dict[str, tk.StringVar] = {}
+        self._value_labels: dict[str, tk.Label] = {}
+        self._monitors_content: tk.Frame | None = None
+        self._status_dot: tk.Label | None = None
+        self._status_text: tk.Label | None = None
+        self._uptime_var = tk.StringVar(value="00:00:00")
+        self._build_ui()
+
+    # ── UI Construction ───────────────────────────────────────────────────────
+
+    def _build_ui(self) -> None:
+        r = self._root
+        from . import __version_label__, __release_date__
+        r.title(f"SentinelTray {__version_label__} ({__release_date__}) — Status")
+        r.configure(bg=_BG)
+        r.resizable(True, True)
+        r.minsize(900, 480)
+        r.protocol("WM_DELETE_WINDOW", self.hide)
+        r.withdraw()
+
+        # App icon
+        try:
+            from .path_utils import get_project_root as _gpr  # type: ignore[attr-defined]
+            ico = _gpr() / "assets" / "icon.ico"
+            if ico.exists():
+                r.iconbitmap(str(ico))
+        except Exception:
+            pass
+
+        W, H = 1080, 580
+        self._center(W, H)
+        r.geometry(f"{W}x{H}")
+
+        # ── Header ────────────────────────────────────────────────────────────
+        header = tk.Frame(r, bg=_SURFACE, pady=14)
+        header.pack(fill=tk.X)
+
+        eye = tk.Canvas(header, width=42, height=42, bg=_SURFACE, highlightthickness=0)
+        eye.pack(side=tk.LEFT, padx=(18, 10))
+        self._draw_eye(eye, 42)
+
+        title_frame = tk.Frame(header, bg=_SURFACE)
+        title_frame.pack(side=tk.LEFT)
+        tk.Label(
+            title_frame, text="SentinelTray",
+            font=("Segoe UI", 15, "bold"), fg=_GREEN, bg=_SURFACE, anchor="w"
+        ).pack(anchor="w")
+        tk.Label(
+            title_frame, text="Window Monitor & Alert System",
+            font=("Segoe UI", 9), fg=_MUTED, bg=_SURFACE, anchor="w"
+        ).pack(anchor="w")
+
+        tk.Label(
+            header, text=f"v{__version_label__}  ·  {__release_date__}",
+            font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE
+        ).pack(side=tk.RIGHT, padx=18)
+
+        tk.Frame(r, bg=_BORDER, height=1).pack(fill=tk.X)
+
+        # ── Two-column body ───────────────────────────────────────────────────
+        body_outer = tk.Frame(r, bg=_BG)
+        body_outer.pack(fill=tk.BOTH, expand=True, padx=16, pady=12)
+        body_outer.columnconfigure(0, weight=1)
+        body_outer.columnconfigure(1, weight=1)
+        body_outer.rowconfigure(0, weight=1)
+
+        left = tk.Frame(body_outer, bg=_BG)
+        left.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+
+        right = tk.Frame(body_outer, bg=_BG)
+        right.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+
+        # ── LEFT: Status + Uptime row ─────────────────────────────────────────
+        row1 = tk.Frame(left, bg=_BG)
+        row1.pack(fill=tk.X, pady=(0, 10))
+
+        sc, sc_c = self._make_card(row1, "STATUS")
+        sc.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 6))
+        pill = tk.Frame(sc_c, bg=_CARD)
+        pill.pack(pady=6)
+        self._status_dot = tk.Label(pill, text="●", font=("Segoe UI", 22), fg=_AMBER, bg=_CARD)
+        self._status_dot.pack(side=tk.LEFT)
+        self._status_text = tk.Label(
+            pill, text="STARTING", font=("Segoe UI", 14, "bold"), fg=_AMBER, bg=_CARD
+        )
+        self._status_text.pack(side=tk.LEFT, padx=(8, 0))
+
+        uc, uc_c = self._make_card(row1, "UPTIME")
+        uc.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0))
+        tk.Label(
+            uc_c, textvariable=self._uptime_var,
+            font=("Consolas", 20, "bold"), fg=_TEXT, bg=_CARD
+        ).pack(pady=6)
+
+        # ── LEFT: Scan Status ─────────────────────────────────────────────────
+        self._kv_section(left, "SCAN STATUS", [
+            ("last_scan",   "Last Check"),
+            ("next_scan",   "Next Check"),
+            ("last_result", "Last Result"),
+        ])
+
+        # ── LEFT: Alerts ──────────────────────────────────────────────────────
+        self._kv_section(left, "ALERTS", [
+            ("last_match",    "Last Detection"),
+            ("last_match_at", "Match Timestamp"),
+            ("last_send",     "Last Alert Sent"),
+        ])
+
+        # ── RIGHT: Errors ─────────────────────────────────────────────────────
+        self._kv_section(right, "ERRORS", [
+            ("error_count",    "Total Errors"),
+            ("last_error",     "Last Error"),
+            ("breaker_active", "Circuit Breakers"),
+        ])
+
+        # ── RIGHT: Email Queue ────────────────────────────────────────────────
+        eq_outer, eq_c = self._make_card(right, "EMAIL QUEUE")
+        eq_outer.pack(fill=tk.X, pady=(10, 0))
+        for key, label, color in (
+            ("q_pending",  "Pending",  _AMBER),
+            ("q_sent",     "Sent",     _GREEN),
+            ("q_failed",   "Failed",   _RED),
+            ("q_deferred", "Deferred", _MUTED),
+        ):
+            cell = tk.Frame(eq_c, bg=_CARD)
+            cell.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=4)
+            var = tk.StringVar(value="0")
+            self._vars[key] = var
+            tk.Label(cell, textvariable=var,
+                     font=("Consolas", 22, "bold"), fg=color, bg=_CARD).pack()
+            tk.Label(cell, text=label, font=("Segoe UI", 8), fg=_MUTED, bg=_CARD).pack()
+
+        # ── RIGHT: Monitors ───────────────────────────────────────────────────
+        mon_outer, mon_c = self._make_card(right, "MONITORS")
+        mon_outer.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+        self._monitors_content = mon_c
+
+        # ── Footer ────────────────────────────────────────────────────────────
+        tk.Frame(r, bg=_BORDER, height=1).pack(fill=tk.X)
+        footer = tk.Frame(r, bg=_SURFACE, pady=10)
+        footer.pack(fill=tk.X)
+
+        self._make_btn(footer, "⟳  Scan Now", self._trigger_scan, _BLUE).pack(
+            side=tk.LEFT, padx=(18, 6))
+        self._make_btn(footer, "⚙  Config", self._on_open_config, _BTN_DIM).pack(
+            side=tk.LEFT, padx=(0, 6))
+        self._make_btn(footer, "↗  Repository",
+                       lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
+            side=tk.LEFT)
+        self._make_btn(footer, "Exit  ✕", self._on_exit, "#5a1a1a").pack(
+            side=tk.RIGHT, padx=(0, 18))
+
+    def _make_card(self, parent: tk.Widget, title: str) -> tuple[tk.Frame, tk.Frame]:
+        """Create a styled card. Returns (outer, content). Caller packs outer."""
+        outer = tk.Frame(parent, bg=_BORDER, padx=1, pady=1)
+        inner = tk.Frame(outer, bg=_CARD)
+        inner.pack(fill=tk.BOTH, expand=True)
+        tk.Label(inner, text=title, font=("Segoe UI", 7, "bold"),
+                 fg=_GREEN, bg=_CARD, anchor="w").pack(fill=tk.X, padx=12, pady=(8, 2))
+        tk.Frame(inner, bg=_BORDER, height=1).pack(fill=tk.X, padx=12)
+        content = tk.Frame(inner, bg=_CARD)
+        content.pack(fill=tk.BOTH, expand=True, padx=12, pady=(6, 10))
+        return outer, content
+
+    def _kv_section(
+        self,
+        parent: tk.Widget,
+        title: str,
+        rows: list[tuple[str, str]],
+    ) -> None:
+        outer, content = self._make_card(parent, title)
+        outer.pack(fill=tk.X, pady=(10, 0))
+        for key, label in rows:
+            var = tk.StringVar(value="—")
+            self._vars[key] = var
+            row = tk.Frame(content, bg=_CARD)
+            row.pack(fill=tk.X, pady=1)
+            tk.Label(row, text=label + ":", font=("Segoe UI", 9),
+                     fg=_MUTED, bg=_CARD, width=20, anchor="w").pack(side=tk.LEFT)
+            lbl = tk.Label(row, textvariable=var, font=("Segoe UI", 9),
+                           fg=_TEXT, bg=_CARD, anchor="w", wraplength=320, justify="left")
+            lbl.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            self._value_labels[key] = lbl
+
+    def _make_btn(
+        self, parent: tk.Frame, text: str, cmd: Callable[[], None], bg: str
+    ) -> tk.Button:
+        return tk.Button(
+            parent, text=text, command=cmd,
+            font=("Segoe UI", 9, "bold"),
+            fg=_WHITE, bg=bg, activeforeground=_WHITE, activebackground=bg,
+            relief=tk.FLAT, cursor="hand2", padx=14, pady=6, bd=0,
+        )
+
+    def _draw_eye(self, canvas: tk.Canvas, size: int) -> None:
+        cx, cy = size // 2, size // 2
+        ew, eh = int(size * 0.90), int(size * 0.54)
+        ex0, ey0 = cx - ew // 2, cy - eh // 2
+        ex1, ey1 = ex0 + ew, ey0 + eh
+        canvas.create_oval(ex0, ey0, ex1, ey1, fill="white", outline="#0a4a0a", width=2)
+        r = int(size * 0.20)
+        canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill="#196127")
+        r = int(size * 0.14)
+        canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill="#3fb950")
+        r = int(size * 0.09)
+        canvas.create_oval(cx - r, cy - r, cx + r, cy + r, fill="#0a0a0a")
+        hl = int(size * 0.04)
+        hx, hy = cx + int(size * 0.07), cy - int(size * 0.07)
+        canvas.create_oval(hx - hl, hy - hl, hx + hl, hy + hl, fill="white")
+
+    def _center(self, w: int, h: int) -> None:
+        sw = self._root.winfo_screenwidth()
+        sh = self._root.winfo_screenheight()
+        self._root.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+
+    # ── Visibility ────────────────────────────────────────────────────────────
+
+    def show(self) -> None:
+        self._visible = True
+        self._root.deiconify()
+        self._root.lift()
+        self._root.focus_force()
+        self._schedule_refresh()
+
+    def hide(self) -> None:
+        self._visible = False
+        self._root.withdraw()
+        if self._after_id:
+            try:
+                self._root.after_cancel(self._after_id)
+            except Exception:
+                pass
+            self._after_id = None
+
+    # ── Refresh loop ──────────────────────────────────────────────────────────
+
+    def _schedule_refresh(self) -> None:
+        if self._after_id:
+            try:
+                self._root.after_cancel(self._after_id)
+            except Exception:
+                pass
+        self._after_id = self._root.after(self._REFRESH_MS, self._refresh)
+
+    def _refresh(self) -> None:
+        self._after_id = None
+        try:
+            self._update_ui()
+        except Exception as exc:
+            LOGGER.debug("GUI refresh error: %s", exc)
+        if self._visible:
+            self._schedule_refresh()
+
+    def _update_ui(self) -> None:
+        snap = self._status.snapshot()
+        cfg = self._get_config()
+
+        # ── Status indicator ──────────────────────────────────────────────────
+        if self._status_dot is None or self._status_text is None:
+            return
+        if snap.running:
+            self._status_dot.configure(fg=_GREEN)
+            self._status_text.configure(text="RUNNING", fg=_GREEN)
+        else:
+            self._status_dot.configure(fg=_RED)
+            self._status_text.configure(text="STOPPED", fg=_RED)
+
+        # ── Uptime ────────────────────────────────────────────────────────────
+        h, rem = divmod(snap.uptime_seconds, 3600)
+        m, s = divmod(rem, 60)
+        self._uptime_var.set(f"{h:02d}:{m:02d}:{s:02d}")
+
+        # ── Scan ──────────────────────────────────────────────────────────────
+        self._set("last_scan", format_timestamp(snap.last_scan) or "—")
+        self._set("next_scan", _fmt_next_scan(snap.last_scan, cfg.poll_interval_seconds))
+        self._set("last_result", snap.last_scan_result or "—")
+
+        # ── Alerts ────────────────────────────────────────────────────────────
+        self._set("last_match", snap.last_match or "—")
+        self._set("last_match_at", format_timestamp(snap.last_match_at) or "—")
+        last_send_fmt = format_timestamp(snap.last_send)
+        self._set("last_send", last_send_fmt or "—")
+
+        # ── Errors ────────────────────────────────────────────────────────────
+        self._set("error_count", str(snap.error_count))
+        lbl = self._value_labels.get("error_count")
+        if lbl:
+            lbl.configure(fg=_RED if snap.error_count else _GREEN)
+
+        self._set("last_error", snap.last_error or "—")
+        lbl = self._value_labels.get("last_error")
+        if lbl:
+            lbl.configure(fg=_RED if snap.last_error else _MUTED)
+
+        self._set("breaker_active", str(snap.breaker_active_count))
+        lbl = self._value_labels.get("breaker_active")
+        if lbl:
+            lbl.configure(fg=_RED if snap.breaker_active_count else _TEXT)
+
+        # ── Email queue ───────────────────────────────────────────────────────
+        q = snap.email_queue
+        self._set("q_pending", str(q.get("queued", 0)))
+        self._set("q_sent", str(q.get("sent", 0)))
+        self._set("q_failed", str(q.get("failed", 0)))
+        self._set("q_deferred", str(q.get("deferred", 0)))
+
+        # ── Monitors ──────────────────────────────────────────────────────────
+        self._update_monitors(snap, cfg)
+
+    def _set(self, key: str, value: str) -> None:
+        var = self._vars.get(key)
+        if var is not None:
+            var.set(value)
+
+    def _update_monitors(self, snap: object, cfg: AppConfig) -> None:
+        if self._monitors_content is None:
+            return
+        for w in self._monitors_content.winfo_children():
+            w.destroy()
+        if not cfg.monitors:
+            tk.Label(self._monitors_content, text="No monitors configured.",
+                     font=("Segoe UI", 9), fg=_MUTED, bg=_CARD).pack(anchor="w")
+            return
+        failures = getattr(snap, "monitor_failures", {})
+        breakers = getattr(snap, "monitor_breakers_active", {})
+        for idx, monitor in enumerate(cfg.monitors, start=1):
+            key = monitor.window_title_regex or f"monitor_{idx}"
+            fail_count = failures.get(key, 0)
+            breaker = breakers.get(key, False)
+            if breaker:
+                dot_fg, note = _RED, "  [CIRCUIT OPEN]"
+            elif fail_count > 0:
+                dot_fg, note = _AMBER, f"  {fail_count} failure(s)"
+            else:
+                dot_fg, note = _GREEN, ""
+            row = tk.Frame(self._monitors_content, bg=_CARD)
+            row.pack(fill=tk.X, pady=2)
+            tk.Label(row, text="●", font=("Segoe UI", 11), fg=dot_fg, bg=_CARD).pack(
+                side=tk.LEFT, padx=(0, 8))
+            title = monitor.window_title_regex or f"Monitor {idx}"
+            if len(title) > 48:
+                title = title[:45] + "..."
+            tk.Label(row, text=f"Monitor {idx}:  {title}",
+                     font=("Segoe UI", 9), fg=_TEXT, bg=_CARD).pack(side=tk.LEFT)
+            if note:
+                tk.Label(row, text=note, font=("Segoe UI", 9),
+                         fg=_RED if breaker else _AMBER, bg=_CARD).pack(side=tk.LEFT)
+
+    def _trigger_scan(self) -> None:
+        self._on_manual_scan()
+
+
+# ── Module-level helpers ──────────────────────────────────────────────────────
+
+def _fmt_next_scan(last_scan: str, poll_interval_seconds: int) -> str:
+    if not last_scan or not poll_interval_seconds:
+        return "—"
+    try:
+        last = datetime.fromisoformat(last_scan)
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        remaining = (
+            last + timedelta(seconds=poll_interval_seconds) - datetime.now(timezone.utc)
+        ).total_seconds()
+        if remaining <= 0:
+            return "imminent"
+        m, s = divmod(int(remaining), 60)
+        return f"in {m}m {s:02d}s" if m else f"in {s}s"
+    except (ValueError, TypeError):
+        return "—"
+
+
+def _start_notifier(
+    config: AppConfig,
+    status: StatusStore,
+    stop_event: Event,
+    manual_scan_event: Event,
+    scan_complete_event: Event | None = None,
+    test_message_event: Event | None = None,
+) -> Thread:
+    notifier = Notifier(config=config, status=status)
+    t = Thread(
+        target=notifier.run_loop,
+        args=(stop_event, manual_scan_event, scan_complete_event, test_message_event),
+        daemon=True,
+    )
+    t.start()
+    return t
+
+
+# ── Main entry point ──────────────────────────────────────────────────────────
+
+def run_gui(config: AppConfig) -> None:
+    """GUI entry point — starts minimized, accessible only via system tray."""
+    set_console_visible(False)
+
+    status = StatusStore()
+    manual_scan_event = Event()
+    scan_complete_event = Event()
+    test_message_event = Event()
+    exit_event = Event()
+
+    stop_holder: list[Event] = [Event()]
+    thread_holder: list[Thread] = [
+        _start_notifier(
+            config, status, stop_holder[0],
+            manual_scan_event, scan_complete_event, test_message_event,
+        )
+    ]
+    config_holder: list[AppConfig] = [config]
+
+    # ── Tk root ───────────────────────────────────────────────────────────────
+    root = tk.Tk()
+    root.withdraw()
+
+    # ── Config editor helpers ─────────────────────────────────────────────────
+    edit_proc: list[subprocess.Popen | None] = [None]
+
+    def open_config() -> None:
+        proc = edit_proc[0]
+        if proc is not None and proc.poll() is None:
+            return
+        cfg_path = get_user_data_dir() / "config.local.yaml"
+        try:
+            edit_proc[0] = subprocess.Popen(["notepad.exe", str(cfg_path)], text=True)
+        except Exception as exc:
+            LOGGER.warning("Config editor failed: %s", exc)
+
+    def _reload_notifier(new_cfg: AppConfig) -> None:
+        old_stop = stop_holder[0]
+        old_stop.set()
+        try:
+            thread_holder[0].join(timeout=5)
+        except Exception:
+            pass
+        new_stop = Event()
+        stop_holder[0] = new_stop
+        status.set_last_error("")
+        thread_holder[0] = _start_notifier(
+            new_cfg, status, new_stop,
+            manual_scan_event, scan_complete_event, test_message_event,
+        )
+
+    def _poll_config_edit() -> None:
+        proc = edit_proc[0]
+        if proc is not None and proc.poll() is not None:
+            edit_proc[0] = None
+            cfg_path = get_user_data_dir() / "config.local.yaml"
+            try:
+                new_cfg = load_config(str(cfg_path))
+                config_holder[0] = new_cfg
+                _reload_notifier(new_cfg)
+                LOGGER.info("Config reloaded after editor closed", extra={"category": "config"})
+            except Exception as exc:
+                LOGGER.warning("Config reload failed: %s", exc, extra={"category": "config"})
+        root.after(2000, _poll_config_edit)
+
+    root.after(2000, _poll_config_edit)
+
+    # ── Status window ─────────────────────────────────────────────────────────
+    window = StatusWindow(
+        root,
+        status,
+        config,
+        get_config=lambda: config_holder[0],
+        on_manual_scan=manual_scan_event.set,
+        on_open_config=open_config,
+        on_exit=exit_event.set,
+    )
+
+    # ── Tray icon ─────────────────────────────────────────────────────────────
+    def _show_from_tray() -> None:
+        root.after(0, window.show)
+
+    tray = TrayIcon(
+        on_exit_requested=exit_event.set,
+        on_open_status=_show_from_tray,
+    )
+    tray.start()
+
+    # ── Watchdog thread ───────────────────────────────────────────────────────
+    def _watchdog() -> None:
+        while not exit_event.wait(5):
+            if not thread_holder[0].is_alive() and not stop_holder[0].is_set():
+                LOGGER.warning("Notifier died; restarting", extra={"category": "startup"})
+                _reload_notifier(config_holder[0])
+
+    Thread(target=_watchdog, daemon=True, name="gui-watchdog").start()
+
+    # ── Exit poller ───────────────────────────────────────────────────────────
+    def _check_exit() -> None:
+        if exit_event.is_set():
+            stop_holder[0].set()
+            tray.stop()
+            try:
+                root.quit()
+            except Exception:
+                pass
+            return
+        root.after(300, _check_exit)
+
+    root.after(300, _check_exit)
+
+    # ── Run mainloop ──────────────────────────────────────────────────────────
+    try:
+        root.mainloop()
+    except Exception as exc:
+        LOGGER.error("GUI mainloop error: %s", exc, extra={"category": "startup"})
+    finally:
+        stop_holder[0].set()
+        tray.stop()
+        if edit_proc[0] is not None:
+            try:
+                edit_proc[0].terminate()
+            except Exception:
+                pass

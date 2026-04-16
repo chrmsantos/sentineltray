@@ -19,6 +19,7 @@ class StatusSnapshot:
     error_count: int
     email_queue: dict[str, int]
     monitor_failures: dict[str, int]
+    monitor_breakers_active: dict[str, bool]
     breaker_active_count: int
 
 
@@ -110,6 +111,7 @@ class StatusStore:
                 error_count=self._error_count,
                 email_queue=dict(self._email_queue),
                 monitor_failures=dict(self._monitor_failures),
+                monitor_breakers_active=dict(self._monitor_breakers_active),
                 breaker_active_count=breaker_active_count,
             )
 

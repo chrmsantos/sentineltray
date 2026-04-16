@@ -14,7 +14,8 @@ from getpass import getpass
 from pathlib import Path
 
 from .config import AppConfig, get_project_root, get_user_data_dir, get_user_log_dir, load_config
-from .console_app import run_console, run_console_config_error
+from .console_app import run_console_config_error
+from .gui_app import run_gui
 from .email_sender import EmailAuthError, validate_smtp_credentials
 from .logging_setup import setup_logging
 from .dpapi_utils import save_secret
@@ -551,7 +552,7 @@ def main() -> int:
         else:
             if config is None:
                 raise SystemExit("Configuration not loaded.")
-            run_console(config)
+            run_gui(config)
     except Exception as exc:
         LOGGER.error("Failed to start console UI: %s", exc, extra={"category": "startup"})
         raise SystemExit("Failed to start console UI.") from exc

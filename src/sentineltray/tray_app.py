@@ -141,13 +141,25 @@ def _install_close_to_tray_handler(tray: "TrayIcon") -> object:
 
 
 class TrayIcon:
-    """System-tray icon with a green ball that shows/hides the console window."""
+    """System-tray icon.
 
-    def __init__(self, *, on_exit_requested: Callable[[], None]) -> None:
+    When *on_open_status* is provided the icon runs in GUI mode:
+    the console is kept hidden and the tray menu offers "Open Status"
+    as the default (left-click / double-click) action instead of the
+    legacy console-toggle.
+    """
+
+    def __init__(
+        self,
+        *,
+        on_exit_requested: Callable[[], None],
+        on_open_status: Callable[[], None] | None = None,
+    ) -> None:
         self._on_exit_requested = on_exit_requested
+        self._on_open_status = on_open_status
         self._icon: pystray.Icon | None = None
         self._thread: threading.Thread | None = None
-        self._console_visible = True
+        self._console_visible = on_open_status is None  # hidden in GUI mode
         self._close_handler: object = None
 
     # ------------------------------------------------------------------
@@ -162,6 +174,10 @@ class TrayIcon:
         set_console_visible(self._console_visible)
         icon.update_menu()
 
+    def _open_status(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
+        if self._on_open_status is not None:
+            self._on_open_status()
+
     def _on_exit(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
         icon.stop()
         self._on_exit_requested()
@@ -171,13 +187,28 @@ class TrayIcon:
     # ------------------------------------------------------------------
 
     def start(self) -> None:
-        """Show the tray icon without hiding the console window."""
-        self._console_visible = True
+        """Start the tray icon."""
+        if self._on_open_status is not None:
+            # GUI mode — hide console, offer Status as default action
+            self._console_visible = False
+            set_console_visible(False)
+            menu = pystray.Menu(
+                pystray.MenuItem(
+                    "Open Status",
+                    self._open_status,
+                    default=True,
+                ),
+                pystray.Menu.SEPARATOR,
+                pystray.MenuItem("Exit", self._on_exit),
+            )
+        else:
+            # Legacy console mode
+            self._console_visible = True
+            menu = pystray.Menu(
+                pystray.MenuItem(self._console_menu_label, self._toggle_console),
+                pystray.MenuItem("Sair", self._on_exit),
+            )
 
-        menu = pystray.Menu(
-            pystray.MenuItem(self._console_menu_label, self._toggle_console),
-            pystray.MenuItem("Sair", self._on_exit),
-        )
         self._icon = pystray.Icon(
             "SentinelTray",
             _make_green_eye(),
@@ -194,7 +225,7 @@ class TrayIcon:
         LOGGER.info("Tray icon started", extra={"category": "startup"})
 
     def stop(self) -> None:
-        """Stop the tray icon and restore the console window."""
+        """Stop the tray icon."""
         if self._close_handler is not None:
             try:
                 ctypes.windll.kernel32.SetConsoleCtrlHandler(self._close_handler, False)  # type: ignore[attr-defined]
@@ -202,7 +233,9 @@ class TrayIcon:
                 LOGGER.debug("SetConsoleCtrlHandler uninstall failed: %s", exc)
             self._close_handler = None
         if self._icon is not None:
-            set_console_visible(True)
+            if self._on_open_status is None:
+                # Legacy mode: restore console on exit
+                set_console_visible(True)
             try:
                 self._icon.stop()
             except Exception as exc:
