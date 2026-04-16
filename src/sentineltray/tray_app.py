@@ -194,12 +194,12 @@ class TrayIcon:
             set_console_visible(False)
             menu = pystray.Menu(
                 pystray.MenuItem(
-                    "Open Status",
+                    "Abrir Status",
                     self._open_status,
                     default=True,
                 ),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem("Exit", self._on_exit),
+                pystray.MenuItem("Sair", self._on_exit),
             )
         else:
             # Legacy console mode

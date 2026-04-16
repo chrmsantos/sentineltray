@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
-import subprocess
-import time
 import webbrowser
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -11,10 +8,10 @@ from threading import Event, Thread
 from typing import Callable
 
 import tkinter as tk
+from tkinter import messagebox
 
 from .app import Notifier
 from .config import AppConfig, get_user_data_dir, load_config
-from .dpapi_utils import save_secret
 from .status import StatusStore, format_timestamp
 from .tray_app import TrayIcon, set_console_visible
 
@@ -35,6 +32,252 @@ _TEXT    = "#c9d1d9"   # primary text
 _MUTED   = "#8b949e"   # secondary text
 _WHITE   = "#e6edf3"   # bright text
 _BTN_DIM = "#21262d"   # dim button bg
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# In-app YAML config editor
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ConfigEditorWindow:
+    """Modal-like Toplevel that lets the user edit config.local.yaml in-app."""
+
+    def __init__(
+        self,
+        parent: tk.Tk,
+        *,
+        on_saved: Callable[[AppConfig], None],
+    ) -> None:
+        self._parent = parent
+        self._on_saved = on_saved
+        self._win: tk.Toplevel | None = None
+        self._text: tk.Text | None = None
+        self._lineno: tk.Text | None = None
+        self._status_var = tk.StringVar()
+        self._status_color = tk.StringVar(value=_MUTED)
+        self._status_lbl: tk.Label | None = None
+        self._cfg_path = get_user_data_dir() / "config.local.yaml"
+
+    # ── Public ────────────────────────────────────────────────────────────────
+
+    def show(self) -> None:
+        if self._win is not None and self._win.winfo_exists():
+            self._win.lift()
+            self._win.focus_force()
+            return
+        self._build()
+        self._load_file()
+
+    # ── Build ─────────────────────────────────────────────────────────────────
+
+    def _build(self) -> None:
+        win = tk.Toplevel(self._parent)
+        self._win = win
+        win.title("SentinelTray — Editor de Configuração")
+        win.configure(bg=_BG)
+        win.geometry("860x620")
+        win.minsize(600, 400)
+        win.resizable(True, True)
+        win.transient(self._parent)
+        win.grab_set()
+
+        try:
+            if self._parent.iconbitmap():
+                win.iconbitmap(self._parent.iconbitmap())
+        except Exception:
+            pass
+
+        # ── Toolbar ───────────────────────────────────────────────────────────
+        toolbar = tk.Frame(win, bg=_SURFACE, pady=8)
+        toolbar.pack(fill=tk.X)
+        tk.Label(toolbar, text="⚙  config.local.yaml",
+                 font=("Segoe UI", 10, "bold"), fg=_GREEN, bg=_SURFACE).pack(
+            side=tk.LEFT, padx=14)
+        tk.Label(toolbar, text=str(self._cfg_path),
+                 font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE).pack(
+            side=tk.LEFT, padx=(0, 14))
+        tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
+
+        # ── Editor area ───────────────────────────────────────────────────────
+        editor_frame = tk.Frame(win, bg=_BG)
+        editor_frame.pack(fill=tk.BOTH, expand=True)
+
+        # Line-number gutter
+        ln = tk.Text(
+            editor_frame,
+            width=4, padx=6, takefocus=0, state="disabled",
+            font=("Consolas", 11), bg="#0d1117", fg=_MUTED,
+            relief=tk.FLAT, bd=0, wrap=tk.NONE,
+            cursor="arrow",
+        )
+        ln.pack(side=tk.LEFT, fill=tk.Y)
+        self._lineno = ln
+
+        tk.Frame(editor_frame, bg=_BORDER, width=1).pack(side=tk.LEFT, fill=tk.Y)
+
+        # Main text widget + scrollbars
+        text_container = tk.Frame(editor_frame, bg=_BG)
+        text_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        vsb = tk.Scrollbar(text_container, orient=tk.VERTICAL)
+        hsb = tk.Scrollbar(text_container, orient=tk.HORIZONTAL)
+        txt = tk.Text(
+            text_container,
+            font=("Consolas", 11),
+            bg="#0d1117", fg=_TEXT,
+            insertbackground=_GREEN,
+            selectbackground="#264f78",
+            relief=tk.FLAT, bd=0,
+            wrap=tk.NONE,
+            yscrollcommand=vsb.set,
+            xscrollcommand=hsb.set,
+            undo=True,
+            tabs=("2.0c",),
+        )
+        vsb.config(command=self._sync_scroll)
+        hsb.config(command=txt.xview)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        hsb.pack(side=tk.BOTTOM, fill=tk.X)
+        txt.pack(fill=tk.BOTH, expand=True)
+        self._text = txt
+        self._vsb = vsb
+
+        # Sync line numbers on key/scroll
+        txt.bind("<KeyRelease>", lambda e: self._update_linenos())
+        txt.bind("<MouseWheel>", lambda e: self._after_scroll())
+        txt.bind("<Button-4>", lambda e: self._after_scroll())
+        txt.bind("<Button-5>", lambda e: self._after_scroll())
+        txt.bind("<<Modified>>", lambda e: self._on_modified())
+
+        # ── Status bar ────────────────────────────────────────────────────────
+        tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
+        status_bar = tk.Frame(win, bg=_SURFACE, pady=4)
+        status_bar.pack(fill=tk.X)
+        sl = tk.Label(status_bar, textvariable=self._status_var,
+                      font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE, anchor="w")
+        sl.pack(side=tk.LEFT, padx=14, fill=tk.X, expand=True)
+        self._status_lbl = sl
+        self._status_var.set("Pronto — Ctrl+S para salvar")
+
+        # ── Footer buttons ────────────────────────────────────────────────────
+        tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
+        footer = tk.Frame(win, bg=_SURFACE, pady=10)
+        footer.pack(fill=tk.X)
+        self._make_btn(footer, "✓  Validar", self._validate, _BTN_DIM).pack(
+            side=tk.LEFT, padx=(14, 6))
+        self._make_btn(footer, "💾  Salvar e Aplicar", self._save_apply, _GREEN2).pack(
+            side=tk.LEFT, padx=(0, 6))
+        self._make_btn(footer, "Cancelar", win.destroy, "#5a1a1a").pack(
+            side=tk.RIGHT, padx=(0, 14))
+
+        # Keyboard shortcut
+        win.bind("<Control-s>", lambda e: self._save_apply())
+        win.bind("<Escape>", lambda e: win.destroy())
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def _make_btn(self, parent: tk.Frame, text: str,
+                  cmd: Callable[[], None], bg: str) -> tk.Button:
+        return tk.Button(
+            parent, text=text, command=cmd,
+            font=("Segoe UI", 9, "bold"),
+            fg=_WHITE, bg=bg, activeforeground=_WHITE, activebackground=bg,
+            relief=tk.FLAT, cursor="hand2", padx=12, pady=5, bd=0,
+        )
+
+    def _load_file(self) -> None:
+        self._cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        if not self._cfg_path.exists():
+            self._cfg_path.write_text(
+                "# SentinelTray — configuração local\n", encoding="utf-8"
+            )
+        try:
+            content = self._cfg_path.read_text(encoding="utf-8")
+        except Exception as exc:
+            content = f"# ERRO ao ler arquivo: {exc}\n"
+        if self._text:
+            self._text.delete("1.0", tk.END)
+            self._text.insert("1.0", content)
+            self._text.edit_reset()          # clear undo stack
+            self._text.edit_modified(False)  # clear modified flag
+        self._update_linenos()
+        self._set_status("Arquivo carregado — Ctrl+S para salvar", _MUTED)
+
+    def _update_linenos(self) -> None:
+        txt = self._text
+        ln = self._lineno
+        if txt is None or ln is None:
+            return
+        # Determine visible line range
+        first = int(txt.index("@0,0").split(".")[0])
+        last_idx = txt.index(f"@0,{txt.winfo_height()}")
+        last = int(last_idx.split(".")[0])
+        total = int(txt.index(tk.END).split(".")[0]) - 1
+        last = min(last + 1, total)
+        ln.config(state="normal")
+        ln.delete("1.0", tk.END)
+        for i in range(first, last + 1):
+            ln.insert(tk.END, f"{i}\n")
+        ln.config(state="disabled")
+        # Sync vertical position
+        ln.yview_moveto(txt.yview()[0])
+
+    def _sync_scroll(self, *args: object) -> None:
+        if self._text:
+            self._text.yview(*args)
+        self._update_linenos()
+
+    def _after_scroll(self) -> None:
+        if self._win:
+            self._win.after(20, self._update_linenos)
+
+    def _on_modified(self) -> None:
+        if self._text and self._text.edit_modified():
+            self._set_status("Alterações não salvas — Ctrl+S para salvar", _AMBER)
+
+    def _set_status(self, msg: str, color: str = _MUTED) -> None:
+        self._status_var.set(msg)
+        if self._status_lbl:
+            self._status_lbl.configure(fg=color)
+
+    def _get_content(self) -> str:
+        if self._text is None:
+            return ""
+        return self._text.get("1.0", tk.END)
+
+    def _validate(self) -> AppConfig | None:
+        """Write to a temp path and parse; return AppConfig on success or None."""
+        content = self._get_content()
+        tmp = self._cfg_path.with_suffix(".yaml.validate_tmp")
+        try:
+            tmp.write_text(content, encoding="utf-8")
+            cfg = load_config(str(tmp))
+            self._set_status("✓ Configuração válida", _GREEN)
+            return cfg
+        except Exception as exc:
+            self._set_status(f"✗ {exc}", _RED)
+            return None
+        finally:
+            try:
+                tmp.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    def _save_apply(self) -> None:
+        cfg = self._validate()
+        if cfg is None:
+            return
+        content = self._get_content()
+        try:
+            self._cfg_path.write_text(content, encoding="utf-8")
+        except Exception as exc:
+            self._set_status(f"✗ Falha ao salvar: {exc}", _RED)
+            return
+        if self._text:
+            self._text.edit_modified(False)
+        self._set_status("✓ Salvo e aplicado", _GREEN)
+        self._on_saved(cfg)
+        if self._win:
+            self._win.after(800, self._win.destroy)
 
 
 class StatusWindow:
@@ -109,7 +352,7 @@ class StatusWindow:
             font=("Segoe UI", 15, "bold"), fg=_GREEN, bg=_SURFACE, anchor="w"
         ).pack(anchor="w")
         tk.Label(
-            title_frame, text="Window Monitor & Alert System",
+            title_frame, text="Monitor de Janelas e Alertas",
             font=("Segoe UI", 9), fg=_MUTED, bg=_SURFACE, anchor="w"
         ).pack(anchor="w")
 
@@ -144,11 +387,11 @@ class StatusWindow:
         self._status_dot = tk.Label(pill, text="●", font=("Segoe UI", 22), fg=_AMBER, bg=_CARD)
         self._status_dot.pack(side=tk.LEFT)
         self._status_text = tk.Label(
-            pill, text="STARTING", font=("Segoe UI", 14, "bold"), fg=_AMBER, bg=_CARD
+            pill, text="INICIANDO", font=("Segoe UI", 14, "bold"), fg=_AMBER, bg=_CARD
         )
         self._status_text.pack(side=tk.LEFT, padx=(8, 0))
 
-        uc, uc_c = self._make_card(row1, "UPTIME")
+        uc, uc_c = self._make_card(row1, "TEMPO ATIVO")
         uc.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0))
         tk.Label(
             uc_c, textvariable=self._uptime_var,
@@ -156,34 +399,34 @@ class StatusWindow:
         ).pack(pady=6)
 
         # ── LEFT: Scan Status ─────────────────────────────────────────────────
-        self._kv_section(left, "SCAN STATUS", [
-            ("last_scan",   "Last Check"),
-            ("next_scan",   "Next Check"),
-            ("last_result", "Last Result"),
+        self._kv_section(left, "VERIFICAÇÃO", [
+            ("last_scan",   "Última Verificação"),
+            ("next_scan",   "Próxima Verificação"),
+            ("last_result", "Último Resultado"),
         ])
 
         # ── LEFT: Alerts ──────────────────────────────────────────────────────
-        self._kv_section(left, "ALERTS", [
-            ("last_match",    "Last Detection"),
-            ("last_match_at", "Match Timestamp"),
-            ("last_send",     "Last Alert Sent"),
+        self._kv_section(left, "ALERTAS", [
+            ("last_match",    "Última Detecção"),
+            ("last_match_at", "Horário da Detecção"),
+            ("last_send",     "Último Alerta Enviado"),
         ])
 
         # ── RIGHT: Errors ─────────────────────────────────────────────────────
-        self._kv_section(right, "ERRORS", [
-            ("error_count",    "Total Errors"),
-            ("last_error",     "Last Error"),
-            ("breaker_active", "Circuit Breakers"),
+        self._kv_section(right, "ERROS", [
+            ("error_count",    "Total de Erros"),
+            ("last_error",     "Último Erro"),
+            ("breaker_active", "Disjuntores"),
         ])
 
         # ── RIGHT: Email Queue ────────────────────────────────────────────────
-        eq_outer, eq_c = self._make_card(right, "EMAIL QUEUE")
+        eq_outer, eq_c = self._make_card(right, "FILA DE E-MAIL")
         eq_outer.pack(fill=tk.X, pady=(10, 0))
         for key, label, color in (
-            ("q_pending",  "Pending",  _AMBER),
-            ("q_sent",     "Sent",     _GREEN),
-            ("q_failed",   "Failed",   _RED),
-            ("q_deferred", "Deferred", _MUTED),
+            ("q_pending",  "Pendente",  _AMBER),
+            ("q_sent",     "Enviado",   _GREEN),
+            ("q_failed",   "Falhou",    _RED),
+            ("q_deferred", "Adiado",    _MUTED),
         ):
             cell = tk.Frame(eq_c, bg=_CARD)
             cell.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=4)
@@ -194,7 +437,7 @@ class StatusWindow:
             tk.Label(cell, text=label, font=("Segoe UI", 8), fg=_MUTED, bg=_CARD).pack()
 
         # ── RIGHT: Monitors ───────────────────────────────────────────────────
-        mon_outer, mon_c = self._make_card(right, "MONITORS")
+        mon_outer, mon_c = self._make_card(right, "MONITORES")
         mon_outer.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
         self._monitors_content = mon_c
 
@@ -203,14 +446,14 @@ class StatusWindow:
         footer = tk.Frame(r, bg=_SURFACE, pady=10)
         footer.pack(fill=tk.X)
 
-        self._make_btn(footer, "⟳  Scan Now", self._trigger_scan, _BLUE).pack(
+        self._make_btn(footer, "⟳  Verificar Agora", self._trigger_scan, _BLUE).pack(
             side=tk.LEFT, padx=(18, 6))
-        self._make_btn(footer, "⚙  Config", self._on_open_config, _BTN_DIM).pack(
+        self._make_btn(footer, "⚙  Configuração", self._on_open_config, _BTN_DIM).pack(
             side=tk.LEFT, padx=(0, 6))
-        self._make_btn(footer, "↗  Repository",
+        self._make_btn(footer, "↗  Repositório",
                        lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
             side=tk.LEFT)
-        self._make_btn(footer, "Exit  ✕", self._on_exit, "#5a1a1a").pack(
+        self._make_btn(footer, "Sair  ✕", self._on_exit, "#5a1a1a").pack(
             side=tk.RIGHT, padx=(0, 18))
 
     def _make_card(self, parent: tk.Widget, title: str) -> tuple[tk.Frame, tk.Frame]:
@@ -323,10 +566,10 @@ class StatusWindow:
             return
         if snap.running:
             self._status_dot.configure(fg=_GREEN)
-            self._status_text.configure(text="RUNNING", fg=_GREEN)
+            self._status_text.configure(text="EXECUTANDO", fg=_GREEN)
         else:
             self._status_dot.configure(fg=_RED)
-            self._status_text.configure(text="STOPPED", fg=_RED)
+            self._status_text.configure(text="PARADO", fg=_RED)
 
         # ── Uptime ────────────────────────────────────────────────────────────
         h, rem = divmod(snap.uptime_seconds, 3600)
@@ -381,7 +624,7 @@ class StatusWindow:
         for w in self._monitors_content.winfo_children():
             w.destroy()
         if not cfg.monitors:
-            tk.Label(self._monitors_content, text="No monitors configured.",
+            tk.Label(self._monitors_content, text="Nenhum monitor configurado.",
                      font=("Segoe UI", 9), fg=_MUTED, bg=_CARD).pack(anchor="w")
             return
         failures = getattr(snap, "monitor_failures", {})
@@ -391,9 +634,9 @@ class StatusWindow:
             fail_count = failures.get(key, 0)
             breaker = breakers.get(key, False)
             if breaker:
-                dot_fg, note = _RED, "  [CIRCUIT OPEN]"
+                dot_fg, note = _RED, "  [CIRCUITO ABERTO]"
             elif fail_count > 0:
-                dot_fg, note = _AMBER, f"  {fail_count} failure(s)"
+                dot_fg, note = _AMBER, f"  {fail_count} falha(s)"
             else:
                 dot_fg, note = _GREEN, ""
             row = tk.Frame(self._monitors_content, bg=_CARD)
@@ -426,9 +669,9 @@ def _fmt_next_scan(last_scan: str, poll_interval_seconds: int) -> str:
             last + timedelta(seconds=poll_interval_seconds) - datetime.now(timezone.utc)
         ).total_seconds()
         if remaining <= 0:
-            return "imminent"
+            return "iminente"
         m, s = divmod(int(remaining), 60)
-        return f"in {m}m {s:02d}s" if m else f"in {s}s"
+        return f"em {m}m {s:02d}s" if m else f"em {s}s"
     except (ValueError, TypeError):
         return "—"
 
@@ -476,19 +719,7 @@ def run_gui(config: AppConfig) -> None:
     root = tk.Tk()
     root.withdraw()
 
-    # ── Config editor helpers ─────────────────────────────────────────────────
-    edit_proc: list[subprocess.Popen | None] = [None]
-
-    def open_config() -> None:
-        proc = edit_proc[0]
-        if proc is not None and proc.poll() is None:
-            return
-        cfg_path = get_user_data_dir() / "config.local.yaml"
-        try:
-            edit_proc[0] = subprocess.Popen(["notepad.exe", str(cfg_path)], text=True)
-        except Exception as exc:
-            LOGGER.warning("Config editor failed: %s", exc)
-
+    # ── Config editor ─────────────────────────────────────────────────────────
     def _reload_notifier(new_cfg: AppConfig) -> None:
         old_stop = stop_holder[0]
         old_stop.set()
@@ -503,22 +734,12 @@ def run_gui(config: AppConfig) -> None:
             new_cfg, status, new_stop,
             manual_scan_event, scan_complete_event, test_message_event,
         )
+        config_holder[0] = new_cfg
 
-    def _poll_config_edit() -> None:
-        proc = edit_proc[0]
-        if proc is not None and proc.poll() is not None:
-            edit_proc[0] = None
-            cfg_path = get_user_data_dir() / "config.local.yaml"
-            try:
-                new_cfg = load_config(str(cfg_path))
-                config_holder[0] = new_cfg
-                _reload_notifier(new_cfg)
-                LOGGER.info("Config reloaded after editor closed", extra={"category": "config"})
-            except Exception as exc:
-                LOGGER.warning("Config reload failed: %s", exc, extra={"category": "config"})
-        root.after(2000, _poll_config_edit)
+    editor = ConfigEditorWindow(root, on_saved=_reload_notifier)
 
-    root.after(2000, _poll_config_edit)
+    def open_config() -> None:
+        root.after(0, editor.show)
 
     # ── Status window ─────────────────────────────────────────────────────────
     window = StatusWindow(
@@ -572,8 +793,3 @@ def run_gui(config: AppConfig) -> None:
     finally:
         stop_holder[0].set()
         tray.stop()
-        if edit_proc[0] is not None:
-            try:
-                edit_proc[0].terminate()
-            except Exception:
-                pass
