@@ -11,7 +11,7 @@ import tkinter as tk
 from tkinter import messagebox
 
 from .app import Notifier
-from .config import AppConfig, get_user_data_dir, load_config
+from .config import AppConfig, get_project_root, get_user_data_dir, load_config
 from .status import StatusStore, format_timestamp
 from .tray_app import TrayIcon, set_console_visible
 
@@ -287,9 +287,22 @@ class ConfigEditorWindow:
     def _load_file(self) -> None:
         self._cfg_path.parent.mkdir(parents=True, exist_ok=True)
         if not self._cfg_path.exists():
-            self._cfg_path.write_text(
-                "# SentinelTray — configuração local\n", encoding="utf-8"
-            )
+            import sys
+            meipass = getattr(sys, "_MEIPASS", None)
+            candidates = []
+            if meipass:
+                candidates.append(Path(meipass) / "config" / "config.local.yaml.example")
+            candidates.append(get_project_root() / "config" / "config.local.yaml.example")
+            template_content: str | None = None
+            for example_path in candidates:
+                try:
+                    template_content = example_path.read_text(encoding="utf-8")
+                    break
+                except Exception:
+                    continue
+            if template_content is None:
+                template_content = "# SentinelTray — configuração local\n"
+            self._cfg_path.write_text(template_content, encoding="utf-8")
         try:
             content = self._cfg_path.read_text(encoding="utf-8")
         except Exception as exc:
