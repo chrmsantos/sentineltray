@@ -255,7 +255,12 @@ def _terminate_existing_instance() -> bool:
 def _ensure_local_override(path: Path) -> None:
     if not path.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(_CONFIG_TEMPLATE, encoding="utf-8")
+        example_path = get_project_root() / "config" / "config.local.yaml.example"
+        try:
+            template_content = example_path.read_text(encoding="utf-8")
+        except Exception:
+            template_content = _CONFIG_TEMPLATE
+        path.write_text(template_content, encoding="utf-8")
         LOGGER.info(
             "Config template created at %s",
             path,
