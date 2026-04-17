@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## 2026-04-17 (4.3.5)
+
+- Correção: ao gerar `config.local.yaml` automaticamente na primeira execução do EXE compilado, o conteúdo agora corresponde corretamente ao `config.local.yaml.example` do projeto. O arquivo `.example` é incluído no pacote PyInstaller e lido via `sys._MEIPASS` em tempo de execução; o template genérico embutido em código é mantido apenas como fallback final.
+
 ## 2026-04-17 (4.3.0)
 
 - Performance: `_select_best_window` usa `max()` em vez de `sorted()[0]`, reduzindo de O(n log n) para O(n) na seleção de janelas candidatas.

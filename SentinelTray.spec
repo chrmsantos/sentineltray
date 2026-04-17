@@ -5,7 +5,7 @@ a = Analysis(
     ['C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\main.py'],
     pathex=['C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\src'],
     binaries=[],
-    datas=[],
+    datas=[('config/config.local.yaml.example', 'config')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
