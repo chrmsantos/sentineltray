@@ -44,7 +44,7 @@ If config.local.yaml is missing or invalid, the app opens the console error view
 
 SMTP passwords are stored using Windows DPAPI in:
 
-- config\smtp_password_<index>.dpapi
+- config\smtp_password_\<index\>.dpapi
 
 ## Run
 
