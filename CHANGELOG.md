@@ -1,5 +1,18 @@
 ﻿# Changelog
 
+## 2026-04-17 (5.0.0 rc.1)
+
+- Correção: assunto do e-mail de verificação manual sem resultado corrigido de "Correspondência Detectada" para "Verificação Manual" (nova categoria `verificação:` em `email_sender.py`).
+- Correção: ponteiro solto em `dpapi_utils._bytes_to_blob` — buffer mantido vivo para evitar coleta prematura pelo GC durante operações DPAPI.
+- Correção: `debounce_seconds` agora é sempre aplicado, independentemente de `send_repeated_matches`. Anteriormente, `send_repeated_matches=true` suprimia completamente o debounce, causando envio repetido a cada poll.
+- Correção: remoção da injeção global de `VK_ESCAPE` em `detector._dismiss_shell_overlay`, que podia cancelar ações do usuário em outros aplicativos.
+- Correção: adicionado cooldown de 30 segundos entre envios consecutivos do e-mail de "nenhuma correspondência" ao clicar em "Verificar Agora".
+- Correção: padrão de `pause_on_user_active` corrigido de `False` para `True` em `_DEFAULT_CONFIG_VALUES`, alinhando código com documentação e arquivo `.example`.
+- Correção: verificação SMTP na inicialização movida para thread de fundo (não bloqueia mais a inicialização por 10s) e estendida para todos os monitores configurados.
+- Correção: `_terminate_existing_instance` agora verifica o nome do processo antes de executar `taskkill`, evitando encerrar processos não relacionados que por acaso tenham o mesmo PID.
+- Correção: e-mail de healthcheck agora usa as configurações do monitor correspondente (janela e regex) em vez de sempre usar o monitor 1 para todos os envios.
+- Correção: comentário de `healthcheck_interval_seconds` no arquivo de configuração corrigido de "900 (15 minutos)" para "1800 (30 minutos)".
+
 ## 2026-04-17 (4.3.6)
 
 - Correção: template embutido `_CONFIG_TEMPLATE` em `entrypoint.py` sincronizado com `config.local.yaml.example`. O fallback agora gera um arquivo idêntico ao `.example` (em português, com todos os comentários e valores reais do projeto), eliminando a divergência de conteúdo que ocorria quando o arquivo `.example` não era encontrado durante a criação automática do `config.local.yaml`.
