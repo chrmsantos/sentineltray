@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 2026-04-17 (4.3.0)
+
+- Performance: `_select_best_window` usa `max()` em vez de `sorted()[0]`, reduzindo de O(n log n) para O(n) na seleção de janelas candidatas.
+- Performance: `_normalize_text` usa list comprehension em vez de generator em `str.join`, eliminando overhead do protocolo de iteração na normalização Unicode.
+- Performance: `datetime.now()` calculado uma única vez por iteração de monitor em `_scan_once_impl`, evitando chamada dupla quando debounce e min_repeat estão ambos ativos.
+
 ## 2026-04-17 (4.2.0)
 
 - Config template: quando `config.local.yaml` não existe na inicialização, o arquivo criado automaticamente passa a usar o conteúdo exato de `config/config.local.yaml.example` (com comentários e valores reais do projeto), em vez do template genérico embutido em código. O template embutido é mantido como fallback caso o arquivo `.example` não seja encontrado.
