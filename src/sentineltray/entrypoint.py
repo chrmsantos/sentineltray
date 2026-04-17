@@ -101,7 +101,7 @@ poll_interval_seconds: 30
 
 # Intervalo (em segundos) entre verificações de "saúde" (healthcheck) do sistema.
 # O healthcheck registra um log periódico confirmando que o SentinelTray está ativo.
-# Valor padrão: 900 (15 minutos).
+# Valor padrão: 1800 (30 minutos).
 healthcheck_interval_seconds: 1800
 
 # Tempo base (em segundos) para o backoff exponencial em caso de erros gerais.
@@ -359,6 +359,25 @@ def _ensure_single_instance() -> None:
     atexit.register(_cleanup)
 
 
+def _get_process_name(pid: int) -> str | None:
+    """Return the executable name of the given PID, or None if it cannot be determined."""
+    try:
+        result = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            for line in result.stdout.strip().splitlines():
+                line = line.strip()
+                if line.startswith('"'):
+                    return line.split('"')[1].lower()
+    except Exception:
+        pass
+    return None
+
+
 def _terminate_existing_instance() -> bool:
     pid_path = _pid_file_path()
     if not pid_path.exists():
@@ -391,6 +410,15 @@ def _terminate_existing_instance() -> bool:
             "PID file contains invalid value %r: %s",
             prior_pid,
             exc,
+            extra={"category": "startup"},
+        )
+        return False
+    process_name = _get_process_name(pid_value)
+    if process_name is not None and "sentineltray" not in process_name and "python" not in process_name:
+        LOGGER.warning(
+            "PID %s belongs to '%s', not SentinelTray; skipping termination to avoid killing an unrelated process",
+            pid_value,
+            process_name,
             extra={"category": "startup"},
         )
         return False

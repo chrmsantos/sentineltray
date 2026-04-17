@@ -13,7 +13,9 @@ class DATA_BLOB(ctypes.Structure):
 
 def _bytes_to_blob(data: bytes) -> DATA_BLOB:
     buffer = ctypes.create_string_buffer(data)
-    return DATA_BLOB(len(data), ctypes.cast(buffer, ctypes.POINTER(ctypes.c_byte)))
+    blob = DATA_BLOB(len(data), ctypes.cast(buffer, ctypes.POINTER(ctypes.c_byte)))
+    blob._buffer = buffer  # keep buffer alive until blob is no longer needed
+    return blob
 
 
 def _blob_to_bytes(blob: DATA_BLOB) -> bytes:

@@ -13,7 +13,7 @@ from uuid import uuid4
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Event
+from threading import Event, Thread
 from typing import Any, cast
 
 from .config import AppConfig, MonitorConfig, get_project_root
@@ -188,20 +188,28 @@ def _get_commit_hash() -> str:
 def _check_smtp_health(config: AppConfig) -> None:
     if not config.monitors:
         return
-    email = config.monitors[0].email
-    host = email.smtp_host
-    port = email.smtp_port
-    if not host or not port:
-        return
-    try:
-        with socket.create_connection((host, int(port)), timeout=10):
-            return
-    except OSError as exc:
-        LOGGER.warning(
-            "SMTP healthcheck failed: %s",
-            exc,
-            extra={"category": "send"},
-        )
+
+    def _check() -> None:
+        for monitor_cfg in config.monitors:
+            email = monitor_cfg.email
+            host = email.smtp_host
+            port = email.smtp_port
+            if not host or not port:
+                continue
+            try:
+                with socket.create_connection((host, int(port)), timeout=10):
+                    pass
+            except OSError as exc:
+                LOGGER.warning(
+                    "SMTP healthcheck failed for %s:%s: %s",
+                    host,
+                    port,
+                    exc,
+                    extra={"category": "send"},
+                )
+
+    t = Thread(target=_check, daemon=True, name="smtp-health-check")
+    t.start()
 
 
 @dataclass
@@ -226,6 +234,7 @@ class Notifier:
         self._state_write_errors = 0
         self._last_scan_error = False
         self._last_scan_had_match = False
+        self._last_no_match_test_at: float = 0.0
         self._last_error_notification_at = 0.0
         self._queue_stats: dict[str, int] = {
             "queued": 0,
@@ -525,24 +534,21 @@ class Notifier:
                         extra={"category": "scan"},
                     )
             now = datetime.now(timezone.utc)
-            if self.config.send_repeated_matches:
-                send_items = list(normalized)
-            else:
-                send_items, skipped = filter_debounce(
-                    normalized,
-                    monitor.last_sent,
-                    self.config.debounce_seconds,
-                    now,
-                )
-                if skipped and LOGGER.isEnabledFor(logging.INFO):
-                    for text, age_seconds in skipped:
-                        summary = _summarize_text(text)
-                        LOGGER.info(
-                            "Debounce active for %s (age %s seconds)",
-                            summary,
-                            age_seconds,
-                            extra={"category": "send"},
-                        )
+            send_items, skipped = filter_debounce(
+                normalized,
+                monitor.last_sent,
+                self.config.debounce_seconds,
+                now,
+            )
+            if skipped and LOGGER.isEnabledFor(logging.INFO):
+                for text, age_seconds in skipped:
+                    summary = _summarize_text(text)
+                    LOGGER.info(
+                        "Debounce active for %s (age %s seconds)",
+                        summary,
+                        age_seconds,
+                        extra={"category": "send"},
+                    )
 
             if send_items and self.config.min_repeat_seconds > 0:
                 send_items, skipped = filter_min_repeat(
@@ -671,7 +677,15 @@ class Notifier:
             )
 
     def _send_manual_no_match_test(self) -> None:
-        message = "verificação manual: nenhuma correspondência encontrada"
+        now = time.monotonic()
+        if now - self._last_no_match_test_at < 30:
+            LOGGER.info(
+                "Manual no-match test suppressed (cooldown active)",
+                extra={"category": "send"},
+            )
+            return
+        self._last_no_match_test_at = now
+        message = "verificação: nenhuma correspondência encontrada"
         try:
             sent_any = False
             sent_direct = False
@@ -720,20 +734,19 @@ class Notifier:
         uptime_seconds = int((datetime.now(timezone.utc) - self._started_at).total_seconds())
         self.status.set_uptime_seconds(uptime_seconds)
         snapshot = self.status.snapshot()
-        primary = self._monitors[0].config
-        status_text = format_status(
-            snapshot,
-            window_title_regex=primary.window_title_regex,
-            phrase_regex=primary.phrase_regex,
-            poll_interval_seconds=self.config.poll_interval_seconds,
-        )
-        message = f"status: Em execução\n{status_text}"
-        safe_message = _safe_status_text(message)
         try:
             sent_any = False
             sent_direct = False
             queued_any = False
             for monitor in self._monitors:
+                status_text = format_status(
+                    snapshot,
+                    window_title_regex=monitor.config.window_title_regex,
+                    phrase_regex=monitor.config.phrase_regex,
+                    poll_interval_seconds=self.config.poll_interval_seconds,
+                )
+                message = f"status: Em execução\n{status_text}"
+                safe_message = _safe_status_text(message)
                 if self._send_message(monitor, safe_message, category="healthcheck"):
                     sent_any = True
                     if monitor.last_send_queued:

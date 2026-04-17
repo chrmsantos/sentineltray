@@ -256,11 +256,6 @@ class WindowTextDetector:
             except Exception:
                 LOGGER.debug("Failed to maximize window via handle", exc_info=True)
         if not self._window_is_foreground(window):
-            # A shell overlay (e.g. Start menu) may be holding the foreground and
-            # preventing SetForegroundWindow from succeeding.  Dismiss it and retry.
-            if self._dismiss_shell_overlay():
-                self._force_foreground(window)
-        if not self._window_is_foreground(window):
             raise WindowUnavailableError("Target window not in foreground")
         if not self._window_is_maximized(window):
             raise WindowUnavailableError("Target window not maximized")

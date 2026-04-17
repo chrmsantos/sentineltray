@@ -77,7 +77,7 @@ poll_interval_seconds: 30
 
 # Intervalo (em segundos) entre verificações de "saúde" (healthcheck) do sistema.
 # O healthcheck registra um log periódico confirmando que o SentinelTray está ativo.
-# Valor padrão: 900 (15 minutos).
+# Valor padrão: 1800 (30 minutos).
 healthcheck_interval_seconds: 1800
 
 # Tempo base (em segundos) para o backoff exponencial em caso de erros gerais.

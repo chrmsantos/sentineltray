@@ -35,7 +35,7 @@ _DEFAULT_CONFIG_VALUES: dict[str, Any] = {
     "email_queue_max_attempts": 10,
     "email_queue_retry_base_seconds": 30,
     "config_version": CURRENT_CONFIG_VERSION,
-    "pause_on_user_active": False,
+    "pause_on_user_active": True,
     "pause_idle_threshold_seconds": 180,
 }
 
