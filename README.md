@@ -1,6 +1,6 @@
 # SentinelTray
 
-Release candidate: 3.0.0-rc.3 (06-02-2026)
+Version: 4.1.0 (17-04-2026)
 
 Minimal Windows notifier that reads visible text from a target desktop app and sends an email when a phrase appears.
 
@@ -185,3 +185,7 @@ monitors:
 - Security policy in SECURITY.md.
 - Licenses and third parties in docs/licenses.md.
 - Releases include provenance (SLSA).
+
+## Author
+
+Christian Martin dos Santos

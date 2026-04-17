@@ -553,6 +553,9 @@ class StatusWindow:
         self._make_btn(footer, "↗  Repositório",
                        lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
             side=tk.LEFT)
+        tk.Label(footer, text="Christian Martin dos Santos",
+                 font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE).pack(
+            side=tk.LEFT, padx=(12, 0))
         self._make_btn(footer, "Sair  ✕", self._on_exit, "#5a1a1a").pack(
             side=tk.RIGHT, padx=(0, 18))
 
@@ -797,7 +800,7 @@ def _start_notifier(
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def run_gui(config: AppConfig) -> None:
-    """GUI entry point — starts minimized, accessible only via system tray."""
+    """GUI entry point — opens the status window on startup."""
     set_console_visible(False)
 
     status = StatusStore()
@@ -861,6 +864,9 @@ def run_gui(config: AppConfig) -> None:
         on_open_status=_show_from_tray,
     )
     tray.start()
+
+    # ── Show window on startup ────────────────────────────────────────────────
+    root.after(0, window.show)
 
     # ── Watchdog thread ───────────────────────────────────────────────────────
     def _watchdog() -> None:
