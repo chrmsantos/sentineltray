@@ -522,10 +522,10 @@ class Notifier:
                         removed,
                         extra={"category": "scan"},
                     )
+            now = datetime.now(timezone.utc)
             if self.config.send_repeated_matches:
                 send_items = list(normalized)
             else:
-                now = datetime.now(timezone.utc)
                 send_items, skipped = filter_debounce(
                     normalized,
                     monitor.last_sent,
@@ -543,7 +543,6 @@ class Notifier:
                         )
 
             if send_items and self.config.min_repeat_seconds > 0:
-                now = datetime.now(timezone.utc)
                 send_items, skipped = filter_min_repeat(
                     send_items,
                     monitor.last_sent,

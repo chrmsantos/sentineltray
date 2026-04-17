@@ -52,7 +52,7 @@ class WindowTextDetector:
     @staticmethod
     def _normalize_text(value: str) -> str:
         decomposed = unicodedata.normalize("NFKD", value)
-        return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+        return "".join([ch for ch in decomposed if not unicodedata.combining(ch)])
 
     def _log_throttled(self, level: int, key: str, message: str, *args: object) -> None:
         if self._log_throttle_seconds == 0:
@@ -288,7 +288,7 @@ class WindowTextDetector:
                 pass
             return value
 
-        selected = sorted(candidates, key=score, reverse=True)[0]
+        selected = max(candidates, key=score)
         LOGGER.info(
             "Multiple windows matched; selecting best candidate (%s found)",
             len(candidates),
