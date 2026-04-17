@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## 2026-04-17 (4.3.6)
+
+- Correção: template embutido `_CONFIG_TEMPLATE` em `entrypoint.py` sincronizado com `config.local.yaml.example`. O fallback agora gera um arquivo idêntico ao `.example` (em português, com todos os comentários e valores reais do projeto), eliminando a divergência de conteúdo que ocorria quando o arquivo `.example` não era encontrado durante a criação automática do `config.local.yaml`.
+
 ## 2026-04-17 (4.3.5)
 
 - Correção: ao gerar `config.local.yaml` automaticamente na primeira execução do EXE compilado, o conteúdo agora corresponde corretamente ao `config.local.yaml.example` do projeto. O arquivo `.example` é incluído no pacote PyInstaller e lido via `sys._MEIPASS` em tempo de execução; o template genérico embutido em código é mantido apenas como fallback final.
