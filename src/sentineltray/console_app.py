@@ -107,11 +107,24 @@ def _create_config_editor() -> tuple[
             target_path = config_path()
             if not target_path.exists():
                 target_path.parent.mkdir(parents=True, exist_ok=True)
-                target_path.write_text(
-                    "# SentinelTray - configuração local\n"
-                    "# Preencha os campos obrigatórios antes de rodar.\n",
-                    encoding="utf-8",
-                )
+                meipass = getattr(sys, "_MEIPASS", None)
+                candidates = []
+                if meipass:
+                    candidates.append(Path(meipass) / "config" / "config.local.yaml.example")
+                candidates.append(get_project_root() / "config" / "config.local.yaml.example")
+                template_content: str | None = None
+                for example_path in candidates:
+                    try:
+                        template_content = example_path.read_text(encoding="utf-8")
+                        break
+                    except Exception:
+                        continue
+                if template_content is None:
+                    template_content = (
+                        "# SentinelTray - configuração local\n"
+                        "# Preencha os campos obrigatórios antes de rodar.\n"
+                    )
+                target_path.write_text(template_content, encoding="utf-8")
             edit_process = subprocess.Popen(["notepad.exe", str(target_path)], text=True)
         except Exception as exc:
             LOGGER.warning("Failed to open config editor: %s", exc)
