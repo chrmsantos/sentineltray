@@ -225,6 +225,7 @@ class Notifier:
         self._telemetry_write_errors = 0
         self._state_write_errors = 0
         self._last_scan_error = False
+        self._last_scan_had_match = False
         self._last_error_notification_at = 0.0
         self._queue_stats: dict[str, int] = {
             "queued": 0,
@@ -447,6 +448,7 @@ class Notifier:
         self.status.set_last_scan(_now_iso())
         any_match = False
         self._last_scan_error = False
+        self._last_scan_had_match = False
         scan_started = time.perf_counter()
         for index, monitor in enumerate(self._monitors, start=1):
             with log_context(
@@ -588,6 +590,7 @@ class Notifier:
 
             if normalized:
                 any_match = True
+                self._last_scan_had_match = True
                 self.status.set_last_match(_summarize_text(normalized[0]))
                 self.status.set_last_match_at(_now_iso())
 
@@ -666,6 +669,29 @@ class Notifier:
                 exc,
                 extra={"category": "error"},
             )
+
+    def _send_manual_no_match_test(self) -> None:
+        message = "verificação manual: nenhuma correspondência encontrada"
+        try:
+            sent_any = False
+            sent_direct = False
+            queued_any = False
+            for monitor in self._monitors:
+                if self._send_message(monitor, message, category="send", force_send=True):
+                    sent_any = True
+                    if monitor.last_send_queued:
+                        queued_any = True
+                    else:
+                        sent_direct = True
+            if sent_any or self.config.log_only_mode:
+                self.status.set_last_send(_now_iso())
+                if sent_direct:
+                    LOGGER.info("Sent manual no-match test message", extra={"category": "send"})
+                elif queued_any:
+                    LOGGER.info("Queued manual no-match test message", extra={"category": "send"})
+        except Exception as exc:
+            error_message = f"error: manual no-match test send failed: {exc}"
+            self._handle_error(error_message)
 
     def _send_startup_test(self) -> None:
         message = "SentinelTray iniciado — monitoramento ativo"
@@ -926,6 +952,8 @@ class Notifier:
                         else:
                             self.status.set_last_error("")
                             error_count = 0
+                            if is_manual and not self._last_scan_had_match:
+                                self._send_manual_no_match_test()
                 except WindowUnavailableError as exc:
                     self._handle_error(f"error: window unavailable: {exc}")
                     LOGGER.info(
