@@ -1,0 +1,145 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.4, pytest-8.3.4, pluggy-1.6.0 -- C:\Users\csantos\AppData\Local\ZWave\Apps\sentineltray\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\csantos\AppData\Local\ZWave\Apps\sentineltray
+configfile: pyproject.toml
+plugins: cov-5.0.0
+collecting ... collected 9 items
+
+tests/test_exe_smoke.py::test_exe_version_flag FAILED                    [ 11%]
+tests/test_exe_smoke.py::test_exe_help_flag PASSED                       [ 22%]
+tests/test_exe_smoke.py::test_exe_unknown_flag_exits_nonzero PASSED      [ 33%]
+tests/test_exe_smoke.py::test_exe_startup_creates_log_files FAILED       [ 44%]
+tests/test_exe_smoke.py::test_exe_startup_log_has_initialized_marker FAILED [ 55%]
+tests/test_exe_smoke.py::test_exe_startup_log_has_started_marker FAILED  [ 66%]
+tests/test_exe_smoke.py::test_exe_startup_no_critical_errors PASSED      [ 77%]
+tests/test_exe_smoke.py::test_exe_startup_no_unexpected_errors PASSED    [ 88%]
+tests/test_exe_smoke.py::test_exe_disk_check_no_failure PASSED           [100%]
+
+================================== FAILURES ===================================
+____________________________ test_exe_version_flag ____________________________
+
+tmp_path = WindowsPath('C:/Users/csantos/AppData/Local/Temp/pytest-of-csantos/pytest-97/test_exe_version_flag0')
+
+    @pytest.mark.skipif(not _exe_available(), reason=f"Executable not found: {EXE_PATH}")
+    def test_exe_version_flag(tmp_path: Path) -> None:
+        """--version must exit 0 and print the version string."""
+        root = _setup_root(tmp_path)
+>       result = _run_exe(root, "--version", timeout=10)
+
+tests\test_exe_smoke.py:200: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_exe_smoke.py:177: in _run_exe
+    result = subprocess.run(
+..\..\..\Programs\Python\Python314\Lib\subprocess.py:557: in run
+    stdout, stderr = process.communicate(input, timeout=timeout)
+..\..\..\Programs\Python\Python314\Lib\subprocess.py:1221: in communicate
+    stdout, stderr = self._communicate(input, endtime, timeout)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <Popen: returncode: 1 args: ['C:\\Users\\csantos\\AppData\\Local\\ZWave\\App...>
+input = None, endtime = 17032.4784157, orig_timeout = 10
+
+    def _communicate(self, input, endtime, orig_timeout):
+        # Start reader threads feeding into a list hanging off of this
+        # object, unless they've already been started.
+        if self.stdout and not hasattr(self, "_stdout_buff"):
+            self._stdout_buff = []
+            self.stdout_thread = \
+                    threading.Thread(target=self._readerthread,
+                                     args=(self.stdout, self._stdout_buff))
+            self.stdout_thread.daemon = True
+            self.stdout_thread.start()
+        if self.stderr and not hasattr(self, "_stderr_buff"):
+            self._stderr_buff = []
+            self.stderr_thread = \
+                    threading.Thread(target=self._readerthread,
+                                     args=(self.stderr, self._stderr_buff))
+            self.stderr_thread.daemon = True
+            self.stderr_thread.start()
+    
+        # Start writer thread to send input to stdin, unless already
+        # started.  The thread writes input and closes stdin when done,
+        # or continues in the background on timeout.
+        if self.stdin and not hasattr(self, "_stdin_thread"):
+            self._stdin_thread = \
+                    threading.Thread(target=self._writerthread,
+                                     args=(input,))
+            self._stdin_thread.daemon = True
+            self._stdin_thread.start()
+    
+        # Wait for the writer thread, or time out.  If we time out, the
+        # thread remains writing and the fd left open in case the user
+        # calls communicate again.
+        if hasattr(self, "_stdin_thread"):
+            self._stdin_thread.join(self._remaining_time(endtime))
+            if self._stdin_thread.is_alive():
+                raise TimeoutExpired(self.args, orig_timeout)
+    
+        # Wait for the reader threads, or time out.  If we time out, the
+        # threads remain reading and the fds left open in case the user
+        # calls communicate again.
+        if self.stdout is not None:
+            self.stdout_thread.join(self._remaining_time(endtime))
+            if self.stdout_thread.is_alive():
+>               raise TimeoutExpired(self.args, orig_timeout)
+E               subprocess.TimeoutExpired: Command '['C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\dist\\SentinelTray.exe', '--version']' timed out after 10 seconds
+
+..\..\..\Programs\Python\Python314\Lib\subprocess.py:1664: TimeoutExpired
+_____________________ test_exe_startup_creates_log_files ______________________
+
+tmp_path = WindowsPath('C:/Users/csantos/AppData/Local/Temp/pytest-of-csantos/pytest-97/test_exe_startup_creates_log_f0')
+
+    @pytest.mark.skipif(not _exe_available(), reason=f"Executable not found: {EXE_PATH}")
+    def test_exe_startup_creates_log_files(tmp_path: Path) -> None:
+        """Running the exe for a few seconds must create log files."""
+        root = _setup_root(tmp_path)
+        _run_exe(root, kill_after=4.0)
+        log_files = _collect_run_logs(root)
+>       assert log_files, (
+            "No run log files found after startup.\n"
+            f"Expected logs under: {root / 'config' / 'logs'}\n"
+            "Contents: " + str(list((root / 'config' / 'logs').iterdir()) if (root / 'config' / 'logs').exists() else [])
+        )
+E       AssertionError: No run log files found after startup.
+E         Expected logs under: C:\Users\csantos\AppData\Local\Temp\pytest-of-csantos\pytest-97\test_exe_startup_creates_log_f0\sentineltray_root\config\logs
+E         Contents: []
+E       assert []
+
+tests\test_exe_smoke.py:240: AssertionError
+_________________ test_exe_startup_log_has_initialized_marker _________________
+
+tmp_path = WindowsPath('C:/Users/csantos/AppData/Local/Temp/pytest-of-csantos/pytest-97/test_exe_startup_log_has_initi0')
+
+    @pytest.mark.skipif(not _exe_available(), reason=f"Executable not found: {EXE_PATH}")
+    def test_exe_startup_log_has_initialized_marker(tmp_path: Path) -> None:
+        """The log must contain 'Logging initialized' from the startup sequence."""
+        root = _setup_root(tmp_path)
+        _run_exe(root, kill_after=4.0)
+        log_files = _collect_run_logs(root)
+>       assert log_files, f"No log files found under {root / 'config' / 'logs'}"
+E       AssertionError: No log files found under C:\Users\csantos\AppData\Local\Temp\pytest-of-csantos\pytest-97\test_exe_startup_log_has_initi0\sentineltray_root\config\logs
+E       assert []
+
+tests\test_exe_smoke.py:253: AssertionError
+___________________ test_exe_startup_log_has_started_marker ___________________
+
+tmp_path = WindowsPath('C:/Users/csantos/AppData/Local/Temp/pytest-of-csantos/pytest-97/test_exe_startup_log_has_start0')
+
+    @pytest.mark.skipif(not _exe_available(), reason=f"Executable not found: {EXE_PATH}")
+    def test_exe_startup_log_has_started_marker(tmp_path: Path) -> None:
+        """The log must contain the 'SentinelTray started' marker."""
+        root = _setup_root(tmp_path)
+        _run_exe(root, kill_after=5.0)
+        log_files = _collect_run_logs(root)
+>       assert log_files, f"No log files found under {root / 'config' / 'logs'}"
+E       AssertionError: No log files found under C:\Users\csantos\AppData\Local\Temp\pytest-of-csantos\pytest-97\test_exe_startup_log_has_start0\sentineltray_root\config\logs
+E       assert []
+
+tests\test_exe_smoke.py:266: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_exe_smoke.py::test_exe_version_flag - subprocess.TimeoutExp...
+FAILED tests/test_exe_smoke.py::test_exe_startup_creates_log_files - Assertio...
+FAILED tests/test_exe_smoke.py::test_exe_startup_log_has_initialized_marker
+FAILED tests/test_exe_smoke.py::test_exe_startup_log_has_started_marker - Ass...
+=================== 4 failed, 5 passed in 69.87s (0:01:09) ====================
