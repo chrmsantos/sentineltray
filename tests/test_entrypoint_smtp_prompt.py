@@ -76,7 +76,7 @@ def test_prompt_smtp_password_sets_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("SENTINELTRAY_SMTP_PASSWORD", raising=False)
     monkeypatch.delenv("SENTINELTRAY_SMTP_PASSWORD_1", raising=False)
 
-    monkeypatch.setattr(entrypoint, "prompt_smtp_password_gui", lambda _user, _idx: "secret")
+    monkeypatch.setattr("sentineltray.gui_app.prompt_smtp_password_gui", lambda _user, _idx: "secret")
 
     entrypoint._prompt_smtp_passwords([(1, "smtp-user")])
 
