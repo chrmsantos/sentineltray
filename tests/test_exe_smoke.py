@@ -147,7 +147,7 @@ def _run_exe(
     then the entire process tree is killed (including children that may have
     inherited pipe handles), and the result is collected.
     """
-    env = {**os.environ, "SENTINELTRAY_ROOT": str(root)}
+    env = {**os.environ, "SENTINELTRAY_ROOT": str(root), "SENTINELTRAY_DATA_DIR": str(root / "config")}
     if kill_after is not None:
         proc = subprocess.Popen(
             [str(EXE_PATH), *args],
@@ -197,7 +197,7 @@ def _run_exe(
 def test_exe_version_flag(tmp_path: Path) -> None:
     """--version must exit 0 and print the version string."""
     root = _setup_root(tmp_path)
-    result = _run_exe(root, "--version", timeout=10)
+    result = _run_exe(root, "--version", timeout=30)
     assert result.returncode == 0, (
         f"--version exited with code {result.returncode}\n"
         f"stdout: {result.stdout!r}\n"

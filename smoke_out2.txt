@@ -1,0 +1,9 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.4, pytest-8.3.4, pluggy-1.6.0 -- C:\Users\csantos\AppData\Local\ZWave\Apps\sentineltray\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\csantos\AppData\Local\ZWave\Apps\sentineltray
+configfile: pyproject.toml
+plugins: cov-5.0.0
+collecting ... collected 9 items
+
+tests/test_exe_smoke.py::test_exe_version_flag 
