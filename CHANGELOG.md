@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## 2026-04-18 (5.1.0)
+
+- Novo: botão "Restaurar valores padrão" no editor de configuração — restaura o conteúdo do editor para o template oficial (`config.local.yaml.example`) com confirmação prévia.
+- Novo: na primeira inicialização sem `config.local.yaml`, o app abre o editor gráfico de configuração pré-preenchido com os valores padrão, em vez de abrir o Bloco de Notas e encerrar.
+
 ## 2026-04-17 (5.0.1 rc.1)
 
 - Correção: janela GUI de edição de configuração (`ConfigEditorWindow`) agora cria `config.local.yaml` com o template completo (lido do `.example` empacotado) quando o arquivo não existe, em vez de um stub de uma linha.

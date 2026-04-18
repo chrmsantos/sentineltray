@@ -266,6 +266,8 @@ class ConfigEditorWindow:
             side=tk.LEFT, padx=(14, 6))
         self._make_btn(footer, "💾  Salvar e Aplicar", self._save_apply, _GREEN2).pack(
             side=tk.LEFT, padx=(0, 6))
+        self._make_btn(footer, "↺  Restaurar valores padrão", self._restore_defaults, _BTN_DIM).pack(
+            side=tk.LEFT, padx=(0, 6))
         self._make_btn(footer, "Cancelar", win.destroy, "#5a1a1a").pack(
             side=tk.RIGHT, padx=(0, 14))
 
@@ -283,6 +285,39 @@ class ConfigEditorWindow:
             fg=_WHITE, bg=bg, activeforeground=_WHITE, activebackground=bg,
             relief=tk.FLAT, cursor="hand2", padx=12, pady=5, bd=0,
         )
+
+    def _restore_defaults(self) -> None:
+        import sys
+        from tkinter import messagebox
+        if not messagebox.askyesno(
+            "Restaurar valores padrão",
+            "Isso substituirá o conteúdo do editor pelo template padrão.\n"
+            "As alterações não salvas serão perdidas. Deseja continuar?",
+            parent=self._win,
+        ):
+            return
+        meipass = getattr(sys, "_MEIPASS", None)
+        candidates = []
+        if meipass:
+            candidates.append(Path(meipass) / "config" / "config.local.yaml.example")
+        candidates.append(get_project_root() / "config" / "config.local.yaml.example")
+        template_content: str | None = None
+        for example_path in candidates:
+            try:
+                template_content = example_path.read_text(encoding="utf-8")
+                break
+            except Exception:
+                continue
+        if template_content is None:
+            self._set_status("✗ Template padrão não encontrado", _RED)
+            return
+        if self._text:
+            self._text.delete("1.0", tk.END)
+            self._text.insert("1.0", template_content)
+            self._text.edit_reset()
+            self._text.edit_modified(False)
+        self._update_linenos()
+        self._set_status("Valores padrão restaurados — Ctrl+S para salvar", _AMBER)
 
     def _load_file(self) -> None:
         self._cfg_path.parent.mkdir(parents=True, exist_ok=True)

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from .config import AppConfig, get_project_root, get_user_data_dir, get_user_log_dir, load_config
 from .console_app import run_console_config_error
-from .gui_app import prompt_smtp_password_gui, run_gui
+from .gui_app import ConfigEditorWindow, prompt_smtp_password_gui, run_gui
 from .email_sender import EmailAuthError, validate_smtp_credentials
 from .logging_setup import setup_logging
 from .dpapi_utils import save_secret
@@ -721,6 +721,60 @@ def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
                 break
 
 
+def _first_run_gui_setup(path: Path) -> None:
+    """Write the config template and open the GUI editor for first-run setup.
+
+    Raises SystemExit if the user closes the editor without saving.
+    """
+    import tkinter as tk
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    candidates = []
+    if meipass:
+        candidates.append(Path(meipass) / "config" / "config.local.yaml.example")
+    candidates.append(get_project_root() / "config" / "config.local.yaml.example")
+    template_content: str | None = None
+    for example_path in candidates:
+        try:
+            template_content = example_path.read_text(encoding="utf-8")
+            break
+        except Exception:
+            continue
+    if template_content is None:
+        template_content = _CONFIG_TEMPLATE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(template_content, encoding="utf-8")
+    LOGGER.info(
+        "Config template created at %s for first-run setup",
+        path,
+        extra={"category": "config"},
+    )
+
+    saved: list[bool] = [False]
+
+    root = tk.Tk()
+    root.withdraw()
+
+    def on_saved(cfg: AppConfig) -> None:
+        saved[0] = True
+
+    editor = ConfigEditorWindow(root, on_saved=on_saved)
+    editor.show()
+    if editor._win is not None:
+        root.wait_window(editor._win)
+    try:
+        root.destroy()
+    except Exception:
+        pass
+
+    if not saved[0]:
+        raise SystemExit(
+            "SentinelTray requer configuração para iniciar.\n"
+            f"Arquivo: {path}\n"
+            "Preencha os valores e salve para iniciar o SentinelTray."
+        )
+
+
 def main() -> int:
     _setup_boot_logging()
     _ensure_single_instance()
@@ -733,6 +787,8 @@ def main() -> int:
     try:
         _ensure_windows()
         _run_startup_integrity_checks(local_path)
+        if not local_path.exists():
+            _first_run_gui_setup(local_path)
         _ensure_local_override(local_path)
         config = load_config(str(local_path))
         missing_passwords = _missing_smtp_passwords(config)

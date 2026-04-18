@@ -44,12 +44,13 @@ def test_main_requires_local_override_when_missing(
     monkeypatch.setattr(entrypoint, "_setup_boot_logging", lambda: None)
     monkeypatch.setattr(entrypoint, "_ensure_single_instance", lambda: None)
     monkeypatch.setattr(entrypoint, "_ensure_windows", lambda: None)
-    monkeypatch.setattr(entrypoint.subprocess, "Popen", lambda *_a, **_k: None)
-    monkeypatch.setattr(
-        entrypoint,
-        "run_console_config_error",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(SystemExit()),
-    )
+
+    def fake_first_run_gui(path: Path) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# template\n", encoding="utf-8")
+        raise SystemExit("cancelled")
+
+    monkeypatch.setattr(entrypoint, "_first_run_gui_setup", fake_first_run_gui)
 
     local_path = get_user_data_dir() / "config.local.yaml"
     assert not local_path.exists()
