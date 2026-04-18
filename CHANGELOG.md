@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## 2026-04-17 (5.0.1 rc.1)
+
+- Correção: janela GUI de edição de configuração (`ConfigEditorWindow`) agora cria `config.local.yaml` com o template completo (lido do `.example` empacotado) quando o arquivo não existe, em vez de um stub de uma linha.
+
 ## 2026-04-17 (5.0.0 rc.2)
 
 - Correção: botão "Editar Config" agora cria o arquivo `config.local.yaml` com o template completo e comentado (lido do `.example` empacotado), em vez de um stub vazio de 2 linhas.
