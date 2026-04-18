@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from threading import Lock
 
 
@@ -16,6 +16,7 @@ class StatusSnapshot:
     last_error: str
     last_healthcheck: str
     uptime_seconds: int
+    started_at: datetime | None
     error_count: int
     email_queue: dict[str, int]
     monitor_failures: dict[str, int]
@@ -35,6 +36,7 @@ class StatusStore:
         self._last_error = ""
         self._last_healthcheck = ""
         self._uptime_seconds = 0
+        self._started_at: datetime | None = None
         self._error_count = 0
         self._email_queue = {
             "queued": 0,
@@ -82,6 +84,10 @@ class StatusStore:
         with self._lock:
             self._uptime_seconds = value
 
+    def set_started_at(self, value: datetime | None) -> None:
+        with self._lock:
+            self._started_at = value
+
     def increment_error_count(self) -> None:
         with self._lock:
             self._error_count += 1
@@ -108,6 +114,7 @@ class StatusStore:
                 last_error=self._last_error,
                 last_healthcheck=self._last_healthcheck,
                 uptime_seconds=self._uptime_seconds,
+                started_at=self._started_at,
                 error_count=self._error_count,
                 email_queue=dict(self._email_queue),
                 monitor_failures=dict(self._monitor_failures),

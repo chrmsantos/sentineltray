@@ -723,7 +723,11 @@ class StatusWindow:
             self._status_text.configure(text="PARADO", fg=_RED)
 
         # ── Uptime ────────────────────────────────────────────────────────────
-        h, rem = divmod(snap.uptime_seconds, 3600)
+        if snap.started_at is not None:
+            elapsed = int((datetime.now(timezone.utc) - snap.started_at).total_seconds())
+        else:
+            elapsed = snap.uptime_seconds
+        h, rem = divmod(max(0, elapsed), 3600)
         m, s = divmod(rem, 60)
         self._uptime_var.set(f"{h:02d}:{m:02d}:{s:02d}")
 

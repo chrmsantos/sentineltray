@@ -902,6 +902,7 @@ class Notifier:
             )
             self.status.set_running(True)
             self.status.set_uptime_seconds(0)
+            self.status.set_started_at(self._started_at)
             self._update_telemetry()
             error_count = 0
             def _wait_for_next_scan(wait_seconds: int) -> bool:
