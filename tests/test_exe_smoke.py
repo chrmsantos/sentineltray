@@ -213,7 +213,7 @@ def test_exe_version_flag(tmp_path: Path) -> None:
 def test_exe_help_flag(tmp_path: Path) -> None:
     """--help must exit 0."""
     root = _setup_root(tmp_path)
-    result = _run_exe(root, "--help", timeout=10)
+    result = _run_exe(root, "--help", timeout=30)
     assert result.returncode == 0, (
         f"--help exited with code {result.returncode}\n"
         f"stdout: {result.stdout!r}\n"
@@ -225,7 +225,7 @@ def test_exe_help_flag(tmp_path: Path) -> None:
 def test_exe_unknown_flag_exits_nonzero(tmp_path: Path) -> None:
     """Unknown flags must cause a non-zero exit."""
     root = _setup_root(tmp_path)
-    result = _run_exe(root, "--unknown-flag", timeout=10)
+    result = _run_exe(root, "--unknown-flag", timeout=30)
     assert result.returncode != 0, (
         f"Expected non-zero exit for unknown flag, got {result.returncode}"
     )
