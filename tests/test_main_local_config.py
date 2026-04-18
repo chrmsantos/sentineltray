@@ -75,7 +75,6 @@ def test_ensure_single_instance_already_running(monkeypatch: pytest.MonkeyPatch)
     notice = {"called": False}
 
     monkeypatch.setattr(entrypoint, "_ensure_single_instance_mutex", lambda: False)
-    monkeypatch.setattr(entrypoint, "_terminate_existing_instance", lambda: False)
     monkeypatch.setattr(
         entrypoint,
         "_show_already_running_notice",

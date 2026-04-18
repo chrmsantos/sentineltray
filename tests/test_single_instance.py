@@ -27,32 +27,18 @@ def test_terminate_existing_instance_calls_taskkill(
     assert called["args"][2] == "1234"
 
 
-def test_single_instance_terminates_then_writes_pid(
+def test_single_instance_acquires_mutex_and_writes_pid(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     pid_path = get_user_data_dir() / "sentineltray.pid"
     pid_path.parent.mkdir(parents=True, exist_ok=True)
-    pid_path.write_text("1234", encoding="utf-8")
 
-    calls = {"mutex": 0, "terminated": 0}
-
-    def fake_mutex() -> bool:
-        calls["mutex"] += 1
-        return calls["mutex"] > 1
-
-    def fake_terminate() -> bool:
-        calls["terminated"] += 1
-        return True
-
-    monkeypatch.setattr(entrypoint, "_ensure_single_instance_mutex", fake_mutex)
-    monkeypatch.setattr(entrypoint, "_terminate_existing_instance", fake_terminate)
+    monkeypatch.setattr(entrypoint, "_ensure_single_instance_mutex", lambda: True)
     monkeypatch.setattr(entrypoint.os, "getpid", lambda: 4321)
-    monkeypatch.setattr(entrypoint.time, "sleep", lambda *_args, **_kwargs: None)
 
     entrypoint._ensure_single_instance()
 
-    assert calls["terminated"] == 1
     assert pid_path.read_text(encoding="utf-8") == "4321"
 
 
