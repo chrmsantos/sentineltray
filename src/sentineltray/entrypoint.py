@@ -99,22 +99,8 @@ def _ensure_single_instance_mutex() -> bool:
 
 def _ensure_single_instance() -> None:
     if not _ensure_single_instance_mutex():
-        terminated = _terminate_existing_instance()
-        if terminated:
-            for _ in range(6):
-                time.sleep(0.5)
-                if _ensure_single_instance_mutex():
-                    break
-            else:
-                LOGGER.error(
-                    "Failed to acquire single-instance mutex after termination",
-                    extra={"category": "startup"},
-                )
-                _show_already_running_notice()
-                raise SystemExit(0)
-        else:
-            _show_already_running_notice()
-            raise SystemExit(0)
+        _show_already_running_notice()
+        raise SystemExit(0)
     pid_path = _pid_file_path()
     pid_path.parent.mkdir(parents=True, exist_ok=True)
 
