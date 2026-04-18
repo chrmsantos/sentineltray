@@ -1,0 +1,138 @@
+........................................................................ [ 54%]
+...................F.......................................F             [100%]
+================================== FAILURES ===================================
+__________ test_ensure_local_override_creates_template_when_missing ___________
+
+tmp_path = WindowsPath('C:/Users/csantos/AppData/Local/Temp/pytest-of-csantos/pytest-95/test_ensure_local_override_cre0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001AF51EA6820>
+
+    def test_ensure_local_override_creates_template_when_missing(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        local_path = tmp_path / "config.local.yaml"
+        monkeypatch.setattr(entrypoint.subprocess, "Popen", lambda *_a, **_k: None)
+    
+        with pytest.raises(SystemExit) as exc_info:
+>           entrypoint._ensure_local_override(local_path)
+
+tests\test_main_local_config.py:17: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\sentineltray\entrypoint.py:243: in _ensure_local_override
+    path.write_text(_load_config_template(), encoding="utf-8")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def _load_config_template() -> str:
+        """Return the contents of config.local.yaml.example as the default template.
+    
+        Searches the PyInstaller bundle directory first, then the project root.
+        Raises FileNotFoundError if the example file cannot be located.
+        """
+        meipass = getattr(sys, "_MEIPASS", None)
+        candidates = []
+        if meipass:
+            candidates.append(Path(meipass) / "config" / "config.local.yaml.example")
+        candidates.append(get_project_root() / "config" / "config.local.yaml.example")
+        for example_path in candidates:
+            try:
+                return example_path.read_text(encoding="utf-8")
+            except Exception:
+                continue
+>       raise FileNotFoundError(
+            "Config template not found. Expected config/config.local.yaml.example "
+            "alongside the application."
+        )
+E       FileNotFoundError: Config template not found. Expected config/config.local.yaml.example alongside the application.
+
+src\sentineltray\entrypoint.py:38: FileNotFoundError
+___________________ test_run_loop_skips_window_unavailable ____________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001AF520363C0>
+tmp_path = WindowsPath('C:/Users/csantos/AppData/Local/Temp/pytest-of-csantos/pytest-95/test_run_loop_skips_window_una0')
+
+    def test_run_loop_skips_window_unavailable(
+        monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        monkeypatch.setenv("USERPROFILE", str(tmp_path))
+        base = get_user_data_dir()
+        log_root = get_user_log_dir()
+        email = EmailConfig(
+            smtp_host="smtp.local",
+            smtp_port=587,
+            smtp_username="",
+            smtp_password="",
+            from_address="alerts@example.com",
+            to_addresses=["ops@example.com"],
+            use_tls=True,
+            timeout_seconds=10,
+            subject="SentinelTray Notification",
+            retry_attempts=0,
+            retry_backoff_seconds=0,
+        )
+        config = AppConfig(
+            poll_interval_seconds=1,
+            healthcheck_interval_seconds=3600,
+            error_backoff_base_seconds=5,
+            error_backoff_max_seconds=300,
+            debounce_seconds=600,
+            max_history=10,
+            state_file=str(base / "state.json"),
+            log_file=str(log_root / "sentineltray.log"),
+            log_level="INFO",
+            log_console_level="WARNING",
+            log_console_enabled=False,
+            log_max_bytes=5000000,
+            log_backup_count=3,
+            log_run_files_keep=3,
+            telemetry_file=str(log_root / "telemetry.json"),
+            allow_window_restore=True,
+            log_only_mode=False,
+            send_repeated_matches=True,
+            pause_on_user_active=False,
+            monitors=[
+                MonitorConfig(
+                    window_title_regex="APP",
+                    phrase_regex="ALERT",
+                    email=email,
+                )
+            ],
+        )
+    
+        notifier = Notifier(config=config, status=StatusStore())
+        stop_event = Event()
+    
+        def fake_scan_once() -> None:
+            raise WindowUnavailableError("Target window not enabled")
+    
+        notifier.scan_once = fake_scan_once  # type: ignore[assignment]
+    
+        sends = {"count": 0}
+    
+        class FakeSender:
+            def send(self, _message: str) -> None:
+                sends["count"] += 1
+    
+        notifier._sender = FakeSender()  # type: ignore[assignment]
+    
+        calls = {"count": 0}
+    
+        def fake_update_telemetry() -> None:
+            calls["count"] += 1
+            if calls["count"] >= 2:
+                stop_event.set()
+    
+        notifier._update_telemetry = fake_update_telemetry  # type: ignore[assignment]
+    
+        notifier.run_loop(stop_event)
+    
+        snapshot = notifier.status.snapshot()
+        assert snapshot.error_count == 0
+        assert snapshot.last_error
+        # startup test (1) + window-unavailable error notification (1)
+>       assert sends["count"] == 2
+E       assert 1 == 2
+
+tests\test_window_unavailable.py:93: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_main_local_config.py::test_ensure_local_override_creates_template_when_missing
+FAILED tests/test_window_unavailable.py::test_run_loop_skips_window_unavailable
+2 failed, 130 passed in 4.43s
