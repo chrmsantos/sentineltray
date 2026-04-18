@@ -920,6 +920,12 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
     # ── Show window on startup ────────────────────────────────────────────────
     root.after(0, window.show)
 
+    # ── Deferred SMTP validation ──────────────────────────────────────────────
+    if smtp_validator is not None:
+        def _start_smtp_validator() -> None:
+            smtp_validator(root, config_holder, _reload_notifier)
+        root.after(100, _start_smtp_validator)
+
     # ── Watchdog thread ───────────────────────────────────────────────────────
     def _watchdog() -> None:
         while not exit_event.wait(5):

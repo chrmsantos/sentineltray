@@ -1,4 +1,4 @@
-rom __future__ import annotations
+from __future__ import annotations
 
 import atexit
 import ctypes
@@ -12,9 +12,6 @@ import time
 from pathlib import Path
 
 from .config import AppConfig, get_project_root, get_user_data_dir, get_user_log_dir, load_config
-from .console_app import run_console_config_error
-from .gui_app import ConfigEditorWindow, prompt_smtp_password_gui, run_gui
-from .email_sender import EmailAuthError, validate_smtp_credentials
 from .logging_setup import setup_logging
 from .dpapi_utils import save_secret
 from . import __release_date__, __version_label__
@@ -393,7 +390,13 @@ def _run_startup_integrity_checks(local_path: Path) -> None:
     data_dir.mkdir(parents=True, exist_ok=True)
     log_root = get_user_log_dir()
     log_root.mkdir(parents=True, exist_ok=True)
-    _migrate_legacy_config(local_path)
+    sentinel = data_dir / "migration.done"
+    if not sentinel.exists():
+        _migrate_legacy_config(local_path)
+        try:
+            sentinel.write_text("1", encoding="utf-8")
+        except Exception:
+            pass
 
 
 
@@ -421,6 +424,7 @@ def _clear_stored_smtp_password(index: int) -> None:
 
 
 def _validate_smtp_config(config: AppConfig) -> tuple[list[tuple[int, str]], list[str]]:
+    from .email_sender import EmailAuthError, validate_smtp_credentials
     auth_failures: list[tuple[int, str]] = []
     auth_messages: list[str] = []
     failures: list[str] = []
@@ -468,6 +472,7 @@ def _missing_smtp_passwords(config: AppConfig) -> list[tuple[int, str]]:
 
 
 def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
+    from .gui_app import prompt_smtp_password_gui
     if not missing:
         return
     for index, username in missing:
@@ -496,6 +501,7 @@ def _first_run_gui_setup(path: Path) -> None:
     Raises SystemExit if the user closes the editor without saving.
     """
     import tkinter as tk
+    from .gui_app import ConfigEditorWindow
 
     template_content = _load_config_template()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -551,28 +557,59 @@ def main() -> int:
         if missing_passwords:
             _prompt_smtp_passwords(missing_passwords)
             config = load_config(str(local_path))
-        auth_failures, auth_messages = _validate_smtp_config(config)
-        if auth_failures:
-            for index, _ in auth_failures:
-                _clear_stored_smtp_password(index)
-            _prompt_smtp_passwords(auth_failures)
-            config = load_config(str(local_path))
-            auth_failures, auth_messages = _validate_smtp_config(config)
-            if auth_failures:
-                raise ValueError(
-                    "SMTP validation failed (SENTINELTRAY_SMTP_PASSWORD): "
-                    + "; ".join(auth_messages)
-                )
     except Exception as exc:
         config_error_message = _handle_config_error(local_path, exc)
 
     try:
         if config_error_message is not None:
+            from .console_app import run_console_config_error
             run_console_config_error(config_error_message)
         else:
             if config is None:
                 raise SystemExit("Configuration not loaded.")
-            run_gui(config)
+
+            _captured_local_path = local_path
+
+            def _smtp_validator(root, config_holder, reload_notifier) -> None:
+                import threading
+
+                def _bg() -> None:
+                    try:
+                        auth_failures, _ = _validate_smtp_config(config_holder[0])
+                    except Exception as exc:
+                        LOGGER.error(
+                            "SMTP validation error during startup: %s",
+                            exc,
+                            extra={"category": "config"},
+                        )
+                        return
+                    if not auth_failures:
+                        return
+
+                    def _reprompt() -> None:
+                        for index, _ in auth_failures:
+                            _clear_stored_smtp_password(index)
+                        try:
+                            _prompt_smtp_passwords(auth_failures)
+                        except SystemExit:
+                            return
+                        try:
+                            new_cfg = load_config(str(_captured_local_path))
+                        except Exception as exc:
+                            LOGGER.error(
+                                "Failed to reload config after SMTP re-prompt: %s",
+                                exc,
+                                extra={"category": "config"},
+                            )
+                            return
+                        reload_notifier(new_cfg)
+
+                    root.after(0, _reprompt)
+
+                threading.Thread(target=_bg, daemon=True, name="smtp-validator").start()
+
+            from .gui_app import run_gui
+            run_gui(config, smtp_validator=_smtp_validator)
     except Exception as exc:
         LOGGER.error("Failed to start console UI: %s", exc, extra={"category": "startup"})
         raise SystemExit("Failed to start console UI.") from exc

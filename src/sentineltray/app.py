@@ -229,7 +229,7 @@ class Notifier:
         self._telemetry = JsonWriter(Path(self.config.telemetry_file))
         self._app_version = _get_version()
         self._release_date = _get_release_date()
-        self._commit_hash = _get_commit_hash()
+        self._commit_hash = ""
         self._telemetry_write_errors = 0
         self._state_write_errors = 0
         self._last_scan_error = False
@@ -244,6 +244,9 @@ class Notifier:
             "oldest_age_seconds": 0,
         }
         self._sender: EmailSender | None = None
+        def _fetch_commit_hash() -> None:
+            self._commit_hash = _get_commit_hash()
+        Thread(target=_fetch_commit_hash, daemon=True, name="commit-hash").start()
         _check_smtp_health(self.config)
 
     def _reset_components(self) -> None:

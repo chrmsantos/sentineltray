@@ -209,7 +209,7 @@ def test_email_sender_match_subject(monkeypatch) -> None:
 
     msg = captured["message"]
     assert msg is not None
-    assert msg["Subject"] == "SentinelTray — Correspondência Detectada"
+    assert msg["Subject"] == "ZWave SentinelTray — Correspondência Detectada"
 
 
 def test_email_sender_error_subject(monkeypatch) -> None:
@@ -255,4 +255,4 @@ def test_email_sender_error_subject(monkeypatch) -> None:
 
     msg = captured["message"]
     assert msg is not None
-    assert msg["Subject"] == "SentinelTray — Erro Detectado"
+    assert msg["Subject"] == "ZWave SentinelTray — Erro Detectado"
