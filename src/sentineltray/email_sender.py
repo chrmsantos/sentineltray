@@ -43,25 +43,26 @@ _CATEGORY_LABEL: dict[str, str] = {
 
 def _build_subject(subject: str, category: str) -> str:
     if category == "Alert":
-        return "SentinelTray — Correspondência Detectada"
+        return "ZWave SentinelTray — Correspondência Detectada"
     if category == "Error":
-        return "SentinelTray — Erro Detectado"
+        return "ZWave SentinelTray — Erro Detectado"
     if category == "Status":
-        return "SentinelTray — Status do sistema"
+        return "ZWave SentinelTray — Status do sistema"
     if category == "Verificação":
-        return "SentinelTray — Verificação Manual"
+        return "ZWave SentinelTray — Verificação Manual"
     base = (subject or "").strip()
     if base:
         cleaned = base
-        while cleaned.lower().startswith("sentineltray"):
-            cleaned = cleaned[len("sentineltray") :].strip()
-            cleaned = cleaned.lstrip("-–—:|/").strip()
-            if not cleaned:
-                break
+        for _prefix in ("zwave sentineltray", "sentineltray"):
+            while cleaned.lower().startswith(_prefix):
+                cleaned = cleaned[len(_prefix):].strip()
+                cleaned = cleaned.lstrip("-–—:|/").strip()
+                if not cleaned:
+                    break
         base = cleaned
     if base:
-        return f"SentinelTray {base} - {category}"
-    return f"SentinelTray {category}"
+        return f"ZWave SentinelTray {base} - {category}"
+    return f"ZWave SentinelTray {category}"
 
 
 def _build_body(message: str) -> tuple[str, str]:
@@ -89,10 +90,10 @@ def _build_body(message: str) -> tuple[str, str]:
 
     label = _CATEGORY_LABEL.get(category, category)
     body = (
-        "SentinelTray\n\n"
+        "ZWave SentinelTray\n\n"
         f"{label}:\n"
         f"{details}\n\n"
-        "Esta é uma mensagem automática do SentinelTray."
+        "Esta é uma mensagem automática do ZWave SentinelTray."
     )
     return category, body
 

@@ -212,7 +212,7 @@ class TrayIcon:
         self._icon = pystray.Icon(
             "SentinelTray",
             _make_green_eye(),
-            "SentinelTray",
+            "ZWave SentinelTray",
             menu,
         )
         self._thread = threading.Thread(

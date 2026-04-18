@@ -1,4 +1,4 @@
-# SentinelTray — Configuração.
+﻿# ZWave SentinelTray — Configuração.
 # Copie este arquivo para config.local.yaml e preencha com seus valores.
 # NÃO armazene smtp_password aqui — deixe em branco e informe na primeira
 # inicialização; a senha será salva criptografada em smtp_password_<n>.dpapi.
@@ -32,7 +32,7 @@ monitors:
     smtp_username: 'sentineltray@gmail.com'
 
     # Senha SMTP. Deixe SEMPRE vazio aqui.
-    # O SentinelTray solicitará a senha interativamente na primeira execução
+    # O ZWave SentinelTray solicitará a senha interativamente na primeira execução
     # e a armazenará de forma segura via DPAPI (Windows Data Protection API)
     # no arquivo smtp_password_<n>.dpapi, na pasta config/.
     smtp_password: ''
@@ -55,7 +55,7 @@ monitors:
     timeout_seconds: 10
 
     # Assunto padrão dos e-mails de alerta enviados por este monitor.
-    subject: SentinelTray
+    subject: ZWave SentinelTray
 
     # Número de tentativas de reenvio em caso de falha no envio do e-mail.
     # Após todas as tentativas falharem, a mensagem vai para a fila persistente.
@@ -76,7 +76,7 @@ monitors:
 poll_interval_seconds: 30
 
 # Intervalo (em segundos) entre verificações de "saúde" (healthcheck) do sistema.
-# O healthcheck registra um log periódico confirmando que o SentinelTray está ativo.
+# O healthcheck registra um log periódico confirmando que o ZWave SentinelTray está ativo.
 # Valor padrão: 1800 (30 minutos).
 healthcheck_interval_seconds: 1800
 
@@ -104,13 +104,13 @@ max_history: 50
 # ARQUIVOS & LOGS — caminhos e configurações de registro
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Caminho do arquivo de estado persistente do SentinelTray.
+# Caminho do arquivo de estado persistente do ZWave SentinelTray.
 # Armazena o histórico de alertas e o estado dos monitores entre reinicializações.
 # Caminho relativo à pasta de dados do aplicativo (config/).
 state_file: state.json
 
 # Caminho do arquivo de log principal (formato texto rotacionado).
-# Registra eventos, erros e informações de operação do SentinelTray.
+# Registra eventos, erros e informações de operação do ZWave SentinelTray.
 log_file: logs/sentineltray.log
 
 # Nível mínimo de severidade para gravar no arquivo de log.
@@ -137,7 +137,7 @@ log_max_bytes: 5000000
 log_backup_count: 3
 
 # Quantidade de arquivos de log de execução (run logs) a preservar.
-# Logs de execução são criados a cada inicialização do SentinelTray.
+# Logs de execução são criados a cada inicialização do ZWave SentinelTray.
 # Execuções mais antigas além desse limite são excluídas automaticamente.
 log_run_files_keep: 3
 
@@ -147,10 +147,10 @@ log_run_files_keep: 3
 telemetry_file: logs/telemetry.json
 
 # ─────────────────────────────────────────────────────────────────────────────
-# COMPORTAMENTO — controle de como o SentinelTray reage aos eventos
+# COMPORTAMENTO — controle de como o ZWave SentinelTray reage aos eventos
 # ─────────────────────────────────────────────────────────────────────────────
 
-# Permite que o SentinelTray restaure janelas minimizadas para ler seu conteúdo.
+# Permite que o ZWave SentinelTray restaure janelas minimizadas para ler seu conteúdo.
 # Algumas janelas só expõem seu texto quando estão visíveis/restauradas.
 # Desative (false) se não quiser que o aplicativo altere o estado das janelas.
 allow_window_restore: true
@@ -191,7 +191,7 @@ window_error_backoff_max_seconds: 120
 window_error_circuit_threshold: 3
 
 # Tempo (em segundos) que o circuit breaker mantém a janela desativada após
-# ser acionado. Após esse período, o SentinelTray tenta acessar a janela novamente.
+# ser acionado. Após esse período, o ZWave SentinelTray tenta acessar a janela novamente.
 window_error_circuit_seconds: 300
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -230,7 +230,7 @@ email_queue_retry_base_seconds: 30
 pause_on_user_active: true
 
 # Tempo de ociosidade (em segundos) necessário para considerar o usuário inativo.
-# O SentinelTray só retoma o envio de alertas após o usuário ficar inativo
+# O ZWave SentinelTray só retoma o envio de alertas após o usuário ficar inativo
 # por pelo menos esse período.
 # Exemplo: 120 = 2 minutos sem atividade de teclado/mouse para retomar alertas.
 pause_idle_threshold_seconds: 120

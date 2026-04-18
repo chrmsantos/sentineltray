@@ -121,7 +121,7 @@ def _create_config_editor() -> tuple[
                         continue
                 if template_content is None:
                     template_content = (
-                        "# SentinelTray - configuração local\n"
+                        "# ZWave SentinelTray - configuração local\n"
                         "# Preencha os campos obrigatórios antes de rodar.\n"
                     )
                 target_path.write_text(template_content, encoding="utf-8")
@@ -258,7 +258,7 @@ def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
             summary.append(f"{label}={count}")
         failure_line = "Falhas por monitor: " + ", ".join(summary)
     return [
-        "SentinelTray - Console",
+        "ZWave SentinelTray - Console",
         f"Status atual: {state}",
         f"ERROS: {snapshot.error_count}",
         *_email_address_lines(config),
@@ -510,7 +510,7 @@ def run_console_config_error(error_details: str) -> None:
     try:
         while True:
             clear_screen()
-            print("SentinelTray - Erro de Configuração")
+            print("ZWave SentinelTray - Erro de Configuração")
             print("")
             print(error_details)
             print("")

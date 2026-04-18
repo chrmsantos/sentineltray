@@ -1,4 +1,4 @@
-# SentinelTray
+# ZWave SentinelTray
 
 Version: 4.1.0 (17-04-2026)
 
@@ -24,7 +24,7 @@ Edit config.local.yaml and set:
 - monitors[].email.retry_attempts
 - monitors[].email.retry_backoff_seconds
 - monitors[].email.smtp_username (no config local)
-- monitors[].email.smtp_password: leave empty; SentinelTray prompts on startup and stores it encrypted (DPAPI)
+- monitors[].email.smtp_password: leave empty; ZWave SentinelTray prompts on startup and stores it encrypted (DPAPI)
 - allow_window_restore, send_repeated_matches
 - log_only_mode
 - log_level, log_console_level, log_console_enabled
@@ -57,13 +57,13 @@ Manual venv activation from CMD:
 scripts\activate_venv.cmd
 
 If you run main.py directly, it automatically adds src/ to the import path.
-SentinelTray starts in the foreground console interface. Use the menu to open Config,
+ZWave SentinelTray starts in the foreground console interface. Use the menu to open Config,
 trigger a manual scan, check matching windows, or Exit.
 
 To keep the console menu stable, interactive mode suppresses console logging and
 routes logs to the configured files only.
 
-While running, SentinelTray prevents automatic sleep or display power-down to keep
+While running, ZWave SentinelTray prevents automatic sleep or display power-down to keep
 the monitored window available for scans.
 
 For a simple start, use the shortcut at the project root: Executar SentinelTray.cmd.
@@ -126,7 +126,7 @@ monitors:
          to_addresses: ['ops1@example.com']
          use_tls: true
          timeout_seconds: 10
-         subject: 'SentinelTray Notification'
+         subject: 'ZWave SentinelTray Notification'
          retry_attempts: 0
          retry_backoff_seconds: 0
    - window_title_regex: 'APP2'
@@ -141,7 +141,7 @@ monitors:
          to_addresses: ['ops2@example.com']
          use_tls: true
          timeout_seconds: 10
-         subject: 'SentinelTray Notification'
+         subject: 'ZWave SentinelTray Notification'
          retry_attempts: 0
          retry_backoff_seconds: 0
 ```
@@ -151,7 +151,7 @@ monitors:
 - Logs are written per execution with detailed fields and kept with a max of 3 files in config\logs (values above 3 are capped).
 - Logs rotate by size using log_max_bytes and log_backup_count.
 - JSON logs are written alongside text logs in sentineltray.jsonl and per-run sentineltray_*.jsonl.
-- If the config is missing or invalid, SentinelTray still starts in "Config Error" mode and exposes the error details in the console.
+- If the config is missing or invalid, ZWave SentinelTray still starts in "Config Error" mode and exposes the error details in the console.
 - When another instance is already running, the previous instance is terminated before startup (logged in sentineltray_boot.log).
 - Third-party debug logs are suppressed to keep logs actionable.
 - Logs and telemetry redact sensitive strings (emails and local paths) and store match summaries as hashes.
@@ -175,8 +175,8 @@ monitors:
 - Local telemetry file captures last activity for quick diagnostics and lives in config\logs.
 - Log-only mode skips normal alert sends but still emails error notifications.
 - Email delivery failures are detected and reported as specific errors.
-- Match alert emails use subject "SentinelTray Match Alert"; error alerts use "SentinelTray Error Alert".
-- Info-category emails are suppressed; subjects like "SentinelTray Info" are never sent.
+- Match alert emails use subject "ZWave SentinelTray Match Alert"; error alerts use "ZWave SentinelTray Error Alert".
+- Info-category emails are suppressed; subjects like "ZWave SentinelTray Info" are never sent.
 - Config validation rejects invalid intervals and paths at startup.
 - Watchdog detects long scans and can reset components.
 - Scans run only after 2+ minutes of user inactivity.

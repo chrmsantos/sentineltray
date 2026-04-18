@@ -49,7 +49,7 @@ def prompt_smtp_password_gui(username: str, monitor_index: int) -> str | None:
     root.withdraw()
 
     dialog = tk.Toplevel(root)
-    dialog.title("SentinelTray — Senha SMTP")
+    dialog.title("ZWave SentinelTray — Senha SMTP")
     dialog.configure(bg=_BG)
     dialog.resizable(False, False)
     dialog.grab_set()
@@ -172,7 +172,7 @@ class ConfigEditorWindow:
     def _build(self) -> None:
         win = tk.Toplevel(self._parent)
         self._win = win
-        win.title("SentinelTray — Editor de Configuração")
+        win.title("ZWave SentinelTray — Editor de Configuração")
         win.configure(bg=_BG)
         win.geometry("860x620")
         win.minsize(600, 400)
@@ -336,7 +336,7 @@ class ConfigEditorWindow:
                 except Exception:
                     continue
             if template_content is None:
-                template_content = "# SentinelTray — configuração local\n"
+                template_content = "# ZWave SentinelTray — configuração local\n"
             self._cfg_path.write_text(template_content, encoding="utf-8")
         try:
             content = self._cfg_path.read_text(encoding="utf-8")
@@ -465,7 +465,7 @@ class StatusWindow:
     def _build_ui(self) -> None:
         r = self._root
         from . import __version_label__, __release_date__
-        r.title(f"SentinelTray {__version_label__} ({__release_date__}) — Status")
+        r.title(f"ZWave SentinelTray {__version_label__} ({__release_date__}) — Status")
         r.configure(bg=_BG)
         r.resizable(True, True)
         r.minsize(900, 480)
@@ -496,7 +496,7 @@ class StatusWindow:
         title_frame = tk.Frame(header, bg=_SURFACE)
         title_frame.pack(side=tk.LEFT)
         tk.Label(
-            title_frame, text="SentinelTray",
+            title_frame, text="ZWave SentinelTray",
             font=("Segoe UI", 15, "bold"), fg=_GREEN, bg=_SURFACE, anchor="w"
         ).pack(anchor="w")
         tk.Label(

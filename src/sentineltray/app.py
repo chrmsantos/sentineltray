@@ -708,7 +708,7 @@ class Notifier:
             self._handle_error(error_message)
 
     def _send_startup_test(self) -> None:
-        message = "SentinelTray iniciado — monitoramento ativo"
+        message = "ZWave SentinelTray iniciado — monitoramento ativo"
         try:
             sent_any = False
             sent_direct = False
@@ -895,7 +895,7 @@ class Notifier:
             )
         try:
             LOGGER.info(
-                "SentinelTray started (beta %s, %s)",
+                "ZWave SentinelTray started (beta %s, %s)",
                 self._app_version,
                 self._release_date,
                 extra={"category": "startup"},
