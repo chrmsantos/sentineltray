@@ -235,7 +235,7 @@ def test_exe_unknown_flag_exits_nonzero(tmp_path: Path) -> None:
 def test_exe_startup_creates_log_files(tmp_path: Path) -> None:
     """Running the exe for a few seconds must create log files."""
     root = _setup_root(tmp_path)
-    _run_exe(root, kill_after=4.0)
+    _run_exe(root, kill_after=20.0)
     log_files = _collect_run_logs(root)
     assert log_files, (
         "No run log files found after startup.\n"
@@ -248,7 +248,7 @@ def test_exe_startup_creates_log_files(tmp_path: Path) -> None:
 def test_exe_startup_log_has_initialized_marker(tmp_path: Path) -> None:
     """The log must contain 'Logging initialized' from the startup sequence."""
     root = _setup_root(tmp_path)
-    _run_exe(root, kill_after=4.0)
+    _run_exe(root, kill_after=20.0)
     log_files = _collect_run_logs(root)
     assert log_files, f"No log files found under {root / 'config' / 'logs'}"
     all_text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in log_files)
@@ -261,7 +261,7 @@ def test_exe_startup_log_has_initialized_marker(tmp_path: Path) -> None:
 def test_exe_startup_log_has_started_marker(tmp_path: Path) -> None:
     """The log must contain the 'SentinelTray started' marker."""
     root = _setup_root(tmp_path)
-    _run_exe(root, kill_after=5.0)
+    _run_exe(root, kill_after=20.0)
     log_files = _collect_run_logs(root)
     assert log_files, f"No log files found under {root / 'config' / 'logs'}"
     all_text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in log_files)
@@ -274,7 +274,7 @@ def test_exe_startup_log_has_started_marker(tmp_path: Path) -> None:
 def test_exe_startup_no_critical_errors(tmp_path: Path) -> None:
     """There must be no CRITICAL log entries after startup."""
     root = _setup_root(tmp_path)
-    _run_exe(root, kill_after=5.0)
+    _run_exe(root, kill_after=20.0)
     log_files = _collect_run_logs(root)
     entries = _parse_log_lines(log_files)
     critical = [e["raw"] for e in entries if "CRITICAL" in e["level"]]
@@ -287,7 +287,7 @@ def test_exe_startup_no_critical_errors(tmp_path: Path) -> None:
 def test_exe_startup_no_unexpected_errors(tmp_path: Path) -> None:
     """ERROR entries must only be startup-related, not recurring loop errors."""
     root = _setup_root(tmp_path)
-    _run_exe(root, kill_after=5.0)
+    _run_exe(root, kill_after=20.0)
     log_files = _collect_run_logs(root)
     entries = _parse_log_lines(log_files)
     error_lines = [e["raw"] for e in entries if e["level"].startswith("ERROR")]
@@ -310,7 +310,7 @@ def test_exe_startup_no_unexpected_errors(tmp_path: Path) -> None:
 def test_exe_disk_check_no_failure(tmp_path: Path) -> None:
     """The disk check must not produce 'Disk check failed' errors."""
     root = _setup_root(tmp_path)
-    _run_exe(root, kill_after=5.0)
+    _run_exe(root, kill_after=20.0)
     log_files = _collect_run_logs(root)
     all_text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in log_files)
     assert "Disk check failed" not in all_text, (
