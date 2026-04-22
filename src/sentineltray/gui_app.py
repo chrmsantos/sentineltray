@@ -601,7 +601,7 @@ class StatusWindow:
         self._make_btn(footer, "↗  Repositório",
                        lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
             side=tk.LEFT)
-        tk.Label(footer, text="Christian Martin dos Santos",
+        tk.Label(footer, text="Licenced under GPLv3 •  Câmara Municipal de Santa Bárbara d'Oeste/SP  •",
                  font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE).pack(
             side=tk.LEFT, padx=(12, 0))
         self._make_btn(footer, "Sair  ✕", self._on_exit, "#5a1a1a").pack(
