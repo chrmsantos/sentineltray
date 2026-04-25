@@ -1,107 +1,141 @@
-﻿"""Generate assets/icon.ico — green eye icon for Z7_SentinelTray.
+﻿"""Generate assets/icon.ico — modern dark-badge eye icon for Z7_SentinelTray.
 
 Run from the repository root:
     python scripts/generate_icon.py
 """
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 
-def _make_eye(size: int) -> Image.Image:
-    """Draw a green eye icon at *size* x *size* pixels using 4x supersampling."""
+# ── Palette ───────────────────────────────────────────────────────────────────
+_BG_DARK   = (11, 17, 27, 255)      # deep navy background
+_BG_MID    = (17, 26, 42, 255)      # slightly lighter for top-light sheen
+_SCLERA    = (228, 240, 235, 255)   # cool off-white
+_LIMBUS    = (6, 32, 16, 255)       # dark outer iris ring
+_IRIS_STEPS = [                     # outer → inner iris gradient
+    (8,  42, 22),
+    (13, 62, 32),
+    (20, 88, 46),
+    (30, 118, 60),
+    (42, 150, 76),
+    (55, 178, 92),
+    (62, 196, 102),                 # peak brightness
+    (52, 172, 87),
+    (40, 145, 72),
+    (28, 112, 56),
+]
+_PUPIL     = (4, 7, 5, 255)         # near-black pupil
+_GLOW      = (0, 210, 90)           # iris glow colour
+_BORDER    = (40, 200, 88, 210)     # eyelid outline
+_WHITE     = (255, 255, 255)
+
+
+def _make_icon(size: int) -> Image.Image:
+    """Render a modern dark-badge eye icon at *size* × *size* pixels."""
     scale = 4
     s = size * scale
     cx, cy = s // 2, s // 2
 
-    # Eye-shape bounding box (horizontal lens / almond)
-    ew = int(s * 0.88)
-    eh = int(s * 0.52)
+    # ── 1. Background: dark rounded square ───────────────────────────────────
+    base = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(base)
+    corner_r = int(s * 0.22)
+    bd.rounded_rectangle([0, 0, s - 1, s - 1], radius=corner_r, fill=_BG_DARK)
+
+    # Subtle top-lit sheen: semi-transparent lighter ellipse near top
+    sheen = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(sheen)
+    sw, sh_ = int(s * 0.70), int(s * 0.35)
+    sd.ellipse(
+        [cx - sw // 2, -sh_ // 2, cx + sw // 2, sh_ // 2 + int(s * 0.08)],
+        fill=(255, 255, 255, 14),
+    )
+    base = Image.alpha_composite(base, sheen)
+
+    # ── 2. Soft iris glow behind the eye ─────────────────────────────────────
+    iris_r = int(s * 0.205)
+    glow_layers = 10
+    glow_layer = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow_layer)
+    for i in range(glow_layers):
+        spread = int(s * 0.018) * (glow_layers - i)
+        alpha = 6 + i * 2
+        gr = iris_r + spread
+        gd.ellipse(
+            [cx - gr, cy - gr, cx + gr, cy + gr],
+            fill=(*_GLOW, alpha),
+        )
+    # Blur the glow for a smooth halo
+    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(radius=int(s * 0.04)))
+    base = Image.alpha_composite(base, glow_layer)
+
+    # ── 3. Eye content ────────────────────────────────────────────────────────
+    ew = int(s * 0.80)
+    eh = int(s * 0.46)
     ex0, ey0 = cx - ew // 2, cy - eh // 2
     ex1, ey1 = ex0 + ew, ey0 + eh
 
-    # ── content layer (everything before masking) ────────────────────
-    content = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    cd = ImageDraw.Draw(content)
+    eye_content = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    ec = ImageDraw.Draw(eye_content)
 
-    # Sclera (eye-white), fills the whole canvas — mask will clip it
-    cd.ellipse([ex0, ey0, ex1, ey1], fill=(255, 255, 255, 255))
+    # Sclera
+    ec.ellipse([ex0, ey0, ex1, ey1], fill=_SCLERA)
 
-    # Outer iris ring — deep forest green
-    iris_r = int(s * 0.21)
-    cd.ellipse(
-        [cx - iris_r, cy - iris_r, cx + iris_r, cy + iris_r],
-        fill=(27, 94, 32, 255),
-    )
-
-    # Mid iris — vibrant green
-    mid_r = int(s * 0.17)
-    cd.ellipse(
-        [cx - mid_r, cy - mid_r, cx + mid_r, cy + mid_r],
-        fill=(46, 204, 113, 255),
-    )
-
-    # Inner iris ring — slightly lighter for depth
-    inner_r = int(s * 0.13)
-    cd.ellipse(
-        [cx - inner_r, cy - inner_r, cx + inner_r, cy + inner_r],
-        fill=(39, 174, 96, 255),
-    )
+    # Iris gradient (multiple concentric filled circles, outer → inner)
+    steps = len(_IRIS_STEPS)
+    for i, colour in enumerate(_IRIS_STEPS):
+        frac = (steps - i) / steps
+        r = int(iris_r * frac)
+        ec.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*colour, 255))
 
     # Pupil
-    pupil_r = int(s * 0.085)
-    cd.ellipse(
+    pupil_r = int(s * 0.100)
+    ec.ellipse(
         [cx - pupil_r, cy - pupil_r, cx + pupil_r, cy + pupil_r],
-        fill=(10, 10, 10, 255),
+        fill=_PUPIL,
     )
 
-    # Catchlight (white highlight)
-    hl_r = max(3, int(s * 0.038))
-    hl_x = cx + int(s * 0.07)
-    hl_y = cy - int(s * 0.07)
-    cd.ellipse(
-        [hl_x - hl_r, hl_y - hl_r, hl_x + hl_r, hl_y + hl_r],
-        fill=(255, 255, 255, 255),
+    # Primary catchlight — upper-right, bright
+    hl1_r = max(2, int(s * 0.040))
+    hl1_x = cx + int(s * 0.072)
+    hl1_y = cy - int(s * 0.072)
+    ec.ellipse(
+        [hl1_x - hl1_r, hl1_y - hl1_r, hl1_x + hl1_r, hl1_y + hl1_r],
+        fill=(*_WHITE, 230),
     )
 
-    # ── alpha mask — only the eye-lens shape is visible ──────────────
-    mask = Image.new("L", (s, s), 0)
-    md = ImageDraw.Draw(mask)
-    md.ellipse([ex0, ey0, ex1, ey1], fill=255)
+    # Secondary catchlight — lower-left, dim
+    hl2_r = max(1, int(s * 0.018))
+    hl2_x = cx - int(s * 0.082)
+    hl2_y = cy + int(s * 0.056)
+    ec.ellipse(
+        [hl2_x - hl2_r, hl2_y - hl2_r, hl2_x + hl2_r, hl2_y + hl2_r],
+        fill=(*_WHITE, 100),
+    )
 
-    # Composite: content visible only inside lens mask
-    result = Image.new("RGBA", (s, s), (0, 0, 0, 0))
-    result.paste(content, mask=mask)
+    # ── 4. Mask eye content to almond shape ──────────────────────────────────
+    eye_mask = Image.new("L", (s, s), 0)
+    ImageDraw.Draw(eye_mask).ellipse([ex0, ey0, ex1, ey1], fill=255)
 
-    # Eyelid border drawn on top of composited image
-    border = ImageDraw.Draw(result)
-    border_w = max(2, int(s * 0.025))
-    border.ellipse(
+    eye_masked = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    eye_masked.paste(eye_content, mask=eye_mask)
+
+    # ── 5. Eyelid border ─────────────────────────────────────────────────────
+    border_layer = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+    border_w = max(2, int(s * 0.022))
+    ImageDraw.Draw(border_layer).ellipse(
         [ex0, ey0, ex1, ey1],
-        outline=(13, 77, 13, 255),
+        outline=_BORDER,
         width=border_w,
     )
 
-    # Eyelash accent lines (upper lid, 5 lashes)
-    lash_color = (13, 77, 13, 200)
-    lash_len = int(s * 0.07)
-    lash_w = max(2, int(s * 0.018))
-    num_lashes = 5
-    for i in range(num_lashes):
-        angle_deg = 180 + 30 + i * (120 // (num_lashes - 1))  # 210..330°
-        angle_rad = math.radians(angle_deg)
-        # Start point: on the upper eyelid ellipse edge
-        sx = int(cx + (ew // 2) * math.cos(angle_rad))
-        sy = int(cy + (eh // 2) * math.sin(angle_rad))
-        # End point: slightly outward
-        ex = int(sx + lash_len * math.cos(angle_rad))
-        ey_end = int(sy + lash_len * math.sin(angle_rad))
-        border.line([sx, sy, ex, ey_end], fill=lash_color, width=lash_w)
+    # ── 6. Composite ─────────────────────────────────────────────────────────
+    result = Image.alpha_composite(base, eye_masked)
+    result = Image.alpha_composite(result, border_layer)
 
-    # Downsample with high-quality LANCZOS filter for smooth antialiasing
     return result.resize((size, size), Image.LANCZOS)
 
 
@@ -114,9 +148,8 @@ def main() -> None:
     ico_path = assets_dir / "icon.ico"
     png_path = assets_dir / "icon_256.png"
 
-    frames = [_make_eye(sz) for sz in sizes]
+    frames = [_make_icon(sz) for sz in sizes]
 
-    # Save multi-size .ico
     frames[0].save(
         ico_path,
         format="ICO",
@@ -125,7 +158,6 @@ def main() -> None:
     )
     print(f"[OK] {ico_path}")
 
-    # Save 256px PNG (for preview / README)
     frames[-1].save(png_path, format="PNG")
     print(f"[OK] {png_path}")
 

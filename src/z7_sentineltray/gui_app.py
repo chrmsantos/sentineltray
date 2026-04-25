@@ -766,6 +766,7 @@ class StatusWindow:
     def show(self) -> None:
         self._visible = True
         self._root.deiconify()
+        self._root.state("zoomed")
         self._root.lift()
         self._root.focus_force()
         self._schedule_refresh()
