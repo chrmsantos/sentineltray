@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from __future__ import annotations
 
@@ -32,11 +32,11 @@ from .tray_app import TrayIcon, set_console_visible
 
 LOGGER = logging.getLogger(__name__)
 
-_PROJECT_REPO_URL = "https://github.com/chrmsantos/sentineltray"
+_PROJECT_REPO_URL = "https://github.com/chrmsantos/z7_sentineltray"
 
 
 def _clear_stored_smtp_password(index: int) -> None:
-    env_key = f"SENTINELTRAY_SMTP_PASSWORD_{index}"
+    env_key = f"Z7_SENTINELTRAY_SMTP_PASSWORD_{index}"
     if env_key in os.environ:
         os.environ.pop(env_key, None)
     secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
@@ -121,7 +121,7 @@ def _create_config_editor() -> tuple[
                         continue
                 if template_content is None:
                     template_content = (
-                        "# ZWave SentinelTray - configuração local\n"
+                        "# Z7_SentinelTray - configuração local\n"
                         "# Preencha os campos obrigatórios antes de rodar.\n"
                     )
                 target_path.write_text(template_content, encoding="utf-8")
@@ -258,7 +258,7 @@ def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
             summary.append(f"{label}={count}")
         failure_line = "Falhas por monitor: " + ", ".join(summary)
     return [
-        "ZWave SentinelTray - Console",
+        "Z7_SentinelTray - Console",
         f"Status atual: {state}",
         f"ERROS: {snapshot.error_count}",
         *_email_address_lines(config),
@@ -427,7 +427,7 @@ def run_console(config: AppConfig) -> None:
                     if not password or not password.strip():
                         continue
                     password = password.strip()
-                    os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
+                    os.environ[f"Z7_SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
                     updated_any = True
                     try:
                         secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
@@ -496,7 +496,7 @@ def run_console_config_error(error_details: str) -> None:
     on_open, finalize_config_edit, close_editor = _create_config_editor()
     details_path = _write_config_error_details(error_details)
     local_path = get_user_data_dir() / "config.local.yaml"
-    supports_smtp_prompt = "SENTINELTRAY_SMTP_PASSWORD" in error_details
+    supports_smtp_prompt = "Z7_SENTINELTRAY_SMTP_PASSWORD" in error_details
     smtp_usernames: list[tuple[int, str]] = []
     try:
         config = load_config(str(local_path))
@@ -510,7 +510,7 @@ def run_console_config_error(error_details: str) -> None:
     try:
         while True:
             clear_screen()
-            print("ZWave SentinelTray - Erro de Configuração")
+            print("Z7_SentinelTray - Erro de Configuração")
             print("")
             print(error_details)
             print("")
@@ -540,7 +540,7 @@ def run_console_config_error(error_details: str) -> None:
                         if not password or not password.strip():
                             continue
                         password = password.strip()
-                        os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
+                        os.environ[f"Z7_SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
                         try:
                             secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
                             save_secret(secret_path, password)
@@ -553,7 +553,7 @@ def run_console_config_error(error_details: str) -> None:
                 else:
                     password = prompt_smtp_password_gui("(não definido no config)", 0)
                     if password and password.strip():
-                        os.environ["SENTINELTRAY_SMTP_PASSWORD"] = password.strip()
+                        os.environ["Z7_SENTINELTRAY_SMTP_PASSWORD"] = password.strip()
                 try:
                     config = load_config(str(local_path))
                 except Exception as exc:

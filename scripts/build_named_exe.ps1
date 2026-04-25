@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $logDir = Join-Path $root "config\logs\scripts"
@@ -50,7 +50,7 @@ try {
 $distPath = Join-Path $root "dist"
 $workPath = Join-Path $root "build\pyinstaller"
 
-$specFile = Join-Path $root "SentinelTray.spec"
+$specFile = Join-Path $root "Z7_SentinelTray.spec"
 
 try {
     & $python -m PyInstaller --noconfirm --clean `
@@ -60,10 +60,10 @@ try {
     throw
 }
 
-$exePath = Join-Path $distPath "SentinelTray.exe"
+$exePath = Join-Path $distPath "Z7_SentinelTray.exe"
 if (Test-Path $exePath) {
     Write-Log "INFO" "Build complete: $exePath"
-    Write-Log "INFO" "Task Manager will show: SentinelTray.exe"
+    Write-Log "INFO" "Task Manager will show: Z7_SentinelTray.exe"
 } else {
     Write-Log "ERROR" "Executable not found after build: $exePath"
     throw "Build failed"

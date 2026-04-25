@@ -1,8 +1,8 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 import pytest
 
-from sentineltray.config import load_config
+from z7_sentineltray.config import load_config
 
 
 def test_invalid_regex_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -23,7 +23,7 @@ def test_invalid_regex_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
                 "      to_addresses: []",
                 "      use_tls: true",
                 "      timeout_seconds: 10",
-                "      subject: 'SentinelTray Notification'",
+                "      subject: 'Z7_SentinelTray Notification'",
                 "      retry_attempts: 0",
                 "      retry_backoff_seconds: 0",
                 "poll_interval_seconds: 1",
@@ -33,7 +33,7 @@ def test_invalid_regex_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
                 "debounce_seconds: 0",
                 "max_history: 10",
                 "state_file: 'state.json'",
-                "log_file: 'logs/sentineltray.log'",
+                "log_file: 'logs/z7_sentineltray.log'",
                 "log_level: 'INFO'",
                 "log_console_level: 'WARNING'",
                 "log_console_enabled: true",

@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 
 import yaml
 
-from sentineltray.config_reconcile import (
+from z7_sentineltray.config_reconcile import (
     apply_template_to_config_text,
     ensure_local_config_from_template,
     reconcile_template_config,

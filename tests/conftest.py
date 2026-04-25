@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import shutil
@@ -24,8 +24,8 @@ def _isolate_runtime_dirs(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
         dst_config.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_example, dst_config / "config.local.yaml.example")
 
-    monkeypatch.setenv("SENTINELTRAY_DATA_DIR", str(data_dir))
-    monkeypatch.setenv("SENTINELTRAY_ROOT", str(root_dir))
+    monkeypatch.setenv("Z7_SENTINELTRAY_DATA_DIR", str(data_dir))
+    monkeypatch.setenv("Z7_SENTINELTRAY_ROOT", str(root_dir))
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "LocalAppData"))
     if "USERPROFILE" not in os.environ:
         monkeypatch.setenv("USERPROFILE", str(tmp_path))

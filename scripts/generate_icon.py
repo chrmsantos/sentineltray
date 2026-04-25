@@ -1,4 +1,4 @@
-"""Generate assets/icon.ico — green eye icon for SentinelTray.
+﻿"""Generate assets/icon.ico — green eye icon for Z7_SentinelTray.
 
 Run from the repository root:
     python scripts/generate_icon.py

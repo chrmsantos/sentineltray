@@ -1,5 +1,16 @@
 ﻿# Changelog
 
+## 2026-04-24 (5.5.0)
+
+- Novo: switcher claro/escuro na barra de rodapé da janela de status — alterna entre o tema escuro (GitHub-dark) e o tema claro (GitHub-light) em tempo real. A preferência é persistida em `ui_prefs.json` e restaurada na próxima abertura.
+- Novo: todos os textos dos e-mails enviados ao usuário (alertas, erros, healthcheck, verificação manual) traduzidos para o português do Brasil. O corpo do healthcheck agora exibe rótulos como "Janela monitorada", "Última verificação", "Disjuntores ativos", etc.
+- Correção: caminhos do arquivo `Z7_SentinelTray.spec` atualizados para o diretório correto do projeto (`Z7\Apps\Z7_SentinelTray`).
+
+## 2026-04-24 (5.4.0)
+
+- Release: projeto renomeado para Z7_SentinelTray (pacote Python `z7_sentineltray`).
+- Promoção do candidato 5.4.0 rc.1 para versão estável.
+
 ## 2026-04-18 (5.1.0)
 
 - Novo: botão "Restaurar valores padrão" no editor de configuração — restaura o conteúdo do editor para o template oficial (`config.local.yaml.example`) com confirmação prévia.

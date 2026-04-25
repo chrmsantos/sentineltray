@@ -1,4 +1,4 @@
-from sentineltray.status import StatusStore, format_status
+﻿from z7_sentineltray.status import StatusStore, format_status
 
 
 def test_status_store_snapshot() -> None:
@@ -29,9 +29,9 @@ def test_status_store_snapshot() -> None:
         phrase_regex="ALERT",
         poll_interval_seconds=60,
     )
-    assert "Running: yes" in text
+    assert "Em execução: sim" in text
     assert "19-01-2026 - 23:00" in text
-    assert "Monitored window: APP" in text
-    assert "Monitored text: ALERT" in text
-    assert "Next check: 19-01-2026 - 23:01" in text
-    assert "Last detection: 19-01-2026 - 23:00" in text
+    assert "Janela monitorada: APP" in text
+    assert "Texto monitorado: ALERT" in text
+    assert "Próxima verificação: 19-01-2026 - 23:01" in text
+    assert "Última detecção: 19-01-2026 - 23:00" in text

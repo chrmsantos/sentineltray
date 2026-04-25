@@ -1,10 +1,10 @@
-import sys
+﻿import sys
 from pathlib import Path
 
 import pytest
 
-from sentineltray import entrypoint
-from sentineltray.config import get_user_data_dir
+from z7_sentineltray import entrypoint
+from z7_sentineltray.config import get_user_data_dir
 
 
 def test_ensure_local_override_creates_template_when_missing(
@@ -38,7 +38,7 @@ def test_main_requires_local_override_when_missing(
     monkeypatch.setattr(sys, "argv", ["main.py"])
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.setenv(
-        "SENTINELTRAY_ROOT",
+        "Z7_SENTINELTRAY_ROOT",
         str(tmp_path),
     )
     monkeypatch.setattr(entrypoint, "_setup_boot_logging", lambda: None)

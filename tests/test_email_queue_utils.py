@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sentineltray.email_queue_utils import (
+from z7_sentineltray.email_queue_utils import (
     build_new_item,
     compute_next_attempt,
     compute_oldest_age_seconds,

@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 
-from sentineltray.path_utils import ensure_under_root, resolve_log_path, resolve_sensitive_path
+from z7_sentineltray.path_utils import ensure_under_root, resolve_log_path, resolve_sensitive_path
 
 
 def test_resolve_sensitive_path_under_base(tmp_path: Path) -> None:

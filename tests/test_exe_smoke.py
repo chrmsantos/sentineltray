@@ -1,4 +1,4 @@
-"""Smoke tests for the built SentinelTray.exe.
+﻿"""Smoke tests for the built Z7_SentinelTray.exe.
 
 These tests launch the actual compiled executable and verify:
 1. --version exits cleanly with code 0.
@@ -25,11 +25,11 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 
-EXE_PATH = Path(__file__).resolve().parents[1] / "dist" / "SentinelTray.exe"
+EXE_PATH = Path(__file__).resolve().parents[1] / "dist" / "Z7_SentinelTray.exe"
 
 _MINIMAL_CONFIG = textwrap.dedent("""\
 monitors:
-- window_title_regex: 'SentinelTray_SmokeTest_DoesNotExist'
+- window_title_regex: 'Z7_SentinelTray_SmokeTest_DoesNotExist'
   phrase_regex: 'SMOKETEST'
   email:
     smtp_host: '127.0.0.1'
@@ -52,7 +52,7 @@ debounce_seconds: 0
 max_history: 10
 
 state_file: state.json
-log_file: logs/sentineltray.log
+log_file: logs/z7_sentineltray.log
 log_level: DEBUG
 log_console_level: WARNING
 log_console_enabled: false
@@ -89,7 +89,7 @@ def _exe_available() -> bool:
 
 def _setup_root(tmp_path: Path) -> Path:
     """Create a minimal project root with working config inside tmp_path."""
-    root = tmp_path / "sentineltray_root"
+    root = tmp_path / "z7_sentineltray_root"
     config_dir = root / "config"
     log_dir = config_dir / "logs"
     config_dir.mkdir(parents=True)
@@ -101,7 +101,7 @@ def _setup_root(tmp_path: Path) -> Path:
 def _collect_run_logs(root: Path) -> list[Path]:
     """Return all run-specific log files produced under config/logs."""
     log_dir = root / "config" / "logs"
-    return sorted(log_dir.glob("sentineltray_*.log"))
+    return sorted(log_dir.glob("z7_sentineltray_*.log"))
 
 
 def _parse_log_lines(log_files: list[Path]) -> list[dict]:
@@ -141,13 +141,13 @@ def _run_exe(
     kill_after: float | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """
-    Launch SentinelTray.exe with SENTINELTRAY_ROOT pointing to *root*.
+    Launch Z7_SentinelTray.exe with Z7_SENTINELTRAY_ROOT pointing to *root*.
 
     If kill_after is set, the process is given that many seconds to start,
     then the entire process tree is killed (including children that may have
     inherited pipe handles), and the result is collected.
     """
-    env = {**os.environ, "SENTINELTRAY_ROOT": str(root), "SENTINELTRAY_DATA_DIR": str(root / "config")}
+    env = {**os.environ, "Z7_SENTINELTRAY_ROOT": str(root), "Z7_SENTINELTRAY_DATA_DIR": str(root / "config")}
     if kill_after is not None:
         proc = subprocess.Popen(
             [str(EXE_PATH), *args],
@@ -204,8 +204,8 @@ def test_exe_version_flag(tmp_path: Path) -> None:
         f"stderr: {result.stderr!r}"
     )
     combined = result.stdout + result.stderr
-    assert "SentinelTray" in combined, (
-        f"Expected 'SentinelTray' in output, got:\n{combined!r}"
+    assert "Z7_SentinelTray" in combined, (
+        f"Expected 'Z7_SentinelTray' in output, got:\n{combined!r}"
     )
 
 
@@ -259,14 +259,14 @@ def test_exe_startup_log_has_initialized_marker(tmp_path: Path) -> None:
 
 @pytest.mark.skipif(not _exe_available(), reason=f"Executable not found: {EXE_PATH}")
 def test_exe_startup_log_has_started_marker(tmp_path: Path) -> None:
-    """The log must contain the 'SentinelTray started' marker."""
+    """The log must contain the 'Z7_SentinelTray started' marker."""
     root = _setup_root(tmp_path)
     _run_exe(root, kill_after=20.0)
     log_files = _collect_run_logs(root)
     assert log_files, f"No log files found under {root / 'config' / 'logs'}"
     all_text = "\n".join(p.read_text(encoding="utf-8", errors="replace") for p in log_files)
-    assert "SentinelTray started" in all_text, (
-        "Expected 'SentinelTray started' in logs.\nLog content:\n" + all_text[:2000]
+    assert "Z7_SentinelTray started" in all_text, (
+        "Expected 'Z7_SentinelTray started' in logs.\nLog content:\n" + all_text[:2000]
     )
 
 

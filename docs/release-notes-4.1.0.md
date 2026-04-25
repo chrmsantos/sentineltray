@@ -1,4 +1,4 @@
-# Release notes — 4.1.0 (2026-04-17)
+﻿# Release notes — 4.1.0 (2026-04-17)
 
 ## Destaques
 
@@ -8,7 +8,7 @@ Primeira versão **estável** da linha 4.x. Consolida todas as funcionalidades d
 
 - **GUI — janela aberta ao iniciar**: o app abre com a janela de status visível na inicialização, em vez de iniciar minimizado somente na bandeja do sistema.
 - **GUI — autor no rodapé**: nome do autor *Christian Martin dos Santos* exibido no rodapé da janela de status.
-- **Metadados**: campo `authors` adicionado ao `pyproject.toml`; constante `__author__` exposta em `sentineltray/__init__.py`.
+- **Metadados**: campo `authors` adicionado ao `pyproject.toml`; constante `__author__` exposta em `z7_sentineltray/__init__.py`.
 
 ## Funcionalidades acumuladas desde 3.0.0
 
@@ -39,10 +39,10 @@ Primeira versão **estável** da linha 4.x. Consolida todas as funcionalidades d
 
 - Senhas SMTP armazenadas via Windows DPAPI (nunca em texto simples).
 - Logs redactam e-mails e caminhos locais; hashes para resumos de correspondências.
-- Dados sensíveis isolados em `%LOCALAPPDATA%\ZWave\Tmp\SentinelTray\Config`.
+- Dados sensíveis isolados em `%LOCALAPPDATA%\ZWave\Tmp\Z7_SentinelTray\Config`.
 
 ### Outros
 
 - Interface totalmente em português do Brasil.
 - Flags `--version` e `--help` na linha de comando.
-- Executável `SentinelTray.exe` sem console (sem flash ao iniciar).
+- Executável `Z7_SentinelTray.exe` sem console (sem flash ao iniciar).

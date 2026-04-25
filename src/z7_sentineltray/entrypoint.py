@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import atexit
 import ctypes
@@ -44,18 +44,18 @@ def _load_config_template() -> str:
 
 def _pid_file_path() -> Path:
     base = get_user_data_dir()
-    return base / "sentineltray.pid"
+    return base / "z7_sentineltray.pid"
 
 
 def _show_already_running_notice() -> None:
     message = (
-        "ZWave SentinelTray já está em execução.\n\n"
+        "Z7_SentinelTray já está em execução.\n\n"
     )
     try:
         ctypes.windll.user32.MessageBoxW(
             None,
             message,
-            "ZWave SentinelTray",
+            "Z7_SentinelTray",
             0x00000040,
         )
     except Exception:
@@ -73,7 +73,7 @@ def _ensure_single_instance_mutex() -> bool:
     # each other while still preventing two instances from the same root.
     root_hash = hashlib.sha256(str(get_project_root()).encode()).hexdigest()[:8]
     for scope in ("Global", "Local"):
-        name = f"{scope}\\SentinelTrayMutex_{root_hash}"
+        name = f"{scope}\\Z7_SentinelTrayMutex_{root_hash}"
         try:
             mutex = kernel32.CreateMutexW(None, False, name)
             _mutex_handle = mutex
@@ -180,9 +180,9 @@ def _terminate_existing_instance() -> bool:
         )
         return False
     process_name = _get_process_name(pid_value)
-    if process_name is not None and "sentineltray" not in process_name and "python" not in process_name:
+    if process_name is not None and "z7_sentineltray" not in process_name and "python" not in process_name:
         LOGGER.warning(
-            "PID %s belongs to '%s', not SentinelTray; skipping termination to avoid killing an unrelated process",
+            "PID %s belongs to '%s', not Z7_SentinelTray; skipping termination to avoid killing an unrelated process",
             pid_value,
             process_name,
             extra={"category": "startup"},
@@ -240,7 +240,7 @@ def _ensure_local_override(path: Path) -> None:
             "Configuration template created.\n"
             f"File: {path}\n"
             "Fill in your values (SMTP host, credentials, window title, etc.), "
-            "save, and restart ZWave SentinelTray."
+            "save, and restart Z7_SentinelTray."
         )
 
     content = path.read_text(encoding="utf-8").strip()
@@ -259,7 +259,7 @@ def _handle_config_error(path: Path, exc: Exception) -> str:
         f"Config file: {path}\n"
         f"Details: {reason}\n\n"
         "Review the YAML formatting and required fields.\n"
-        "After fixing, reopen ZWave SentinelTray.\n\n"
+        "After fixing, reopen Z7_SentinelTray.\n\n"
         "Quick actions:\n"
         "- Use the console menu: Config (opens an editable temporary file).\n"
         "- Use the console menu: Detalhes (shows this message).\n"
@@ -274,11 +274,11 @@ def _reject_extra_args(args: list[str]) -> None:
         return
     if args[0] in ("--version", "-V"):
         from . import __version_label__, __release_date__
-        print(f"ZWave SentinelTray {__version_label__}  ({__release_date__})")
+        print(f"Z7_SentinelTray {__version_label__}  ({__release_date__})")
         raise SystemExit(0)
     if args[0] in ("--help", "-h"):
         print(
-            "ZWave SentinelTray — monitor de janelas com alertas por e-mail.\n"
+            "Z7_SentinelTray — monitor de janelas com alertas por e-mail.\n"
             "\n"
             "Uso: python main.py [--version | --help]\n"
             "  --version, -V   Exibe versão e encerra.\n"
@@ -286,7 +286,7 @@ def _reject_extra_args(args: list[str]) -> None:
         )
         raise SystemExit(0)
     raise SystemExit(
-        "Usage: run ZWave SentinelTray without arguments.\n"
+        "Usage: run Z7_SentinelTray without arguments.\n"
         f"Arguments received: {' '.join(args)}"
     )
 
@@ -297,7 +297,7 @@ def _setup_boot_logging() -> None:
     try:
         log_root = get_user_log_dir()
         log_root.mkdir(parents=True, exist_ok=True)
-        boot_log = log_root / "sentineltray_boot.log"
+        boot_log = log_root / "z7_sentineltray_boot.log"
         setup_logging(
             str(boot_log),
             log_level="INFO",
@@ -323,7 +323,7 @@ def _legacy_data_dir() -> Path | None:
     candidates: list[Path] = []
     local_appdata = os.environ.get("LOCALAPPDATA")
     if local_appdata:
-        candidates.append(Path(local_appdata) / "ZWave" / "SentinelTray" / "config")
+        candidates.append(Path(local_appdata) / "ZWave" / "Z7_SentinelTray" / "config")
     else:
         user_root = os.environ.get("USERPROFILE")
         if user_root:
@@ -333,7 +333,7 @@ def _legacy_data_dir() -> Path | None:
                 / "Local"
                 / "ZWave"
                 / "Tmp"
-                / "SentinelTray"
+                / "Z7_SentinelTray"
                 / "Config"
             )
     candidates.append(get_project_root() / "config")
@@ -387,7 +387,7 @@ def _run_startup_integrity_checks(local_path: Path) -> None:
 
 
 def _clear_stored_smtp_password(index: int) -> None:
-    env_key = f"SENTINELTRAY_SMTP_PASSWORD_{index}"
+    env_key = f"Z7_SENTINELTRAY_SMTP_PASSWORD_{index}"
     if env_key in os.environ:
         os.environ.pop(env_key, None)
     secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
@@ -434,23 +434,23 @@ def _ensure_windows() -> None:
     if sys.platform == "win32":
         return
     LOGGER.error(
-        "Unsupported platform: %s (ZWave SentinelTray requires Windows)",
+        "Unsupported platform: %s (Z7_SentinelTray requires Windows)",
         sys.platform,
         extra={"category": "startup"},
     )
-    raise SystemExit("ZWave SentinelTray requires Windows.")
+    raise SystemExit("Z7_SentinelTray requires Windows.")
 
 
 def _missing_smtp_passwords(config: AppConfig) -> list[tuple[int, str]]:
     missing: list[tuple[int, str]] = []
-    global_password = os.environ.get("SENTINELTRAY_SMTP_PASSWORD", "").strip()
+    global_password = os.environ.get("Z7_SENTINELTRAY_SMTP_PASSWORD", "").strip()
     for index, monitor in enumerate(config.monitors, start=1):
         username = str(monitor.email.smtp_username or "").strip()
         if not username:
             continue
         if str(monitor.email.smtp_password or "").strip():
             continue
-        indexed_password = os.environ.get(f"SENTINELTRAY_SMTP_PASSWORD_{index}", "").strip()
+        indexed_password = os.environ.get(f"Z7_SENTINELTRAY_SMTP_PASSWORD_{index}", "").strip()
         if indexed_password or global_password:
             continue
         missing.append((index, username))
@@ -468,7 +468,7 @@ def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
                 raise SystemExit("Senha SMTP não informada.")
             password = password.strip()
             if password:
-                os.environ[f"SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
+                os.environ[f"Z7_SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
                 try:
                     secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
                     save_secret(secret_path, password)
@@ -517,9 +517,9 @@ def _first_run_gui_setup(path: Path) -> None:
 
     if not saved[0]:
         raise SystemExit(
-            "ZWave SentinelTray requer configuração para iniciar.\n"
+            "Z7_SentinelTray requer configuração para iniciar.\n"
             f"Arquivo: {path}\n"
-            "Preencha os valores e salve para iniciar o ZWave SentinelTray."
+            "Preencha os valores e salve para iniciar o Z7_SentinelTray."
         )
 
 

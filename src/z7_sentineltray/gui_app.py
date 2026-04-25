@@ -1,5 +1,6 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
+import json
 import logging
 import webbrowser
 from datetime import datetime, timedelta, timezone
@@ -16,7 +17,7 @@ from .status import StatusStore, format_timestamp
 from .tray_app import TrayIcon, set_console_visible
 
 LOGGER = logging.getLogger(__name__)
-_PROJECT_REPO_URL = "https://github.com/chrmsantos/sentineltray"
+_PROJECT_REPO_URL = "https://github.com/chrmsantos/z7_sentineltray"
 
 # ── GitHub-dark-inspired palette ─────────────────────────────────────────────
 _BG      = "#0d1117"   # main background
@@ -34,6 +35,82 @@ _WHITE   = "#e6edf3"   # bright text
 _BTN_DIM = "#21262d"   # dim button bg
 
 
+# ── Theme palettes ────────────────────────────────────────────────────────────
+_DARK_PALETTE: dict[str, str] = {
+    "bg": _BG, "surface": _SURFACE, "card": _CARD, "border": _BORDER,
+    "green": _GREEN, "green2": _GREEN2, "red": _RED, "amber": _AMBER,
+    "blue": _BLUE, "text": _TEXT, "muted": _MUTED, "white": _WHITE,
+    "btn_dim": _BTN_DIM, "exit_btn": "#5a1a1a", "select_bg": "#264f78",
+}
+
+_LIGHT_PALETTE: dict[str, str] = {
+    "bg": "#ffffff", "surface": "#f6f8fa", "card": "#ffffff", "border": "#d0d7de",
+    "green": "#1a7f37", "green2": "#2da44e", "red": "#cf222e", "amber": "#9a6700",
+    "blue": "#0969da", "text": "#1f2328", "muted": "#656d76", "white": "#1f2328",
+    "btn_dim": "#e6eaef", "exit_btn": "#ffd8d8", "select_bg": "#b6d3fb",
+}
+
+
+def _apply_theme_walk(root: tk.Widget, old_pal: dict, new_pal: dict) -> None:
+    """Recursively remap palette colors across all widgets."""
+    color_map = {v: new_pal[k] for k, v in old_pal.items()}
+    _OPTS = ("bg", "fg", "activebackground", "activeforeground",
+             "insertbackground", "selectbackground")
+
+    def _remap(w: tk.Widget) -> None:
+        for opt in _OPTS:
+            try:
+                cur = w.cget(opt)
+                if cur in color_map:
+                    w.configure(**{opt: color_map[cur]})
+            except tk.TclError:
+                pass
+        for child in w.winfo_children():
+            _remap(child)
+
+    _remap(root)
+
+
+class _ThemeState:
+    """Persisted holder for the active UI theme."""
+
+    def __init__(self) -> None:
+        self._dark = True
+        self._load()
+
+    def _pref_path(self) -> Path:
+        return get_user_data_dir() / "ui_prefs.json"
+
+    def _load(self) -> None:
+        try:
+            data = json.loads(self._pref_path().read_text(encoding="utf-8"))
+            self._dark = bool(data.get("dark_theme", True))
+        except Exception:
+            self._dark = True
+
+    def _save(self) -> None:
+        try:
+            p = self._pref_path()
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(json.dumps({"dark_theme": self._dark}), encoding="utf-8")
+        except Exception:
+            pass
+
+    @property
+    def is_dark(self) -> bool:
+        return self._dark
+
+    @property
+    def palette(self) -> dict:
+        return _DARK_PALETTE if self._dark else _LIGHT_PALETTE
+
+    def toggle(self, root: tk.Widget) -> None:
+        old = self.palette
+        self._dark = not self._dark
+        self._save()
+        _apply_theme_walk(root, old, self.palette)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # SMTP password dialog
 # ─────────────────────────────────────────────────────────────────────────────
@@ -49,7 +126,7 @@ def prompt_smtp_password_gui(username: str, monitor_index: int) -> str | None:
     root.withdraw()
 
     dialog = tk.Toplevel(root)
-    dialog.title("ZWave SentinelTray — Senha SMTP")
+    dialog.title("Z7_SentinelTray — Senha SMTP")
     dialog.configure(bg=_BG)
     dialog.resizable(False, False)
     dialog.grab_set()
@@ -146,9 +223,11 @@ class ConfigEditorWindow:
         parent: tk.Tk,
         *,
         on_saved: Callable[[AppConfig], None],
+        theme_state: "_ThemeState | None" = None,
     ) -> None:
         self._parent = parent
         self._on_saved = on_saved
+        self._theme = theme_state
         self._win: tk.Toplevel | None = None
         self._text: tk.Text | None = None
         self._lineno: tk.Text | None = None
@@ -172,7 +251,7 @@ class ConfigEditorWindow:
     def _build(self) -> None:
         win = tk.Toplevel(self._parent)
         self._win = win
-        win.title("ZWave SentinelTray — Editor de Configuração")
+        win.title("Z7_SentinelTray — Editor de Configuração")
         win.configure(bg=_BG)
         win.geometry("860x620")
         win.minsize(600, 400)
@@ -275,6 +354,10 @@ class ConfigEditorWindow:
         win.bind("<Control-s>", lambda e: self._save_apply())
         win.bind("<Escape>", lambda e: win.destroy())
 
+        # Apply light theme if active
+        if self._theme is not None and not self._theme.is_dark:
+            _apply_theme_walk(win, _DARK_PALETTE, _LIGHT_PALETTE)
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _make_btn(self, parent: tk.Frame, text: str,
@@ -336,7 +419,7 @@ class ConfigEditorWindow:
                 except Exception:
                     continue
             if template_content is None:
-                template_content = "# ZWave SentinelTray — configuração local\n"
+                template_content = "# Z7_SentinelTray — configuração local\n"
             self._cfg_path.write_text(template_content, encoding="utf-8")
         try:
             content = self._cfg_path.read_text(encoding="utf-8")
@@ -429,7 +512,7 @@ class ConfigEditorWindow:
 
 
 class StatusWindow:
-    """Beautiful tkinter status window for SentinelTray."""
+    """Beautiful tkinter status window for Z7_SentinelTray."""
 
     _REFRESH_MS = 1000
 
@@ -443,6 +526,7 @@ class StatusWindow:
         on_manual_scan: Callable[[], None],
         on_open_config: Callable[[], None],
         on_exit: Callable[[], None],
+        theme_state: "_ThemeState | None" = None,
     ) -> None:
         self._root = root
         self._status = status
@@ -450,6 +534,7 @@ class StatusWindow:
         self._on_manual_scan = on_manual_scan
         self._on_open_config = on_open_config
         self._on_exit = on_exit
+        self._theme = theme_state or _ThemeState()
         self._visible = False
         self._after_id: str | None = None
         self._vars: dict[str, tk.StringVar] = {}
@@ -457,15 +542,18 @@ class StatusWindow:
         self._monitors_content: tk.Frame | None = None
         self._status_dot: tk.Label | None = None
         self._status_text: tk.Label | None = None
+        self._theme_btn: tk.Button | None = None
         self._uptime_var = tk.StringVar(value="00:00:00")
         self._build_ui()
+        if not self._theme.is_dark:
+            _apply_theme_walk(self._root, _DARK_PALETTE, _LIGHT_PALETTE)
 
     # ── UI Construction ───────────────────────────────────────────────────────
 
     def _build_ui(self) -> None:
         r = self._root
         from . import __version_label__, __release_date__
-        r.title(f"ZWave SentinelTray {__version_label__} ({__release_date__}) — Status")
+        r.title(f"Z7_SentinelTray {__version_label__} ({__release_date__}) — Status")
         r.configure(bg=_BG)
         r.resizable(True, True)
         r.minsize(900, 480)
@@ -496,7 +584,7 @@ class StatusWindow:
         title_frame = tk.Frame(header, bg=_SURFACE)
         title_frame.pack(side=tk.LEFT)
         tk.Label(
-            title_frame, text="ZWave SentinelTray",
+            title_frame, text="Z7_SentinelTray",
             font=("Segoe UI", 15, "bold"), fg=_GREEN, bg=_SURFACE, anchor="w"
         ).pack(anchor="w")
         tk.Label(
@@ -601,7 +689,10 @@ class StatusWindow:
         self._make_btn(footer, "↗  Repositório",
                        lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
             side=tk.LEFT)
-        tk.Label(footer, text="Christian Martin dos Santos",
+        theme_label = "☀  Tema Claro" if self._theme.is_dark else "🌙  Tema Escuro"
+        self._theme_btn = self._make_btn(footer, theme_label, self._toggle_theme, _BTN_DIM)
+        self._theme_btn.pack(side=tk.LEFT, padx=(6, 0))
+        tk.Label(footer, text="Licenced under GPLv3 •  Câmara Municipal de Santa Bárbara d'Oeste/SP  •",
                  font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE).pack(
             side=tk.LEFT, padx=(12, 0))
         self._make_btn(footer, "Sair  ✕", self._on_exit, "#5a1a1a").pack(
@@ -716,11 +807,11 @@ class StatusWindow:
         if self._status_dot is None or self._status_text is None:
             return
         if snap.running:
-            self._status_dot.configure(fg=_GREEN)
-            self._status_text.configure(text="EXECUTANDO", fg=_GREEN)
+            self._status_dot.configure(fg=self._theme.palette["green"])
+            self._status_text.configure(text="EXECUTANDO", fg=self._theme.palette["green"])
         else:
-            self._status_dot.configure(fg=_RED)
-            self._status_text.configure(text="PARADO", fg=_RED)
+            self._status_dot.configure(fg=self._theme.palette["red"])
+            self._status_text.configure(text="PARADO", fg=self._theme.palette["red"])
 
         # ── Uptime ────────────────────────────────────────────────────────────
         if snap.started_at is not None:
@@ -746,17 +837,17 @@ class StatusWindow:
         self._set("error_count", str(snap.error_count))
         lbl = self._value_labels.get("error_count")
         if lbl:
-            lbl.configure(fg=_RED if snap.error_count else _GREEN)
+            lbl.configure(fg=self._theme.palette["red"] if snap.error_count else self._theme.palette["green"])
 
         self._set("last_error", snap.last_error or "—")
         lbl = self._value_labels.get("last_error")
         if lbl:
-            lbl.configure(fg=_RED if snap.last_error else _MUTED)
+            lbl.configure(fg=self._theme.palette["red"] if snap.last_error else self._theme.palette["muted"])
 
         self._set("breaker_active", str(snap.breaker_active_count))
         lbl = self._value_labels.get("breaker_active")
         if lbl:
-            lbl.configure(fg=_RED if snap.breaker_active_count else _TEXT)
+            lbl.configure(fg=self._theme.palette["red"] if snap.breaker_active_count else self._theme.palette["text"])
 
         # ── Email queue ───────────────────────────────────────────────────────
         q = snap.email_queue
@@ -779,36 +870,48 @@ class StatusWindow:
         for w in self._monitors_content.winfo_children():
             w.destroy()
         if not cfg.monitors:
+            p = self._theme.palette
             tk.Label(self._monitors_content, text="Nenhum monitor configurado.",
-                     font=("Segoe UI", 9), fg=_MUTED, bg=_CARD).pack(anchor="w")
+                     font=("Segoe UI", 9), fg=p["muted"], bg=p["card"]).pack(anchor="w")
             return
         failures = getattr(snap, "monitor_failures", {})
         breakers = getattr(snap, "monitor_breakers_active", {})
+        p = self._theme.palette
         for idx, monitor in enumerate(cfg.monitors, start=1):
             key = monitor.window_title_regex or f"monitor_{idx}"
             fail_count = failures.get(key, 0)
             breaker = breakers.get(key, False)
             if breaker:
-                dot_fg, note = _RED, "  [CIRCUITO ABERTO]"
+                dot_fg, note = p["red"], "  [CIRCUITO ABERTO]"
             elif fail_count > 0:
-                dot_fg, note = _AMBER, f"  {fail_count} falha(s)"
+                dot_fg, note = p["amber"], f"  {fail_count} falha(s)"
             else:
-                dot_fg, note = _GREEN, ""
-            row = tk.Frame(self._monitors_content, bg=_CARD)
+                dot_fg, note = p["green"], ""
+            row = tk.Frame(self._monitors_content, bg=p["card"])
             row.pack(fill=tk.X, pady=2)
-            tk.Label(row, text="●", font=("Segoe UI", 11), fg=dot_fg, bg=_CARD).pack(
+            tk.Label(row, text="●", font=("Segoe UI", 11), fg=dot_fg, bg=p["card"]).pack(
                 side=tk.LEFT, padx=(0, 8))
             title = monitor.window_title_regex or f"Monitor {idx}"
             if len(title) > 48:
                 title = title[:45] + "..."
             tk.Label(row, text=f"Monitor {idx}:  {title}",
-                     font=("Segoe UI", 9), fg=_TEXT, bg=_CARD).pack(side=tk.LEFT)
+                     font=("Segoe UI", 9), fg=p["text"], bg=p["card"]).pack(side=tk.LEFT)
             if note:
                 tk.Label(row, text=note, font=("Segoe UI", 9),
-                         fg=_RED if breaker else _AMBER, bg=_CARD).pack(side=tk.LEFT)
+                         fg=p["red"] if breaker else p["amber"], bg=p["card"]).pack(side=tk.LEFT)
 
     def _trigger_scan(self) -> None:
         self._on_manual_scan()
+
+    def _toggle_theme(self) -> None:
+        self._theme.toggle(self._root)
+        if self._theme_btn is not None:
+            p = self._theme.palette
+            label = "☀  Tema Claro" if self._theme.is_dark else "🌙  Tema Escuro"
+            self._theme_btn.configure(
+                text=label, bg=p["btn_dim"], fg=p["white"],
+                activebackground=p["btn_dim"], activeforeground=p["white"],
+            )
 
 
 # ── Module-level helpers ──────────────────────────────────────────────────────
@@ -874,6 +977,9 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
     root = tk.Tk()
     root.withdraw()
 
+    # ── Theme state ───────────────────────────────────────────────────────────
+    theme = _ThemeState()
+
     # ── Config editor ─────────────────────────────────────────────────────────
     def _reload_notifier(new_cfg: AppConfig) -> None:
         old_stop = stop_holder[0]
@@ -891,7 +997,7 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
         )
         config_holder[0] = new_cfg
 
-    editor = ConfigEditorWindow(root, on_saved=_reload_notifier)
+    editor = ConfigEditorWindow(root, on_saved=_reload_notifier, theme_state=theme)
 
     def open_config() -> None:
         root.after(0, editor.show)
@@ -905,6 +1011,7 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
         on_manual_scan=manual_scan_event.set,
         on_open_config=open_config,
         on_exit=exit_event.set,
+        theme_state=theme,
     )
 
     # ── Tray icon ─────────────────────────────────────────────────────────────
@@ -919,12 +1026,6 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
 
     # ── Show window on startup ────────────────────────────────────────────────
     root.after(0, window.show)
-
-    # ── Deferred SMTP validation ──────────────────────────────────────────────
-    if smtp_validator is not None:
-        def _start_smtp_validator() -> None:
-            smtp_validator(root, config_holder, _reload_notifier)
-        root.after(100, _start_smtp_validator)
 
     # ── Watchdog thread ───────────────────────────────────────────────────────
     def _watchdog() -> None:

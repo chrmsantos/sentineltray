@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import logging
 import webbrowser
@@ -16,7 +16,7 @@ from .status import StatusStore, format_timestamp
 from .tray_app import TrayIcon, set_console_visible
 
 LOGGER = logging.getLogger(__name__)
-_PROJECT_REPO_URL = "https://github.com/chrmsantos/sentineltray"
+_PROJECT_REPO_URL = "https://github.com/chrmsantos/z7_sentineltray"
 
 # ── GitHub-dark-inspired palette ─────────────────────────────────────────────
 _BG      = "#0d1117"   # main background
@@ -49,7 +49,7 @@ def prompt_smtp_password_gui(username: str, monitor_index: int) -> str | None:
     root.withdraw()
 
     dialog = tk.Toplevel(root)
-    dialog.title("ZWave SentinelTray — Senha SMTP")
+    dialog.title("Z7_SentinelTray — Senha SMTP")
     dialog.configure(bg=_BG)
     dialog.resizable(False, False)
     dialog.grab_set()
@@ -172,7 +172,7 @@ class ConfigEditorWindow:
     def _build(self) -> None:
         win = tk.Toplevel(self._parent)
         self._win = win
-        win.title("ZWave SentinelTray — Editor de Configuração")
+        win.title("Z7_SentinelTray — Editor de Configuração")
         win.configure(bg=_BG)
         win.geometry("860x620")
         win.minsize(600, 400)
@@ -336,7 +336,7 @@ class ConfigEditorWindow:
                 except Exception:
                     continue
             if template_content is None:
-                template_content = "# ZWave SentinelTray — configuração local\n"
+                template_content = "# Z7_SentinelTray — configuração local\n"
             self._cfg_path.write_text(template_content, encoding="utf-8")
         try:
             content = self._cfg_path.read_text(encoding="utf-8")
@@ -429,7 +429,7 @@ class ConfigEditorWindow:
 
 
 class StatusWindow:
-    """Beautiful tkinter status window for SentinelTray."""
+    """Beautiful tkinter status window for Z7_SentinelTray."""
 
     _REFRESH_MS = 1000
 
@@ -465,7 +465,7 @@ class StatusWindow:
     def _build_ui(self) -> None:
         r = self._root
         from . import __version_label__, __release_date__
-        r.title(f"ZWave SentinelTray {__version_label__} ({__release_date__}) — Status")
+        r.title(f"Z7_SentinelTray {__version_label__} ({__release_date__}) — Status")
         r.configure(bg=_BG)
         r.resizable(True, True)
         r.minsize(900, 480)
@@ -496,7 +496,7 @@ class StatusWindow:
         title_frame = tk.Frame(header, bg=_SURFACE)
         title_frame.pack(side=tk.LEFT)
         tk.Label(
-            title_frame, text="ZWave SentinelTray",
+            title_frame, text="Z7_SentinelTray",
             font=("Segoe UI", 15, "bold"), fg=_GREEN, bg=_SURFACE, anchor="w"
         ).pack(anchor="w")
         tk.Label(
@@ -601,7 +601,7 @@ class StatusWindow:
         self._make_btn(footer, "↗  Repositório",
                        lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
             side=tk.LEFT)
-        tk.Label(footer, text="Licenced under GPLv3 •  Câmara Municipal de Santa Bárbara d'Oeste/SP  •",
+        tk.Label(footer, text="Christian Martin dos Santos",
                  font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE).pack(
             side=tk.LEFT, padx=(12, 0))
         self._make_btn(footer, "Sair  ✕", self._on_exit, "#5a1a1a").pack(
@@ -919,6 +919,12 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
 
     # ── Show window on startup ────────────────────────────────────────────────
     root.after(0, window.show)
+
+    # ── Deferred SMTP validation ──────────────────────────────────────────────
+    if smtp_validator is not None:
+        def _start_smtp_validator() -> None:
+            smtp_validator(root, config_holder, _reload_notifier)
+        root.after(100, _start_smtp_validator)
 
     # ── Watchdog thread ───────────────────────────────────────────────────────
     def _watchdog() -> None:

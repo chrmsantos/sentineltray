@@ -169,29 +169,29 @@ def format_status(
     phrase_regex: str = "",
     poll_interval_seconds: int | None = None,
 ) -> str:
-    running = "yes" if snapshot.running else "no"
-    phrase_label = phrase_regex or "<any text>"
-    window_label = window_title_regex or "<configured window>"
+    running = "sim" if snapshot.running else "não"
+    phrase_label = phrase_regex or "<qualquer texto>"
+    window_label = window_title_regex or "<janela configurada>"
     last_scan = _format_timestamp(snapshot.last_scan)
     next_check = _format_next_check(snapshot.last_scan, poll_interval_seconds)
     last_identification = _format_timestamp(snapshot.last_match) or snapshot.last_match
     last_match_at = _format_timestamp(snapshot.last_match_at)
-    failure_summary = _format_failure_summary(snapshot.monitor_failures) or "none"
+    failure_summary = _format_failure_summary(snapshot.monitor_failures) or "nenhuma"
     lines = [
-        f"Running: {running}",
-        f"Monitored window: {window_label}",
-        f"Monitored text: {phrase_label}",
-        f"Last check: {last_scan}",
-        f"Next check: {next_check}",
-        f"Last detection: {last_identification}",
-        f"Last match timestamp: {last_match_at}",
-        f"Last alert sent: {_format_timestamp(snapshot.last_send)}",
-        f"Last error recorded: {_format_timestamp(snapshot.last_error)}",
-        f"Last health summary: {_format_timestamp(snapshot.last_healthcheck)}",
-        f"Email queue pending: {snapshot.email_queue.get('queued', 0)}",
-        f"Circuit breakers active: {snapshot.breaker_active_count}",
-        f"Monitor failures: {failure_summary}",
-        f"Uptime (seconds): {snapshot.uptime_seconds}",
-        f"Total errors: {snapshot.error_count}",
+        f"Em execução: {running}",
+        f"Janela monitorada: {window_label}",
+        f"Texto monitorado: {phrase_label}",
+        f"Última verificação: {last_scan}",
+        f"Próxima verificação: {next_check}",
+        f"Última detecção: {last_identification}",
+        f"Horário da última correspondência: {last_match_at}",
+        f"Último alerta enviado: {_format_timestamp(snapshot.last_send)}",
+        f"Último erro registrado: {_format_timestamp(snapshot.last_error)}",
+        f"Último resumo de saúde: {_format_timestamp(snapshot.last_healthcheck)}",
+        f"E-mails pendentes na fila: {snapshot.email_queue.get('queued', 0)}",
+        f"Disjuntores ativos: {snapshot.breaker_active_count}",
+        f"Falhas nos monitores: {failure_summary}",
+        f"Tempo ativo (segundos): {snapshot.uptime_seconds}",
+        f"Total de erros: {snapshot.error_count}",
     ]
     return "\n".join(lines)

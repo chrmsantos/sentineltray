@@ -1,10 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sys
 
 import pytest
 
-from sentineltray.idle_utils import get_idle_seconds
+from z7_sentineltray.idle_utils import get_idle_seconds
 
 
 def test_get_idle_seconds_returns_nonnegative() -> None:

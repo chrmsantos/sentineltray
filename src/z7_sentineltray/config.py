@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 import logging
@@ -84,16 +84,16 @@ def _get_project_root_from_file() -> Path:
 
 
 def get_user_data_dir() -> Path:
-    override = os.environ.get("SENTINELTRAY_DATA_DIR")
+    override = os.environ.get("Z7_SENTINELTRAY_DATA_DIR")
     if override:
         return Path(override)
     local_appdata = os.environ.get("LOCALAPPDATA")
     if local_appdata:
-        return Path(local_appdata) / "ZWave" / "Tmp" / "SentinelTray" / "Config"
+        return Path(local_appdata) / "ZWave" / "Tmp" / "Z7_SentinelTray" / "Config"
     user_profile = os.environ.get("USERPROFILE")
     if user_profile:
-        return Path(user_profile) / "AppData" / "Local" / "ZWave" / "Tmp" / "SentinelTray" / "Config"
-    return Path.home() / "AppData" / "Local" / "ZWave" / "Tmp" / "SentinelTray" / "Config"
+        return Path(user_profile) / "AppData" / "Local" / "ZWave" / "Tmp" / "Z7_SentinelTray" / "Config"
+    return Path.home() / "AppData" / "Local" / "ZWave" / "Tmp" / "Z7_SentinelTray" / "Config"
 
 
 def get_user_log_dir() -> Path:
@@ -101,7 +101,7 @@ def get_user_log_dir() -> Path:
 
 
 def get_project_root() -> Path:
-    override = os.environ.get("SENTINELTRAY_ROOT")
+    override = os.environ.get("Z7_SENTINELTRAY_ROOT")
     if override:
         return Path(override)
     return _get_project_root_from_file()
@@ -204,7 +204,7 @@ def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, An
 
 
 def _env_override(name: str, monitor_index: int | None) -> str | None:
-    base_key = f"SENTINELTRAY_{name}"
+    base_key = f"Z7_SENTINELTRAY_{name}"
     if monitor_index is not None:
         indexed = os.environ.get(f"{base_key}_{monitor_index}")
         if indexed:

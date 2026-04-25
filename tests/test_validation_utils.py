@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pytest
 
-from sentineltray.validation_utils import validate_email_address, validate_regex
+from z7_sentineltray.validation_utils import validate_email_address, validate_regex
 
 
 def test_validate_regex_accepts_valid() -> None:

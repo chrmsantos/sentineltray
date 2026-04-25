@@ -1,4 +1,4 @@
-"""Tests for automatic scan pause/unpause based on user idle state."""
+﻿"""Tests for automatic scan pause/unpause based on user idle state."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -6,16 +6,16 @@ from threading import Event
 
 import pytest
 
-from sentineltray import app
-from sentineltray.app import Notifier
-from sentineltray.config import (
+from z7_sentineltray import app
+from z7_sentineltray.app import Notifier
+from z7_sentineltray.config import (
     AppConfig,
     EmailConfig,
     MonitorConfig,
     get_user_data_dir,
     get_user_log_dir,
 )
-from sentineltray.status import StatusStore
+from z7_sentineltray.status import StatusStore
 
 
 def _config() -> AppConfig:
@@ -30,7 +30,7 @@ def _config() -> AppConfig:
         to_addresses=["ops@example.com"],
         use_tls=True,
         timeout_seconds=10,
-        subject="SentinelTray",
+        subject="Z7_SentinelTray",
         retry_attempts=0,
         retry_backoff_seconds=0,
     )
@@ -42,7 +42,7 @@ def _config() -> AppConfig:
         debounce_seconds=0,
         max_history=10,
         state_file=str(base / "state.json"),
-        log_file=str(log_root / "sentineltray.log"),
+        log_file=str(log_root / "z7_sentineltray.log"),
         log_level="INFO",
         log_console_level="WARNING",
         log_console_enabled=False,

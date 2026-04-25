@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import ctypes
 import logging
@@ -210,9 +210,9 @@ class TrayIcon:
             )
 
         self._icon = pystray.Icon(
-            "SentinelTray",
+            "Z7_SentinelTray",
             _make_green_eye(),
-            "ZWave SentinelTray",
+            "Z7_SentinelTray",
             menu,
         )
         self._thread = threading.Thread(

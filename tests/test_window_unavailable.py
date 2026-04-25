@@ -1,14 +1,14 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from threading import Event
 
 import pytest
 
-from sentineltray.app import Notifier
-from sentineltray import app as app_module
-from sentineltray.config import AppConfig, EmailConfig, MonitorConfig, get_user_data_dir, get_user_log_dir
-from sentineltray.detector import WindowUnavailableError
-from sentineltray.status import StatusStore
+from z7_sentineltray.app import Notifier
+from z7_sentineltray import app as app_module
+from z7_sentineltray.config import AppConfig, EmailConfig, MonitorConfig, get_user_data_dir, get_user_log_dir
+from z7_sentineltray.detector import WindowUnavailableError
+from z7_sentineltray.status import StatusStore
 
 
 def test_run_loop_skips_window_unavailable(
@@ -26,7 +26,7 @@ def test_run_loop_skips_window_unavailable(
         to_addresses=["ops@example.com"],
         use_tls=True,
         timeout_seconds=10,
-        subject="SentinelTray Notification",
+        subject="Z7_SentinelTray Notification",
         retry_attempts=0,
         retry_backoff_seconds=0,
     )
@@ -38,7 +38,7 @@ def test_run_loop_skips_window_unavailable(
         debounce_seconds=600,
         max_history=10,
         state_file=str(base / "state.json"),
-        log_file=str(log_root / "sentineltray.log"),
+        log_file=str(log_root / "z7_sentineltray.log"),
         log_level="INFO",
         log_console_level="WARNING",
         log_console_enabled=False,

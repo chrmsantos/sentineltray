@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import logging
@@ -43,17 +43,17 @@ _CATEGORY_LABEL: dict[str, str] = {
 
 def _build_subject(subject: str, category: str) -> str:
     if category == "Alert":
-        return "ZWave SentinelTray — Correspondência Detectada"
+        return "Z7_SentinelTray — Correspondência Detectada"
     if category == "Error":
-        return "ZWave SentinelTray — Erro Detectado"
+        return "Z7_SentinelTray — Erro Detectado"
     if category == "Status":
-        return "ZWave SentinelTray — Status do sistema"
+        return "Z7_SentinelTray — Status do sistema"
     if category == "Verificação":
-        return "ZWave SentinelTray — Verificação Manual"
+        return "Z7_SentinelTray — Verificação Manual"
     base = (subject or "").strip()
     if base:
         cleaned = base
-        for _prefix in ("zwave sentineltray", "sentineltray"):
+        for _prefix in ("zwave z7_sentineltray", "z7_sentineltray"):
             while cleaned.lower().startswith(_prefix):
                 cleaned = cleaned[len(_prefix):].strip()
                 cleaned = cleaned.lstrip("-–—:|/").strip()
@@ -61,15 +61,15 @@ def _build_subject(subject: str, category: str) -> str:
                     break
         base = cleaned
     if base:
-        return f"ZWave SentinelTray {base} - {category}"
-    return f"ZWave SentinelTray {category}"
+        return f"Z7_SentinelTray {base} - {category}"
+    return f"Z7_SentinelTray {category}"
 
 
 def _build_body(message: str) -> tuple[str, str]:
     text = (message or "").strip()
     category = "Alert"
     details = text
-    if text.lower().startswith("error:"):
+    if text.lower().startswith("error:") or text.lower().startswith("erro:"):
         category = "Error"
         details = text.split(":", 1)[1].strip() or "Ocorreu um erro."
     elif text.lower().startswith("info:"):
@@ -90,10 +90,10 @@ def _build_body(message: str) -> tuple[str, str]:
 
     label = _CATEGORY_LABEL.get(category, category)
     body = (
-        "ZWave SentinelTray\n\n"
+        "Z7_SentinelTray\n\n"
         f"{label}:\n"
         f"{details}\n\n"
-        "Esta é uma mensagem automática do ZWave SentinelTray."
+        "Esta é uma mensagem automática do Z7_SentinelTray."
     )
     return category, body
 

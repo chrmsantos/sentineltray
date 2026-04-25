@@ -1,9 +1,9 @@
-# -*- mode: python ; coding: utf-8 -*-
+﻿# -*- mode: python ; coding: utf-8 -*-
 
 
 a = Analysis(
-    ['C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\main.py'],
-    pathex=['C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\src'],
+    ['C:\\Users\\csantos\\AppData\\Local\\Z7\\Apps\\Z7_SentinelTray\\main.py'],
+    pathex=['C:\\Users\\csantos\\AppData\\Local\\Z7\\Apps\\Z7_SentinelTray\\src'],
     binaries=[],
     datas=[('config/config.local.yaml.example', 'config')],
     hiddenimports=[],
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='SentinelTray',
+    name='Z7_SentinelTray',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='C:\\Users\\csantos\\AppData\\Local\\ZWave\\Apps\\sentineltray\\assets\\icon.ico',
+    icon='C:\\Users\\csantos\\AppData\\Local\\Z7\\Apps\\Z7_SentinelTray\\assets\\icon.ico',
 )

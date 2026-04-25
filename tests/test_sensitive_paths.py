@@ -1,8 +1,8 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 import pytest
 
-from sentineltray.config import get_user_data_dir, get_user_log_dir, load_config
+from z7_sentineltray.config import get_user_data_dir, get_user_log_dir, load_config
 
 
 def test_sensitive_paths_forced_to_user_root(
@@ -29,7 +29,7 @@ def test_sensitive_paths_forced_to_user_root(
                 "      to_addresses: ['ops@example.com']",
                 "      use_tls: true",
                 "      timeout_seconds: 10",
-                "      subject: 'SentinelTray Notification'",
+                "      subject: 'Z7_SentinelTray Notification'",
                 "      retry_attempts: 0",
                 "      retry_backoff_seconds: 0",
                 "poll_interval_seconds: 1",
@@ -39,7 +39,7 @@ def test_sensitive_paths_forced_to_user_root(
                 "debounce_seconds: 0",
                 "max_history: 10",
                 f"state_file: '{other_root / 'state.json'}'",
-                f"log_file: '{other_root / 'logs' / 'sentineltray.log'}'",
+                f"log_file: '{other_root / 'logs' / 'z7_sentineltray.log'}'",
                 "log_level: 'INFO'",
                 "log_console_level: 'WARNING'",
                 "log_console_enabled: true",
@@ -59,5 +59,5 @@ def test_sensitive_paths_forced_to_user_root(
     base = get_user_data_dir()
     log_root = get_user_log_dir()
     assert config.state_file == str(base / "state.json")
-    assert config.log_file == str(log_root / "sentineltray.log")
+    assert config.log_file == str(log_root / "z7_sentineltray.log")
     assert config.telemetry_file == str(log_root / "telemetry.json")

@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 
-from sentineltray.config_reconcile import apply_template_to_config_text
+from z7_sentineltray.config_reconcile import apply_template_to_config_text
 
 
 def test_apply_template_to_config_text_merges_values() -> None:
@@ -56,7 +56,7 @@ email:
   to_addresses: ['ops@example.com']
   use_tls: true
   timeout_seconds: 10
-  subject: 'SentinelTray'
+  subject: 'Z7_SentinelTray'
   retry_attempts: 1
   retry_backoff_seconds: 1
 """

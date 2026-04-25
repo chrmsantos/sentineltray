@@ -1,6 +1,6 @@
-import pytest
+﻿import pytest
 
-from sentineltray.email_sender import DiskEmailQueue, EmailQueued, QueueingEmailSender
+from z7_sentineltray.email_sender import DiskEmailQueue, EmailQueued, QueueingEmailSender
 
 
 def test_disk_email_queue_enqueue_and_drain(tmp_path):

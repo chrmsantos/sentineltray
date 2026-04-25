@@ -1,10 +1,10 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=69.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "sentineltray"
-version = "5.4.0rc1"
+name = "z7_sentineltray"
+version = "5.5.0"
 requires-python = ">=3.11"
 license = { text = "GPL-3.0-only" }
 authors = [
@@ -15,7 +15,7 @@ authors = [
 pythonpath = ["src"]
 testpaths = ["tests"]
 addopts = [
-    "--cov=sentineltray",
+    "--cov=z7_sentineltray",
     "--cov-report=term-missing",
     "--cov-report=html",
 ]
@@ -31,7 +31,7 @@ norecursedirs = [
 
 [tool.coverage.run]
 branch = true
-source = ["src/sentineltray"]
+source = ["src/z7_sentineltray"]
 
 [tool.coverage.report]
 show_missing = true

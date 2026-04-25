@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pytest
 
-from sentineltray.detector import WindowTextDetector
+from z7_sentineltray.detector import WindowTextDetector
 
 
 def test_find_matches_accepts_whitespace_phrase(monkeypatch: pytest.MonkeyPatch) -> None:

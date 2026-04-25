@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sentineltray.scan_utils import dedupe_items, filter_debounce, filter_min_repeat
+from z7_sentineltray.scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 
 
 def test_dedupe_items_preserves_order() -> None:

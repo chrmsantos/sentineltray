@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import ctypes
 import hashlib
@@ -160,7 +160,7 @@ def _build_alert_message(text: str, previous_number: int | None) -> str:
 
 def _get_version() -> str:
     try:
-        return importlib.metadata.version("sentineltray")
+        return importlib.metadata.version("z7_sentineltray")
     except importlib.metadata.PackageNotFoundError:
         return __version_label__
 
@@ -369,7 +369,7 @@ class Notifier:
             except EmailAuthError as exc:
                 monitor.email_disabled = True
                 self.status.set_last_error(
-                    _safe_status_text(f"error: smtp auth failed: {exc}")
+                    _safe_status_text(f"erro: falha de autenticação SMTP: {exc}")
                 )
                 LOGGER.error(
                     "SMTP authentication failed; disabling email notifications",
@@ -427,8 +427,8 @@ class Notifier:
                 )
             if breaker_seconds > 0:
                 critical_message = (
-                    "error: monitor paused for "
-                    f"{breaker_seconds}s (too many consecutive failures)"
+                    "erro: monitor pausado por "
+                    f"{breaker_seconds}s (muitas falhas consecutivas)"
                 )
                 for current in self._monitors:
                     if current.key != monitor.key:
@@ -489,7 +489,7 @@ class Notifier:
                         breaker_active=False,
                     )
                 except WindowUnavailableError as exc:
-                    message = f"error: window unavailable: {exc}"
+                    message = f"erro: janela indisponível: {exc}"
                     self._handle_monitor_error(monitor, message)
                     self._last_scan_error = True
                     monitor_error = "window_unavailable"
@@ -497,7 +497,7 @@ class Notifier:
                         self.status.set_last_scan_result("ERRO")
                     continue
                 except Exception as exc:
-                    message = f"error: {exc}"
+                    message = f"erro: {exc}"
                     self._handle_monitor_error(monitor, message)
                     LOGGER.exception(
                         "Scan error: %s",
@@ -707,11 +707,11 @@ class Notifier:
                 elif queued_any:
                     LOGGER.info("Queued manual no-match test message", extra={"category": "send"})
         except Exception as exc:
-            error_message = f"error: manual no-match test send failed: {exc}"
+            error_message = f"erro: falha ao enviar teste de verificação manual: {exc}"
             self._handle_error(error_message)
 
     def _send_startup_test(self) -> None:
-        message = "ZWave SentinelTray iniciado — monitoramento ativo"
+        message = "Z7_SentinelTray iniciado — monitoramento ativo"
         try:
             sent_any = False
             sent_direct = False
@@ -730,7 +730,7 @@ class Notifier:
                 elif queued_any:
                     LOGGER.info("Queued startup test message", extra={"category": "send"})
         except Exception as exc:
-            error_message = f"error: startup test send failed: {exc}"
+            error_message = f"erro: falha ao enviar teste de inicialização: {exc}"
             self._handle_error(error_message)
 
     def _send_healthcheck(self) -> None:
@@ -764,7 +764,7 @@ class Notifier:
                 elif queued_any:
                     LOGGER.info("Queued healthcheck message", extra={"category": "send"})
         except Exception as exc:
-            error_message = f"error: healthcheck send failed: {exc}"
+            error_message = f"erro: falha ao enviar resumo de saúde: {exc}"
             self._handle_error(error_message)
 
     def _compute_backoff_seconds(self, error_count: int) -> int:
@@ -867,7 +867,7 @@ class Notifier:
                 except EmailAuthError as exc:
                     monitor.email_disabled = True
                     self.status.set_last_error(
-                        _safe_status_text(f"error: smtp auth failed: {exc}")
+                        _safe_status_text(f"erro: falha de autenticação SMTP: {exc}")
                     )
                 except Exception as exc:
                     LOGGER.warning(
@@ -898,7 +898,7 @@ class Notifier:
             )
         try:
             LOGGER.info(
-                "ZWave SentinelTray started (beta %s, %s)",
+                "Z7_SentinelTray started (beta %s, %s)",
                 self._app_version,
                 self._release_date,
                 extra={"category": "startup"},
@@ -972,14 +972,14 @@ class Notifier:
                             if is_manual and not self._last_scan_had_match:
                                 self._send_manual_no_match_test()
                 except WindowUnavailableError as exc:
-                    self._handle_error(f"error: window unavailable: {exc}")
+                    self._handle_error(f"erro: janela indisponível: {exc}")
                     LOGGER.info(
                         "Skipping scan; %s",
                         exc,
                         extra={"category": "scan"},
                     )
                 except Exception as exc:
-                    message = f"error: {exc}"
+                    message = f"erro: {exc}"
                     self._handle_error(message)
                     LOGGER.exception("Loop error: %s", exc, extra={"category": "error"})
                     error_count += 1

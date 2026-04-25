@@ -1,8 +1,8 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from pathlib import Path
 
-from sentineltray.io_utils import atomic_write_text
+from z7_sentineltray.io_utils import atomic_write_text
 
 
 def test_atomic_write_text_writes_file(tmp_path: Path) -> None:

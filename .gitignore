@@ -1,4 +1,4 @@
-# =============================================================================
+﻿# =============================================================================
 # Python
 # =============================================================================
 __pycache__/
@@ -27,7 +27,7 @@ htmlcov/
 .tox/
 
 # =============================================================================
-# SentinelTray - runtime data (NEVER commit these)
+# Z7_SentinelTray - runtime data (NEVER commit these)
 # =============================================================================
 
 # User config (contains email addresses, SMTP settings)
@@ -46,7 +46,7 @@ config/smtp_password_*.dpapi
 
 # Runtime state and PID file
 config/state.json
-config/sentineltray.pid
+config/z7_sentineltray.pid
 
 # Logs, telemetry, email queue, and error snapshots
 config/logs/

@@ -1,16 +1,16 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 import pytest
 
-from sentineltray import entrypoint
-from sentineltray.config import get_user_data_dir
+from z7_sentineltray import entrypoint
+from z7_sentineltray.config import get_user_data_dir
 
 
 def test_terminate_existing_instance_calls_taskkill(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    pid_path = get_user_data_dir() / "sentineltray.pid"
+    pid_path = get_user_data_dir() / "z7_sentineltray.pid"
     pid_path.parent.mkdir(parents=True, exist_ok=True)
     pid_path.write_text("1234", encoding="utf-8")
 
@@ -31,7 +31,7 @@ def test_single_instance_acquires_mutex_and_writes_pid(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    pid_path = get_user_data_dir() / "sentineltray.pid"
+    pid_path = get_user_data_dir() / "z7_sentineltray.pid"
     pid_path.parent.mkdir(parents=True, exist_ok=True)
 
     monkeypatch.setattr(entrypoint, "_ensure_single_instance_mutex", lambda: True)

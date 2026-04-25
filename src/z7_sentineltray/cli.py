@@ -1,4 +1,4 @@
-"""CLI entrypoint for SentinelTray console app."""
+﻿"""CLI entrypoint for Z7_SentinelTray console app."""
 
 from .entrypoint import main
 
