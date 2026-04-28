@@ -37,10 +37,6 @@ config/config.local.yaml.edit
 # Allow the committed example/template file
 !config/config.local.yaml.example
 
-# Encrypted config and the symmetric key that unlocks it
-config/config.local.key
-config/config.local.yaml.enc
-
 # DPAPI-encrypted SMTP passwords
 config/smtp_password_*.dpapi
 

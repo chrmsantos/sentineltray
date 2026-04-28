@@ -2,6 +2,7 @@
 
 import json
 import logging
+import re
 import webbrowser
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -14,6 +15,7 @@ from tkinter import messagebox
 from .app import Notifier
 from .config import AppConfig, get_project_root, get_user_data_dir, load_config
 from .status import StatusStore, format_timestamp
+from .validation_utils import validate_email_address
 from .tray_app import TrayIcon, set_console_visible
 
 LOGGER = logging.getLogger(__name__)
@@ -511,6 +513,187 @@ class ConfigEditorWindow:
             self._win.after(800, self._win.destroy)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Edit to_addresses dialog
+# ─────────────────────────────────────────────────────────────────────────────
+
+class EditToAddressesDialog:
+    """Modal dialog to quickly edit to_addresses for all monitors."""
+
+    def __init__(
+        self,
+        parent: tk.Tk,
+        *,
+        cfg_path: Path,
+        get_config: Callable[[], AppConfig],
+        on_saved: Callable[[AppConfig], None],
+        theme_state: "_ThemeState | None" = None,
+    ) -> None:
+        self._parent = parent
+        self._cfg_path = cfg_path
+        self._get_config = get_config
+        self._on_saved = on_saved
+        self._theme = theme_state
+        self._win: tk.Toplevel | None = None
+
+    def show(self) -> None:
+        if self._win is not None and self._win.winfo_exists():
+            self._win.lift()
+            self._win.focus_force()
+            return
+        self._build()
+
+    def _build(self) -> None:
+        cfg = self._get_config()
+        monitors = cfg.monitors
+
+        win = tk.Toplevel(self._parent)
+        self._win = win
+        win.title("Z7_SentinelTray — Destinatários de Alerta")
+        win.configure(bg=_BG)
+        win.resizable(False, False)
+        win.transient(self._parent)
+        win.grab_set()
+        win.focus_force()
+
+        # Header
+        header = tk.Frame(win, bg=_SURFACE, pady=10)
+        header.pack(fill=tk.X)
+        tk.Label(
+            header, text="✉  Destinatários de Alerta",
+            font=("Segoe UI", 11, "bold"), fg=_GREEN, bg=_SURFACE,
+        ).pack(side=tk.LEFT, padx=16)
+        tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
+
+        body = tk.Frame(win, bg=_BG, padx=20, pady=14)
+        body.pack(fill=tk.BOTH)
+
+        tk.Label(
+            body,
+            text="Informe os endereços de e-mail que receberão os alertas.\n"
+                 "Separe múltiplos endereços com vírgula.",
+            font=("Segoe UI", 9), fg=_MUTED, bg=_BG, justify="left",
+        ).pack(anchor="w", pady=(0, 12))
+
+        entries: list[tk.Entry] = []
+        for idx, monitor in enumerate(monitors, start=1):
+            title = monitor.window_title_regex or f"Monitor {idx}"
+            if len(title) > 50:
+                title = title[:47] + "..."
+            tk.Label(
+                body,
+                text=f"Monitor {idx} — {title}:",
+                font=("Segoe UI", 9, "bold"), fg=_TEXT, bg=_BG, anchor="w",
+            ).pack(anchor="w")
+            current = ", ".join(monitor.email.to_addresses)
+            entry = tk.Entry(
+                body,
+                font=("Segoe UI", 9),
+                bg=_SURFACE, fg=_TEXT,
+                insertbackground=_TEXT,
+                relief="flat",
+                width=56,
+            )
+            entry.insert(0, current)
+            entry.pack(fill=tk.X, pady=(2, 10))
+            entries.append(entry)
+
+        status_var = tk.StringVar()
+        status_lbl = tk.Label(
+            body, textvariable=status_var,
+            font=("Segoe UI", 8), fg=_RED, bg=_BG, anchor="w", wraplength=440,
+        )
+        status_lbl.pack(anchor="w", pady=(0, 4))
+
+        tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
+        footer = tk.Frame(win, bg=_SURFACE, pady=10)
+        footer.pack(fill=tk.X)
+
+        def on_save() -> None:
+            new_addresses: list[list[str]] = []
+            for idx, entry in enumerate(entries, start=1):
+                raw = entry.get().strip()
+                addrs = [a.strip() for a in raw.split(",") if a.strip()]
+                if not addrs:
+                    status_var.set(f"✗ Monitor {idx}: informe pelo menos um endereço.")
+                    status_lbl.configure(fg=_RED)
+                    return
+                for addr in addrs:
+                    try:
+                        validate_email_address(f"monitor {idx} to_addresses", addr)
+                    except ValueError as exc:
+                        status_var.set(f"✗ {exc}")
+                        status_lbl.configure(fg=_RED)
+                        return
+                new_addresses.append(addrs)
+
+            try:
+                yaml_text = self._cfg_path.read_text(encoding="utf-8")
+            except Exception as exc:
+                status_var.set(f"✗ Falha ao ler arquivo: {exc}")
+                status_lbl.configure(fg=_RED)
+                return
+
+            try:
+                patched = _patch_to_addresses(yaml_text, new_addresses)
+            except ValueError as exc:
+                status_var.set(f"✗ {exc}")
+                status_lbl.configure(fg=_RED)
+                return
+
+            tmp = self._cfg_path.with_suffix(".yaml.recipients_tmp")
+            try:
+                tmp.write_text(patched, encoding="utf-8")
+                new_cfg = load_config(str(tmp))
+            except Exception as exc:
+                status_var.set(f"✗ Config inválida: {exc}")
+                status_lbl.configure(fg=_RED)
+                return
+            finally:
+                try:
+                    tmp.unlink(missing_ok=True)
+                except Exception:
+                    pass
+
+            try:
+                self._cfg_path.write_text(patched, encoding="utf-8")
+            except Exception as exc:
+                status_var.set(f"✗ Falha ao salvar: {exc}")
+                status_lbl.configure(fg=_RED)
+                return
+
+            self._on_saved(new_cfg)
+            win.destroy()
+
+        def on_cancel() -> None:
+            win.destroy()
+
+        tk.Button(
+            footer, text="✓  Salvar", command=on_save,
+            font=("Segoe UI", 9, "bold"), fg=_WHITE, bg=_GREEN2,
+            activeforeground=_WHITE, activebackground=_GREEN2,
+            relief=tk.FLAT, cursor="hand2", padx=14, pady=6, bd=0,
+        ).pack(side=tk.LEFT, padx=(16, 6))
+        tk.Button(
+            footer, text="Cancelar", command=on_cancel,
+            font=("Segoe UI", 9, "bold"), fg=_TEXT, bg=_BTN_DIM,
+            activeforeground=_TEXT, activebackground=_BTN_DIM,
+            relief=tk.FLAT, cursor="hand2", padx=14, pady=6, bd=0,
+        ).pack(side=tk.LEFT)
+
+        win.bind("<Escape>", lambda _e: on_cancel())
+        win.protocol("WM_DELETE_WINDOW", on_cancel)
+
+        if self._theme is not None and not self._theme.is_dark:
+            _apply_theme_walk(win, _DARK_PALETTE, _LIGHT_PALETTE)
+
+        win.update_idletasks()
+        w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+        sx = (win.winfo_screenwidth() - w) // 2
+        sy = (win.winfo_screenheight() - h) // 2
+        win.geometry(f"+{sx}+{sy}")
+
+
 class StatusWindow:
     """Beautiful tkinter status window for Z7_SentinelTray."""
 
@@ -525,6 +708,7 @@ class StatusWindow:
         get_config: Callable[[], AppConfig],
         on_manual_scan: Callable[[], None],
         on_open_config: Callable[[], None],
+        on_edit_recipients: Callable[[], None],
         on_exit: Callable[[], None],
         theme_state: "_ThemeState | None" = None,
     ) -> None:
@@ -533,6 +717,7 @@ class StatusWindow:
         self._get_config = get_config
         self._on_manual_scan = on_manual_scan
         self._on_open_config = on_open_config
+        self._on_edit_recipients = on_edit_recipients
         self._on_exit = on_exit
         self._theme = theme_state or _ThemeState()
         self._visible = False
@@ -685,6 +870,8 @@ class StatusWindow:
         self._make_btn(footer, "⟳  Verificar Agora", self._trigger_scan, _BLUE).pack(
             side=tk.LEFT, padx=(18, 6))
         self._make_btn(footer, "⚙  Configuração", self._on_open_config, _BTN_DIM).pack(
+            side=tk.LEFT, padx=(0, 6))
+        self._make_btn(footer, "✉  Destinatários", self._on_edit_recipients, _BTN_DIM).pack(
             side=tk.LEFT, padx=(0, 6))
         self._make_btn(footer, "↗  Repositório",
                        lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
@@ -917,6 +1104,29 @@ class StatusWindow:
 
 # ── Module-level helpers ──────────────────────────────────────────────────────
 
+def _patch_to_addresses(yaml_text: str, addresses_per_monitor: list[list[str]]) -> str:
+    """Replace each to_addresses line in *yaml_text* with the given address lists.
+
+    Preserves all other content (comments, keys, order). Raises ValueError if the
+    number of to_addresses fields in the file differs from *addresses_per_monitor*.
+    """
+    pattern = re.compile(r"^( *to_addresses:)[ \t].*$", re.MULTILINE)
+    matches = list(pattern.finditer(yaml_text))
+    if len(matches) != len(addresses_per_monitor):
+        raise ValueError(
+            f"Número de campos to_addresses no arquivo ({len(matches)}) "
+            f"difere do número de monitores ({len(addresses_per_monitor)}). "
+            "Use o editor de configuração completo."
+        )
+    result = yaml_text
+    for match, new_addrs in zip(reversed(matches), reversed(addresses_per_monitor)):
+        indent = match.group(1)  # e.g. "    to_addresses:"
+        addrs_yaml = "[" + ", ".join(f"'{a}'" for a in new_addrs) + "]"
+        new_line = f"{indent} {addrs_yaml}"
+        result = result[: match.start()] + new_line + result[match.end() :]
+    return result
+
+
 def _fmt_next_scan(last_scan: str, poll_interval_seconds: int) -> str:
     if not last_scan or not poll_interval_seconds:
         return "—"
@@ -1003,6 +1213,18 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
     def open_config() -> None:
         root.after(0, editor.show)
 
+    cfg_path = get_user_data_dir() / "config.local.yaml"
+    recipients_editor = EditToAddressesDialog(
+        root,
+        cfg_path=cfg_path,
+        get_config=lambda: config_holder[0],
+        on_saved=_reload_notifier,
+        theme_state=theme,
+    )
+
+    def open_recipients() -> None:
+        root.after(0, recipients_editor.show)
+
     # ── Status window ─────────────────────────────────────────────────────────
     window = StatusWindow(
         root,
@@ -1011,6 +1233,7 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
         get_config=lambda: config_holder[0],
         on_manual_scan=manual_scan_event.set,
         on_open_config=open_config,
+        on_edit_recipients=open_recipients,
         on_exit=exit_event.set,
         theme_state=theme,
     )
