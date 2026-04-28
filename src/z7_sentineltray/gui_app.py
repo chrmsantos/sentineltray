@@ -31,6 +31,7 @@ _GREEN2  = "#196127"   # dark green
 _RED     = "#f85149"   # error / stopped
 _AMBER   = "#d29922"   # warning
 _BLUE    = "#58a6ff"   # scan button
+_TEAL    = "#1b5e76"   # recipients button
 _TEXT    = "#c9d1d9"   # primary text
 _MUTED   = "#8b949e"   # secondary text
 _WHITE   = "#e6edf3"   # bright text
@@ -869,9 +870,9 @@ class StatusWindow:
 
         self._make_btn(footer, "⟳  Verificar Agora", self._trigger_scan, _BLUE).pack(
             side=tk.LEFT, padx=(18, 6))
-        self._make_btn(footer, "⚙  Configuração", self._on_open_config, _BTN_DIM).pack(
+        self._make_btn(footer, "✉  Destinatários", self._on_edit_recipients, _TEAL).pack(
             side=tk.LEFT, padx=(0, 6))
-        self._make_btn(footer, "✉  Destinatários", self._on_edit_recipients, _BTN_DIM).pack(
+        self._make_btn(footer, "⚙  Avançado", self._on_open_config, _BTN_DIM).pack(
             side=tk.LEFT, padx=(0, 6))
         self._make_btn(footer, "↗  Repositório",
                        lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
