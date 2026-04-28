@@ -1,0 +1,9 @@
+﻿
+============================== warnings summary ===============================
+tests/test_error_reporting.py: 1 warning
+  C:\Users\csantos\AppData\Local\Programs\Python\Python314\Lib\importlib\metada
+ta\__init__.py:486: DeprecationWarning: Implicit None on return values is 
+deprecated and will raise KeyErrors.
+140 passed, 15 warnings in 4.61s
+
+

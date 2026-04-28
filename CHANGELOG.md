@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 2026-04-28 (5.6.1)
+
+- Correção: ícone do app revertido para o olho verde (design original) — substitui a torre sentinela introduzida na 5.6.0; `generate_icon.py` reescrito para produzir o olho com supersampling 4×, íris multicamada, pupila e reflexo de luz.
+- Novo: testes de persistência do tema claro/escuro (`test_theme_persistence.py`) — 8 casos cobrindo padrão escuro, round-trip salvar/carregar, fallback em arquivo corrompido e criação automática do diretório de configuração.
+- Correção: BOM UTF-8 removido de `pyproject.toml`, que impedia o pytest de ler o arquivo de configuração TOML.
+
 ## 2026-04-28 (5.6.0)
 
 - Correção: corpo dos e-mails agora sempre enviado em UTF-8 (`charset="utf-8"` em `email.set_content`), corrigindo caracteres corrompidos (`\xe7\xe3`, `\xfa`, etc.) em clientes de e-mail Windows.
