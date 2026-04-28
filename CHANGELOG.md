@@ -1,5 +1,12 @@
 ﻿# Changelog
 
+## 2026-04-28 (5.6.0)
+
+- Correção: corpo dos e-mails agora sempre enviado em UTF-8 (`charset="utf-8"` em `email.set_content`), corrigindo caracteres corrompidos (`\xe7\xe3`, `\xfa`, etc.) em clientes de e-mail Windows.
+- Novo: ícone do app substituído por torre sentinela com holofote e janela de farol verde (supersampling 4× + LANCZOS, multi-resolução 16–256px).
+- Novo: botão "✉ Destinatários" no rodapé da janela de status — permite editar `to_addresses` de todos os monitores diretamente na interface, sem abrir o editor completo de configuração.
+- Limpeza: removidas referências a `config.local.yaml.enc` e `config.local.key` do `.gitignore`; arquivos residuais deletados (esquema de criptografia de config era artefato morto).
+
 ## 2026-04-24 (5.5.0)
 
 - Novo: switcher claro/escuro na barra de rodapé da janela de status — alterna entre o tema escuro (GitHub-dark) e o tema claro (GitHub-light) em tempo real. A preferência é persistida em `ui_prefs.json` e restaurada na próxima abertura.
