@@ -135,7 +135,7 @@ class SmtpEmailSender(EmailSender):
         email["From"] = self.config.from_address
         email["To"] = ", ".join(self.config.to_addresses)
         email["Subject"] = _build_subject(self.config.subject, category)
-        email.set_content(body)
+        email.set_content(body, charset="utf-8")
 
         attempts = max(0, self.config.retry_attempts)
         backoff = max(0, self.config.retry_backoff_seconds)

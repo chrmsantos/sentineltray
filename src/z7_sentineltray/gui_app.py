@@ -692,7 +692,7 @@ class StatusWindow:
         theme_label = "☀  Tema Claro" if self._theme.is_dark else "🌙  Tema Escuro"
         self._theme_btn = self._make_btn(footer, theme_label, self._toggle_theme, _BTN_DIM)
         self._theme_btn.pack(side=tk.LEFT, padx=(6, 0))
-        tk.Label(footer, text="Licenced under GPLv3 •  Câmara Municipal de Santa Bárbara d'Oeste/SP  •",
+        tk.Label(footer, text="Z7_SentinelTray • Licenced under GPLv3 •  Câmara Municipal de Santa Bárbara d'Oeste/SP  • Christian Martin dos Santos",
                  font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE).pack(
             side=tk.LEFT, padx=(12, 0))
         self._make_btn(footer, "Sair  ✕", self._on_exit, "#5a1a1a").pack(
