@@ -1,5 +1,9 @@
 ﻿# Changelog
 
+## 2026-04-29 (5.6.2)
+
+- Melhoria: qualidade visual do ícone do app aprimorada — supersampling elevado de 4× para 6×; limbal ring adicionado ao redor da íris; textura de fibras radiais (28 raios) na íris; segundo reflexo de luz na pupila; arco de pálpebra superior separado; 7 cílios com comprimento variável; sombra projetada sob o olho; brilho em duas camadas (haze amplo + núcleo quente); esclera com branco levemente quente; fundo com vignette central sutil.
+
 ## 2026-04-28 (5.6.1)
 
 - Correção: ícone do app revertido para o olho verde (design original) — substitui a torre sentinela introduzida na 5.6.0; `generate_icon.py` reescrito para produzir o olho com supersampling 4×, íris multicamada, pupila e reflexo de luz.
