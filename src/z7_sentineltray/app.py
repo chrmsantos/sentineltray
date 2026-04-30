@@ -944,7 +944,6 @@ class Notifier:
 
             while not stop_event.is_set():
                 loop_started = time.perf_counter()
-                started_at = time.monotonic()
                 try:
                     is_manual = manual_scan_event is not None and manual_scan_event.is_set()
                     if is_manual:
@@ -1006,7 +1005,6 @@ class Notifier:
                     error_count += 1
                     self.status.increment_error_count()
                 finally:
-                    time.monotonic() - started_at
                     LOGGER.info(
                         "Loop iteration duration %.2fms",
                         (time.perf_counter() - loop_started) * 1000,

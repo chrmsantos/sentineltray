@@ -104,10 +104,6 @@ def _ensure_single_instance() -> None:
     pid_path = _pid_file_path()
     pid_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if pid_path.exists():
-        with contextlib.suppress(Exception):
-            pid_path.read_text(encoding="utf-8").strip()
-
     pid_path.write_text(str(os.getpid()), encoding="utf-8")
 
     def _cleanup() -> None:

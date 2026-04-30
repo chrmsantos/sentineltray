@@ -1,12 +1,13 @@
 ﻿# Changelog
 
-## 2026-04-29 (5.7.0)
+## 2026-04-30 (5.7.0)
 
 - Qualidade: refatoração abrangente de boas práticas Python em todos os 21 módulos do pacote `z7_sentineltray` — docstrings no estilo Google, anotações de tipo completas, anti-padrões corrigidos (TRY/SIM/N/C90/ANN/RUF).
 - Qualidade: configuração de ferramentas adicionada ao `pyproject.toml` — Ruff (linter + formatter, 0 erros em `src/` e `tests/`), mypy em modo estrito, pre-commit hooks (ruff + mypy + formatadores padrão).
 - Qualidade: marcador PEP 561 `py.typed` adicionado ao pacote para sinalizar suporte a type-checking estático.
 - Qualidade: suite de testes aprimorada — PT017/PT011/SIM105/N802/E402 corrigidos nos arquivos de teste; arquivo de conflito duplicado removido; 144 testes passando.
 - Limpeza: artefatos de saída de build e testes (`.txt`) removidos da raiz do projeto; `.gitignore` atualizado com padrões para prevenir reacumulação.
+- Limpeza: código legado sem função ativa removido — expressão morta `time.monotonic() - started_at` em `app.py` e leitura descartada de arquivo PID em `entrypoint.py`.
 
 ## 2026-04-29 (5.6.2)
 
