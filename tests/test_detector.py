@@ -1,8 +1,8 @@
-﻿import pytest
+import pytest
 
 pywinauto = pytest.importorskip("pywinauto")
 
-from z7_sentineltray.detector import WindowTextDetector
+from z7_sentineltray.detector import WindowTextDetector  # noqa: E402
 
 
 def test_prepare_window_restores_minimized(monkeypatch) -> None:
@@ -217,6 +217,7 @@ def test_window_is_minimized_handles_missing_attrs() -> None:
 # ---------------------------------------------------------------------------
 # Non-intrusive scan tests: window state is restored after reading
 # ---------------------------------------------------------------------------
+
 
 class _MinimizableWindow:
     """Fake window that starts minimized and tracks state changes."""

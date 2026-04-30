@@ -1,16 +1,18 @@
+"""Structured logging setup: context injection, PII redaction, and JSON formatting."""
+
 import contextlib
 import contextvars
 import json
 import logging
 import os
-from collections.abc import Iterator
 import platform
 import re
 import sys
 import threading
 import time
 import warnings
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from datetime import UTC, datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path, PureWindowsPath
 from uuid import uuid4
@@ -18,14 +20,16 @@ from uuid import uuid4
 MAX_LOG_FILES = 3
 
 _SCAN_ID: contextvars.ContextVar[str] = contextvars.ContextVar("scan_id", default="")
-_LOG_CONTEXT: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar(
-    "log_context",
-    default={},
-)
+_LOG_CONTEXT: contextvars.ContextVar[dict[str, str]] = contextvars.ContextVar("log_context")
 
 
 @contextlib.contextmanager
 def scan_context(scan_id: str) -> Iterator[None]:
+    """Context manager that sets the current scan ID for all log records.
+
+    Args:
+        scan_id: Unique identifier for the scan operation.
+    """
     token = _SCAN_ID.set(scan_id)
     try:
         yield
@@ -35,7 +39,15 @@ def scan_context(scan_id: str) -> Iterator[None]:
 
 @contextlib.contextmanager
 def log_context(**fields: object) -> Iterator[None]:
-    current = dict(_LOG_CONTEXT.get())
+    """Context manager that merges extra fields into every log record.
+
+    All *fields* values are stringified and PII-redacted before being
+    embedded in structured log output.
+
+    Args:
+        **fields: Arbitrary key-value pairs to include in log context.
+    """
+    current = dict(_LOG_CONTEXT.get({}))
     updated = {key: str(value) for key, value in fields.items() if value is not None}
     current.update(updated)
     token = _LOG_CONTEXT.set(current)
@@ -44,23 +56,29 @@ def log_context(**fields: object) -> Iterator[None]:
     finally:
         _LOG_CONTEXT.reset(token)
 
+
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 WINDOWS_PATH_RE = re.compile(r"[A-Za-z]:\\[^\s]+")
 PHONE_RE = re.compile(r"\b(?:\+?\d[\d\s\-()]{7,}\d)\b")
-TOKEN_RE = re.compile(
-    r"(?i)\b(bearer|token|apikey|api_key|secret|password)\s*[:=]\s*[^\s,;]+"
-)
+TOKEN_RE = re.compile(r"(?i)\b(bearer|token|apikey|api_key|secret|password)\s*[:=]\s*[^\s,;]+")
 
 
 class CategoryFilter(logging.Filter):
+    """Ensure every log record has a ``category`` attribute (default ``general``)."""
+
     def filter(self, record: logging.LogRecord) -> bool:
+        """Add a default category to *record* if one is not already set."""
         if not hasattr(record, "category"):
             record.category = "general"
         return True
 
 
 class ContextFilter(logging.Filter):
-    def __init__(self, *, session_id: str, app_version: str, release_date: str, commit_hash: str) -> None:
+    """Inject session metadata and context-var fields into every log record."""
+
+    def __init__(
+        self, *, session_id: str, app_version: str, release_date: str, commit_hash: str
+    ) -> None:
         super().__init__()
         self._session_id = session_id
         self._app_version = app_version
@@ -72,7 +90,8 @@ class ContextFilter(logging.Filter):
         self._pid = os.getpid()
         self._process_start = time.time()
 
-    def filter(self, record: logging.LogRecord) -> bool:
+    def filter(self, record: logging.LogRecord) -> bool:  # noqa: C901
+        """Populate session and context fields on *record*."""
         if not hasattr(record, "session_id"):
             record.session_id = self._session_id
         if not hasattr(record, "app_version"):
@@ -84,7 +103,7 @@ class ContextFilter(logging.Filter):
         if not hasattr(record, "scan_id"):
             record.scan_id = _SCAN_ID.get()
         if not hasattr(record, "log_context"):
-            record.log_context = _LOG_CONTEXT.get()
+            record.log_context = _LOG_CONTEXT.get({})
         if not hasattr(record, "log_context_text"):
             record.log_context_text = _format_log_context(record.log_context)
         if not hasattr(record, "hostname"):
@@ -110,6 +129,7 @@ def _redact_windows_path(match: re.Match[str]) -> str:
 
 
 def sanitize_text(value: str) -> str:
+    """Return *value* with PII (e-mail, paths, phone, tokens) replaced by placeholders."""
     if not value:
         return value
     sanitized = EMAIL_RE.sub("<email>", value)
@@ -137,7 +157,10 @@ def _format_log_context(context: dict[str, str]) -> str:
 
 
 class RedactionFilter(logging.Filter):
+    """Redact PII (e-mail, paths, phone numbers, tokens) from log messages."""
+
     def filter(self, record: logging.LogRecord) -> bool:
+        """Sanitise the formatted message of *record* in-place."""
         message = sanitize_text(record.getMessage())
         record.msg = message
         record.args = ()
@@ -145,6 +168,8 @@ class RedactionFilter(logging.Filter):
 
 
 class DedupFilter(logging.Filter):
+    """Suppress duplicate DEBUG/INFO records within a sliding time window."""
+
     def __init__(self, *, window_seconds: int = 30) -> None:
         super().__init__()
         self._window_seconds = max(1, window_seconds)
@@ -152,6 +177,7 @@ class DedupFilter(logging.Filter):
         self._recent: dict[tuple[str, int, str, str], float] = {}
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Return ``False`` to suppress *record* if it was recently seen."""
         if record.levelno >= logging.WARNING:
             return True
         key = (
@@ -170,14 +196,20 @@ class DedupFilter(logging.Filter):
 
 
 class SanitizingFormatter(logging.Formatter):
-    def formatException(self, ei) -> str:
+    """Formatter that redacts PII from formatted exception tracebacks."""
+
+    def formatException(self, ei: object) -> str:  # noqa: N802
+        """Format and redact a traceback from *ei*."""
         return sanitize_text(super().formatException(ei))
 
 
 class JsonFormatter(logging.Formatter):
+    """Emit each log record as a single-line JSON object."""
+
     def format(self, record: logging.LogRecord) -> str:
+        """Serialise *record* to a JSON string."""
         message = sanitize_text(record.getMessage())
-        timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()
+        timestamp = datetime.fromtimestamp(record.created, tz=UTC).isoformat()
         context = getattr(record, "log_context", {})
         sanitized_context = _sanitize_log_context(context) if context else {}
         payload = {
@@ -214,7 +246,11 @@ class JsonFormatter(logging.Formatter):
 def _install_exception_hooks() -> None:
     logger = logging.getLogger(__name__)
 
-    def handle_exception(exc_type, exc, tb) -> None:
+    def handle_exception(
+        exc_type: type[BaseException],
+        exc: BaseException,
+        tb: object,
+    ) -> None:
         if exc_type in (KeyboardInterrupt, SystemExit):
             logger.info(
                 "Shutdown requested",
@@ -230,6 +266,7 @@ def _install_exception_hooks() -> None:
     sys.excepthook = handle_exception
 
     if hasattr(threading, "excepthook"):
+
         def _thread_excepthook(args: threading.ExceptHookArgs) -> None:
             if args.exc_type in (KeyboardInterrupt, SystemExit):
                 logger.info(
@@ -286,6 +323,24 @@ def setup_logging(
     release_date: str | None = None,
     commit_hash: str | None = None,
 ) -> None:
+    """Configure the root logger with file, run-file, and optional console handlers.
+
+    Sets up JSON-formatted rotating log files, a run-specific log file for
+    each process invocation, structured context injection, PII redaction, and
+    duplicate suppression.
+
+    Args:
+        log_file: Base path for the rotating log file.
+        log_level: Minimum level for file handlers (default ``INFO``).
+        log_console_level: Minimum level for the console handler (default ``WARNING``).
+        log_console_enabled: Whether to add a ``StreamHandler`` to stderr.
+        log_max_bytes: Max bytes before the rotating file is rolled over.
+        log_backup_count: Number of backup log files to keep.
+        log_run_files_keep: Number of per-run log files to retain.
+        app_version: Application version string embedded in every log record.
+        release_date: Release date string embedded in every log record.
+        commit_hash: Git commit hash embedded in every log record.
+    """
     root_logger = logging.getLogger()
     if root_logger.handlers:
         for handler in list(root_logger.handlers):

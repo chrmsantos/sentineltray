@@ -1,4 +1,5 @@
-﻿import smtplib
+import smtplib
+from contextlib import suppress
 
 from z7_sentineltray.config import EmailConfig
 from z7_sentineltray.email_sender import (
@@ -113,10 +114,8 @@ def test_email_sender_auth_failure_no_retry(monkeypatch) -> None:
     monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
 
     sender = SmtpEmailSender(config=config)
-    try:
+    with suppress(EmailAuthError):
         sender.send("msg")
-    except EmailAuthError:
-        pass
 
     assert attempts["count"] == 1
 

@@ -1,10 +1,8 @@
-﻿from __future__ import annotations
+"""Console (non-GUI) front-end for running and configuring Z7_SentinelTray."""
 
 from __future__ import annotations
 
-from builtins import input as input
-from dataclasses import replace
-
+import contextlib
 import logging
 import msvcrt
 import os
@@ -12,9 +10,12 @@ import subprocess
 import sys
 import time
 import webbrowser
+from builtins import input as input
+from collections.abc import Callable
+from dataclasses import replace
+from datetime import UTC
 from pathlib import Path
 from threading import Event, Thread
-from typing import Callable
 
 from .app import Notifier
 from .config import (
@@ -25,10 +26,10 @@ from .config import (
     load_config,
 )
 from .detector import WindowTextDetector
+from .dpapi_utils import save_secret
 from .gui_app import prompt_smtp_password_gui
 from .status import StatusStore, format_timestamp
-from .dpapi_utils import save_secret
-from .tray_app import TrayIcon, set_console_visible
+from .tray_app import TrayIcon
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ def _clear_stored_smtp_password(index: int) -> None:
             exc,
             extra={"category": "config"},
         )
+
 
 def _prune_files(path: Path, pattern: str, keep: int = 3) -> None:
     entries = sorted(
@@ -89,7 +91,7 @@ def _apply_console_logging_policy(config: AppConfig) -> AppConfig:
     return replace(config, log_console_enabled=False)
 
 
-def _create_config_editor() -> tuple[
+def _create_config_editor() -> tuple[  # noqa: C901
     Callable[[], None],
     Callable[[], AppConfig | None],
     Callable[[], None],
@@ -145,7 +147,8 @@ def _create_config_editor() -> tuple[
             except Exception as exc:
                 LOGGER.warning("Config validation failed after edit: %s", exc)
                 return None
-            return new_config
+            else:
+                return new_config
         except Exception as exc:
             LOGGER.warning("Failed to finalize config edit: %s", exc)
         return None
@@ -159,10 +162,8 @@ def _create_config_editor() -> tuple[
                 edit_process.terminate()
                 edit_process.wait(timeout=2)
             except Exception:
-                try:
+                with contextlib.suppress(Exception):
                     edit_process.kill()
-                except Exception:
-                    pass
         edit_process = None
 
     return on_open, finalize_config_edit, close_editor
@@ -175,10 +176,8 @@ def _write_config_error_details(message: str) -> Path:
     if path.exists():
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         rotated = log_dir / f"config_error.{timestamp}.txt"
-        try:
+        with contextlib.suppress(Exception):
             path.rename(rotated)
-        except Exception:
-            pass
     path.write_text(message.strip() + "\n", encoding="utf-8")
     _prune_files(log_dir, "config_error*.txt", keep=3)
     return path
@@ -192,6 +191,7 @@ def _open_text_file(path: Path) -> None:
 
 
 def clear_screen() -> None:
+    """Clear the terminal screen using the platform-appropriate command."""
     os.system("cls" if os.name == "nt" else "clear")
 
 
@@ -208,20 +208,22 @@ def _format_next_scan_remaining(last_scan: str, poll_interval_seconds: int) -> s
     if not last_scan or not poll_interval_seconds:
         return "NENHUM"
     try:
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
+
         last = datetime.fromisoformat(last_scan)
         if last.tzinfo is None:
-            last = last.replace(tzinfo=timezone.utc)
-        now = datetime.now(timezone.utc)
+            last = last.replace(tzinfo=UTC)
+        now = datetime.now(UTC)
         remaining = (last + timedelta(seconds=poll_interval_seconds) - now).total_seconds()
         if remaining <= 0:
             return "iminente"
         minutes, seconds = divmod(int(remaining), 60)
         if minutes > 0:
             return f"{minutes}m {seconds:02d}s"
-        return f"{seconds}s"
     except (ValueError, TypeError):
         return "NENHUM"
+    else:
+        return f"{seconds}s"
 
 
 def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
@@ -231,9 +233,10 @@ def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
     last_message = f"ENVIADA ({last_send_at})" if last_send_at else "NENHUMA"
     last_scan_at = format_timestamp(snapshot.last_scan)
     last_scan_line = f"Ultimo scan: {last_scan_at or 'NENHUM'}"
-    last_scan_result = snapshot.last_scan_result or "NENHUM"
-    last_scan_result_line = f"Resultado ultimo scan: {last_scan_result}"
-    next_scan_remaining = _format_next_scan_remaining(snapshot.last_scan, config.poll_interval_seconds)
+    last_scan_result_line = f"Resultado scan: {snapshot.last_scan_result or 'NENHUM'}"
+    next_scan_remaining = _format_next_scan_remaining(
+        snapshot.last_scan, config.poll_interval_seconds
+    )
     next_scan_line = f"Proximo scan em: {next_scan_remaining}"
     last_error_line = f"Ultimo erro: {snapshot.last_error or 'NENHUM'}"
     queue = snapshot.email_queue
@@ -244,11 +247,7 @@ def _menu_header(status: StatusStore, config: AppConfig) -> list[str]:
         f"{queue.get('failed', 0)} falhas"
     )
     breaker_line = f"Monitores em breaker: {snapshot.breaker_active_count}"
-    failures = [
-        (key, count)
-        for key, count in snapshot.monitor_failures.items()
-        if count > 0
-    ]
+    failures = [(key, count) for key, count in snapshot.monitor_failures.items() if count > 0]
     failures.sort(key=lambda item: item[1], reverse=True)
     failure_line = ""
     if failures:
@@ -289,13 +288,10 @@ def _print_window_matches(config: AppConfig) -> None:
             print(f"Monitor {index}: erro ao listar janelas: {exc}")
             continue
         if not titles:
-            print(
-                f"Monitor {index}: nenhuma janela corresponde ({monitor.window_title_regex})"
-            )
+            print(f"Monitor {index}: nenhuma janela corresponde ({monitor.window_title_regex})")
             continue
         print(
-            f"Monitor {index}: {len(titles)} janela(s) encontrada(s)"
-            f" ({monitor.window_title_regex})"
+            f"Monitor {index}: {len(titles)} janela(s) encontrada(s) ({monitor.window_title_regex})"
         )
         for title in titles[:5]:
             print(f"  - {title}")
@@ -349,7 +345,8 @@ def _read_command(prompt: str, refresh_event: Event, exit_event: Event | None = 
             time.sleep(0.05)
 
 
-def run_console(config: AppConfig) -> None:
+def run_console(config: AppConfig) -> None:  # noqa: C901
+    """Start the interactive console loop with tray icon support."""
     status = StatusStore()
     stop_event = Event()
     manual_scan_event = Event()
@@ -492,7 +489,8 @@ def run_console(config: AppConfig) -> None:
             tray.stop()
 
 
-def run_console_config_error(error_details: str) -> None:
+def run_console_config_error(error_details: str) -> None:  # noqa: C901
+    """Display a config-error recovery prompt and allow the user to fix the config."""
     on_open, finalize_config_edit, close_editor = _create_config_editor()
     details_path = _write_config_error_details(error_details)
     local_path = get_user_data_dir() / "config.local.yaml"

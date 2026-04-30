@@ -1,15 +1,17 @@
-﻿from __future__ import annotations
+"""Application configuration loading, validation, and dataclass definitions."""
 
-from dataclasses import dataclass, field, replace
+from __future__ import annotations
+
 import logging
 import os
+from collections.abc import Callable
+from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import yaml
 
 from .dpapi_utils import load_secret
-
 from .path_utils import ensure_under_root, resolve_log_path, resolve_sensitive_path
 from .validation_utils import validate_email_address, validate_regex
 
@@ -48,8 +50,7 @@ def _migrate_config_data(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("config_version must be an integer") from exc
     if version > CURRENT_CONFIG_VERSION:
         raise ValueError(
-            "config_version is newer than supported: "
-            f"{version} > {CURRENT_CONFIG_VERSION}"
+            f"config_version is newer than supported: {version} > {CURRENT_CONFIG_VERSION}"
         )
     if version < 1:
         raise ValueError("config_version must be >= 1")
@@ -84,6 +85,7 @@ def _get_project_root_from_file() -> Path:
 
 
 def get_user_data_dir() -> Path:
+    """Return the user-specific data directory, respecting ``Z7_SENTINELTRAY_DATA_DIR``."""
     override = os.environ.get("Z7_SENTINELTRAY_DATA_DIR")
     if override:
         return Path(override)
@@ -92,15 +94,25 @@ def get_user_data_dir() -> Path:
         return Path(local_appdata) / "ZWave" / "Tmp" / "Z7_SentinelTray" / "Config"
     user_profile = os.environ.get("USERPROFILE")
     if user_profile:
-        return Path(user_profile) / "AppData" / "Local" / "ZWave" / "Tmp" / "Z7_SentinelTray" / "Config"
+        return (
+            Path(user_profile)
+            / "AppData"
+            / "Local"
+            / "ZWave"
+            / "Tmp"
+            / "Z7_SentinelTray"
+            / "Config"
+        )
     return Path.home() / "AppData" / "Local" / "ZWave" / "Tmp" / "Z7_SentinelTray" / "Config"
 
 
 def get_user_log_dir() -> Path:
+    """Return the user-specific log directory."""
     return get_user_data_dir() / "logs"
 
 
 def get_project_root() -> Path:
+    """Return the project root, respecting ``Z7_SENTINELTRAY_ROOT``."""
     override = os.environ.get("Z7_SENTINELTRAY_ROOT")
     if override:
         return Path(override)
@@ -109,6 +121,8 @@ def get_project_root() -> Path:
 
 @dataclass(frozen=True)
 class EmailConfig:
+    """Immutable SMTP/email delivery configuration for a single monitor."""
+
     smtp_host: str
     smtp_port: int
     smtp_username: str
@@ -124,6 +138,8 @@ class EmailConfig:
 
 @dataclass(frozen=True)
 class MonitorConfig:
+    """Window-match and email settings for one monitor target."""
+
     window_title_regex: str
     phrase_regex: str
     email: EmailConfig
@@ -131,6 +147,8 @@ class MonitorConfig:
 
 @dataclass(frozen=True)
 class AppConfig:
+    """Fully validated, immutable application-wide configuration."""
+
     poll_interval_seconds: int
     healthcheck_interval_seconds: int
     error_backoff_base_seconds: int
@@ -162,13 +180,11 @@ class AppConfig:
     email_queue_retry_base_seconds: int = 30
     pause_on_user_active: bool = False
     pause_idle_threshold_seconds: int = 180
-    monitors: list[MonitorConfig] = field(
-        default_factory=lambda: cast(list[MonitorConfig], [])
-    )
+    monitors: list[MonitorConfig] = field(default_factory=lambda: cast(list[MonitorConfig], []))
     config_version: int = 1
 
 
-def _get_required(data: dict[str, Any], key: str) -> Any:
+def _get_required(data: dict[str, Any], key: str) -> Any:  # noqa: ANN401
     if key not in data:
         raise ValueError(f"Missing required config key: {key}")
     return data[key]
@@ -186,7 +202,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
     except yaml.YAMLError as exc:
         raise ValueError(f"Invalid YAML in config file: {path}: {exc}") from exc
     if not isinstance(raw, dict):
-        raise ValueError("Config must be a mapping")
+        raise TypeError("Config must be a mapping")
     return cast(dict[str, Any], raw)
 
 
@@ -222,12 +238,10 @@ def _build_email_config(
         to_addresses = [item.strip() for item in to_raw.split(",") if item.strip()]
     elif isinstance(to_raw, list):
         to_addresses = [
-            str(item).strip()
-            for item in cast(list[object], to_raw)
-            if str(item).strip()
+            str(item).strip() for item in cast(list[object], to_raw) if str(item).strip()
         ]
     else:
-        raise ValueError("email.to_addresses must be a list or comma-separated string")
+        raise TypeError("email.to_addresses must be a list or comma-separated string")
 
     smtp_username = str(_get_required(email_data, "smtp_username"))
     if "smtp_password" in email_data:
@@ -274,7 +288,7 @@ def _build_email_config(
     )
 
 
-def _build_config(data: dict[str, Any]) -> AppConfig:
+def _build_config(data: dict[str, Any]) -> AppConfig:  # noqa: C901
     data = _apply_config_defaults(_migrate_config_data(data))
     monitors: list[MonitorConfig] = []
     monitors_data = data.get("monitors")
@@ -283,7 +297,7 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
     monitors_list = cast(list[object], monitors_data)
     for index, entry in enumerate(monitors_list, start=1):
         if not isinstance(entry, dict):
-            raise ValueError("monitors entries must be objects")
+            raise TypeError("monitors entries must be objects")
         entry_map = cast(dict[str, Any], entry)
         monitor_email = _build_email_config(
             cast(dict[str, Any], _get_required(entry_map, "email")),
@@ -346,15 +360,9 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
 
     config = AppConfig(
         poll_interval_seconds=int(_get_required(data, "poll_interval_seconds")),
-        healthcheck_interval_seconds=int(
-            _get_required(data, "healthcheck_interval_seconds")
-        ),
-        error_backoff_base_seconds=int(
-            _get_required(data, "error_backoff_base_seconds")
-        ),
-        error_backoff_max_seconds=int(
-            _get_required(data, "error_backoff_max_seconds")
-        ),
+        healthcheck_interval_seconds=int(_get_required(data, "healthcheck_interval_seconds")),
+        error_backoff_base_seconds=int(_get_required(data, "error_backoff_base_seconds")),
+        error_backoff_max_seconds=int(_get_required(data, "error_backoff_max_seconds")),
         debounce_seconds=int(_get_required(data, "debounce_seconds")),
         max_history=int(_get_required(data, "max_history")),
         state_file=str(_get_required(data, "state_file")),
@@ -373,18 +381,10 @@ def _build_config(data: dict[str, Any]) -> AppConfig:
         error_notification_cooldown_seconds=int(
             data.get("error_notification_cooldown_seconds", 300)
         ),
-        window_error_backoff_base_seconds=int(
-            data.get("window_error_backoff_base_seconds", 5)
-        ),
-        window_error_backoff_max_seconds=int(
-            data.get("window_error_backoff_max_seconds", 120)
-        ),
-        window_error_circuit_threshold=int(
-            data.get("window_error_circuit_threshold", 3)
-        ),
-        window_error_circuit_seconds=int(
-            data.get("window_error_circuit_seconds", 300)
-        ),
+        window_error_backoff_base_seconds=int(data.get("window_error_backoff_base_seconds", 5)),
+        window_error_backoff_max_seconds=int(data.get("window_error_backoff_max_seconds", 120)),
+        window_error_circuit_threshold=int(data.get("window_error_circuit_threshold", 3)),
+        window_error_circuit_seconds=int(data.get("window_error_circuit_seconds", 300)),
         email_queue_file=str(data.get("email_queue_file", "logs/email_queue.json")),
         email_queue_max_items=int(data.get("email_queue_max_items", 500)),
         email_queue_max_age_seconds=int(data.get("email_queue_max_age_seconds", 86400)),
@@ -423,7 +423,7 @@ def _is_valid_log_level(level: str) -> bool:
     return level_name in logging.getLevelNamesMapping()
 
 
-def _validate_config(config: AppConfig) -> None:
+def _validate_config(config: AppConfig) -> None:  # noqa: C901
     log_root = get_user_log_dir().resolve()
 
     if config.poll_interval_seconds < 1:
@@ -480,7 +480,9 @@ def _validate_config(config: AppConfig) -> None:
     if config.email_queue_retry_base_seconds < 0:
         raise ValueError("email_queue_retry_base_seconds must be >= 0")
     if config.pause_on_user_active and config.pause_idle_threshold_seconds < 1:
-        raise ValueError("pause_idle_threshold_seconds must be >= 1 when pause_on_user_active is enabled")
+        raise ValueError(
+            "pause_idle_threshold_seconds must be >= 1 when pause_on_user_active is enabled"
+        )
     if config.config_version < 1:
         raise ValueError("config_version must be >= 1")
     if config.monitors:
@@ -490,9 +492,7 @@ def _validate_config(config: AppConfig) -> None:
             if monitor.phrase_regex:
                 validate_regex("monitors.phrase_regex", monitor.phrase_regex)
             if not (1 <= monitor.email.smtp_port <= 65535):
-                raise ValueError(
-                    "monitors.email.smtp_port must be between 1 and 65535"
-                )
+                raise ValueError("monitors.email.smtp_port must be between 1 and 65535")
             if not monitor.email.smtp_host:
                 raise ValueError("monitors.email.smtp_host is required")
             if not monitor.email.smtp_username:
@@ -507,11 +507,13 @@ def _validate_config(config: AppConfig) -> None:
 
 
 def load_config(path: str) -> AppConfig:
+    """Load and validate an ``AppConfig`` from a YAML file at *path*."""
     data = _load_yaml(Path(path))
     return _build_config(data)
 
 
 def load_config_with_override(base_path: str, override_path: str) -> AppConfig:
+    """Load and merge two YAML config files, then validate the result."""
     base = _load_yaml(Path(base_path))
     override = _load_yaml(Path(override_path))
     merged = _merge_dicts(base, override)

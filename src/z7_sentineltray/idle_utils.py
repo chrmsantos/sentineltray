@@ -1,3 +1,5 @@
+"""Win32 idle-time helpers for detecting user inactivity."""
+
 from __future__ import annotations
 
 import sys

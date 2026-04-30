@@ -1,3 +1,5 @@
+"""Win32 window-text detection using pywinauto automation."""
+
 from __future__ import annotations
 
 import ctypes
@@ -9,6 +11,7 @@ import unicodedata
 try:
     from pywinauto import Desktop
     from pywinauto.findwindows import ElementAmbiguousError
+
     _PYWINAUTO_IMPORT_ERROR: Exception | None = None
 except Exception as exc:  # pragma: no cover - optional dependency
     Desktop = None  # type: ignore[assignment]
@@ -22,12 +25,14 @@ LOGGER = logging.getLogger(__name__)
 
 # Win32 window class names for Windows Shell overlays that grab the foreground
 # and block SetForegroundWindow from succeeding while they are open.
-_SHELL_OVERLAY_CLASSES = frozenset({
-    "Windows.UI.Core.CoreWindow",   # Start menu host (Windows 10/11)
-    "Shell_TrayWnd",                # Taskbar
-    "Shell_SecondaryTrayWnd",       # Secondary-monitor taskbar
-    "NotifyIconOverflowWindow",     # System tray overflow
-})
+_SHELL_OVERLAY_CLASSES = frozenset(
+    {
+        "Windows.UI.Core.CoreWindow",  # Start menu host (Windows 10/11)
+        "Shell_TrayWnd",  # Taskbar
+        "Shell_SecondaryTrayWnd",  # Secondary-monitor taskbar
+        "NotifyIconOverflowWindow",  # System tray overflow
+    }
+)
 
 
 class WindowUnavailableError(RuntimeError):
@@ -35,6 +40,8 @@ class WindowUnavailableError(RuntimeError):
 
 
 class WindowTextDetector:
+    """Detects and reads text from a Win32 window matched by title regex."""
+
     def __init__(
         self,
         window_title_regex: str,
@@ -64,7 +71,7 @@ class WindowTextDetector:
             self._last_log[key] = now
             LOGGER.log(level, message, *args, extra={"category": "scan"})
 
-    def _window_exists(self, window, timeout: float = 0.0) -> bool:
+    def _window_exists(self, window: object, timeout: float = 0.0) -> bool:
         try:
             if hasattr(window, "exists") and window.exists(timeout=timeout):
                 return True
@@ -72,11 +79,12 @@ class WindowTextDetector:
                 return True
             if hasattr(window, "is_visible"):
                 return window.is_visible()
-            return True
         except Exception:
             return False
+        else:
+            return True
 
-    def _window_is_foreground(self, window) -> bool:
+    def _window_is_foreground(self, window: object) -> bool:
         try:
             if hasattr(window, "has_focus") and window.has_focus():
                 return True
@@ -96,7 +104,7 @@ class WindowTextDetector:
             return False
         return False
 
-    def _window_is_maximized(self, window) -> bool:
+    def _window_is_maximized(self, window: object) -> bool:
         try:
             if hasattr(window, "is_maximized"):
                 return bool(window.is_maximized())
@@ -111,7 +119,7 @@ class WindowTextDetector:
             return False
         return False
 
-    def _window_is_minimized(self, window) -> bool:
+    def _window_is_minimized(self, window: object) -> bool:
         try:
             if hasattr(window, "is_minimized"):
                 return bool(window.is_minimized())
@@ -126,7 +134,7 @@ class WindowTextDetector:
             return False
         return False
 
-    def _force_foreground(self, window) -> None:
+    def _force_foreground(self, window: object) -> None:
         try:
             if hasattr(window, "set_focus"):
                 window.set_focus()
@@ -150,7 +158,7 @@ class WindowTextDetector:
     def _show_window(self, handle: int, command: int) -> None:
         ctypes.windll.user32.ShowWindow(handle, command)
 
-    def _restore_window(self, window) -> None:
+    def _restore_window(self, window: object) -> None:
         try:
             if hasattr(window, "restore"):
                 window.restore()
@@ -172,7 +180,7 @@ class WindowTextDetector:
         except Exception:
             return None
 
-    def _minimize_window(self, window) -> None:
+    def _minimize_window(self, window: object) -> None:
         """Minimize *window* without activating another window (SW_MINIMIZE=6)."""
         try:
             if hasattr(window, "handle"):
@@ -205,9 +213,10 @@ class WindowTextDetector:
                 return ""
             buf = ctypes.create_unicode_buffer(256)
             ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
-            return buf.value
         except Exception:
             return ""
+        else:
+            return buf.value
 
     def _dismiss_shell_overlay(self) -> bool:
         """Send Escape to dismiss a shell overlay (e.g. Start menu) blocking the foreground.
@@ -218,20 +227,19 @@ class WindowTextDetector:
         if class_name not in _SHELL_OVERLAY_CLASSES:
             return False
         try:
-            _VK_ESCAPE = 0x1B
-            _KEYEVENTF_KEYUP = 0x0002
+            _VK_ESCAPE = 0x1B  # noqa: N806
+            _KEYEVENTF_KEYUP = 0x0002  # noqa: N806
             ctypes.windll.user32.keybd_event(_VK_ESCAPE, 0, 0, 0)
             ctypes.windll.user32.keybd_event(_VK_ESCAPE, 0, _KEYEVENTF_KEYUP, 0)
             time.sleep(0.3)
-            LOGGER.debug(
-                "Dismissed shell overlay: %s", class_name, extra={"category": "scan"}
-            )
-            return True
+            LOGGER.debug("Dismissed shell overlay: %s", class_name, extra={"category": "scan"})
         except Exception:
             LOGGER.debug("Failed to dismiss shell overlay", exc_info=True)
             return False
+        else:
+            return True
 
-    def _ensure_foreground_and_maximized(self, window) -> None:
+    def _ensure_foreground_and_maximized(self, window: object) -> None:  # noqa: C901
         if self._window_is_minimized(window):
             if not self._allow_window_restore:
                 raise WindowUnavailableError("Target window minimized; restore disabled")
@@ -260,11 +268,11 @@ class WindowTextDetector:
         if not self._window_is_maximized(window):
             raise WindowUnavailableError("Target window not maximized")
 
-    def _select_best_window(self, candidates):
+    def _select_best_window(self, candidates: list[object]) -> object:
         if not candidates:
             raise ElementAmbiguousError("No window candidates available")
 
-        def score(window) -> int:
+        def score(window: object) -> int:
             value = 0
             try:
                 if hasattr(window, "has_focus") and window.has_focus():
@@ -310,7 +318,7 @@ class WindowTextDetector:
                 candidates.append(window)
         return candidates
 
-    def _get_window(self):
+    def _get_window(self) -> object:
         if Desktop is None:
             raise RuntimeError(
                 "pywinauto is required for window detection. "
@@ -336,7 +344,6 @@ class WindowTextDetector:
                     return candidates[0]
                 window = self._select_best_window(candidates)
                 self._last_window = window
-                return window
             except Exception as exc:
                 last_exc = exc
                 self._log_throttled(
@@ -347,11 +354,14 @@ class WindowTextDetector:
                     exc,
                 )
                 time.sleep(0.5 * (2**attempt))
+            else:
+                return window
         if isinstance(last_exc, WindowUnavailableError):
             raise last_exc
         raise WindowUnavailableError("Target window lookup failed") from last_exc
 
     def list_matching_window_titles(self) -> list[str]:
+        """Return window titles matching the configured title regex."""
         candidates = self._collect_candidate_windows()
         titles: list[str] = []
         for window in candidates:
@@ -364,6 +374,7 @@ class WindowTextDetector:
         return titles
 
     def check_ready(self) -> None:
+        """Raise ``WindowUnavailableError`` if the target window cannot be activated."""
         window = self._get_window()
         if not self._window_exists(window, timeout=1.0):
             raise WindowUnavailableError("Target window not found")
@@ -404,6 +415,7 @@ class WindowTextDetector:
         return texts
 
     def find_matches(self, phrase_regex: str) -> list[str]:
+        """Return text elements from the target window matching *phrase_regex*."""
         texts = self._iter_texts()
         if not texts:
             return []

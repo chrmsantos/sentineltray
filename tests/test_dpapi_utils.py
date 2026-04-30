@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from z7_sentineltray.dpapi_utils import load_secret, save_secret
 

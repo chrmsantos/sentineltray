@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from pathlib import Path
 
@@ -36,9 +36,7 @@ def test_ensure_local_config_from_template_refuses_non_empty(tmp_path: Path) -> 
 def test_reconcile_template_config_applies_merge(tmp_path: Path) -> None:
     config_path = tmp_path / "config.local.yaml"
     template_text = (
-        "log_level: 'INFO'\n"
-        "email: {smtp_host: ''}\n"
-        "telemetry_file: 'logs/telemetry.json'\n"
+        "log_level: 'INFO'\nemail: {smtp_host: ''}\ntelemetry_file: 'logs/telemetry.json'\n"
     )
     legacy_text = "log_level: 'DEBUG'\nemail: {smtp_host: 'smtp.local'}\n"
 

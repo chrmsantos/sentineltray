@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import os
 from logging.handlers import RotatingFileHandler
@@ -58,7 +58,9 @@ def test_setup_logging_caps_retention(tmp_path: Path) -> None:
     assert len(logs) == 3
 
     handlers = logging.getLogger().handlers
-    rotating_handlers = [handler for handler in handlers if isinstance(handler, RotatingFileHandler)]
+    rotating_handlers = [
+        handler for handler in handlers if isinstance(handler, RotatingFileHandler)
+    ]
     assert rotating_handlers
     assert rotating_handlers[0].backupCount == 3
 

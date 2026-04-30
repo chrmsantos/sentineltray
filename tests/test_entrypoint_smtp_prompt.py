@@ -1,6 +1,4 @@
-﻿from __future__ import annotations
-
-from typing import Iterator
+from __future__ import annotations
 
 import pytest
 
@@ -76,7 +74,9 @@ def test_prompt_smtp_password_sets_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("Z7_SENTINELTRAY_SMTP_PASSWORD", raising=False)
     monkeypatch.delenv("Z7_SENTINELTRAY_SMTP_PASSWORD_1", raising=False)
 
-    monkeypatch.setattr("z7_sentineltray.gui_app.prompt_smtp_password_gui", lambda _user, _idx: "secret")
+    monkeypatch.setattr(
+        "z7_sentineltray.gui_app.prompt_smtp_password_gui", lambda _user, _idx: "secret"
+    )
 
     entrypoint._prompt_smtp_passwords([(1, "smtp-user")])
 

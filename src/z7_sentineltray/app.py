@@ -1,31 +1,39 @@
-﻿from __future__ import annotations
+"""Core monitoring engine: Notifier, MonitorRuntime, and the main run loop."""
+
+from __future__ import annotations
 
 import ctypes
 import hashlib
 import importlib.metadata
 import json
 import logging
+import re
 import shutil
 import socket
-import re
 import time
-from uuid import uuid4
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from threading import Event, Thread
 from typing import Any, cast
+from uuid import uuid4
 
+from . import __release_date__, __version_label__
 from .config import AppConfig, MonitorConfig, get_project_root
 from .detector import WindowTextDetector, WindowUnavailableError
+from .email_sender import (
+    EmailAuthError,
+    EmailQueued,
+    EmailSender,
+    QueueingEmailSender,
+    build_sender,
+)
 from .idle_utils import get_idle_seconds
+from .io_utils import read_json_safe
 from .logging_setup import log_context, sanitize_text, scan_context, setup_logging
 from .scan_utils import dedupe_items, filter_debounce, filter_min_repeat
 from .status import StatusStore, format_status
-from .email_sender import EmailAuthError, EmailQueued, QueueingEmailSender, EmailSender, build_sender
 from .telemetry import JsonWriter, atomic_write_text
-from .io_utils import read_json_safe
-from . import __release_date__, __version_label__
 
 LOGGER = logging.getLogger(__name__)
 EMAIL_DISABLED_LOG_COOLDOWN_SECONDS = 300
@@ -33,6 +41,8 @@ EMAIL_DISABLED_LOG_COOLDOWN_SECONDS = 300
 
 @dataclass
 class MonitorRuntime:
+    """Runtime state for a single configured monitor."""
+
     key: str
     config: MonitorConfig
     detector: WindowTextDetector
@@ -57,10 +67,7 @@ def _apply_execution_state(prevent_sleep: bool) -> bool:
         return False
     try:
         continuous = 0x80000000
-        if prevent_sleep:
-            flags = continuous | 0x00000001 | 0x00000002
-        else:
-            flags = continuous
+        flags = continuous | 1 | 2 if prevent_sleep else continuous
         return bool(kernel32.SetThreadExecutionState(flags))
     except Exception:
         return False
@@ -101,7 +108,7 @@ def _normalize(text: str) -> str:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).astimezone().replace(microsecond=0).isoformat()
+    return datetime.now(UTC).astimezone().replace(microsecond=0).isoformat()
 
 
 def _to_ascii(text: str) -> str:
@@ -180,9 +187,11 @@ def _get_commit_hash() -> str:
             ref_path = base / ".git" / ref.replace("ref:", "").strip()
             if ref_path.exists():
                 return ref_path.read_text(encoding="utf-8").strip()
-        return ref
     except Exception:
         return ""
+    else:
+        return ref
+    return ""
 
 
 def _check_smtp_health(config: AppConfig) -> None:
@@ -214,6 +223,8 @@ def _check_smtp_health(config: AppConfig) -> None:
 
 @dataclass
 class Notifier:
+    """Orchestrates monitors, email delivery, and loop lifecycle."""
+
     config: AppConfig
     status: StatusStore
 
@@ -223,7 +234,7 @@ class Notifier:
         self._history = _load_state(self._state_path)
         for monitor in self._monitors:
             monitor.last_sent = self._build_last_sent_map(self._history, monitor.key)
-        self._started_at = datetime.now(timezone.utc)
+        self._started_at = datetime.now(UTC)
         self._next_healthcheck = time.monotonic() + self.config.healthcheck_interval_seconds
         self._next_queue_drain = time.monotonic() + 30
         self._telemetry = JsonWriter(Path(self.config.telemetry_file))
@@ -244,8 +255,10 @@ class Notifier:
             "oldest_age_seconds": 0,
         }
         self._sender: EmailSender | None = None
+
         def _fetch_commit_hash() -> None:
             self._commit_hash = _get_commit_hash()
+
         Thread(target=_fetch_commit_hash, daemon=True, name="commit-hash").start()
         _check_smtp_health(self.config)
 
@@ -327,7 +340,7 @@ class Notifier:
 
     def _send_message(
         self,
-        monitor: "MonitorRuntime",
+        monitor: MonitorRuntime,
         message: str,
         *,
         category: str,
@@ -371,7 +384,7 @@ class Notifier:
                 self.status.set_last_error(
                     _safe_status_text(f"erro: falha de autenticação SMTP: {exc}")
                 )
-                LOGGER.error(
+                LOGGER.exception(
                     "SMTP authentication failed; disabling email notifications",
                     extra={"category": category},
                 )
@@ -415,9 +428,7 @@ class Notifier:
 
         if monitor.failure_count >= self.config.window_error_circuit_threshold:
             breaker_seconds = max(0, self.config.window_error_circuit_seconds)
-            monitor.breaker_until = max(
-                monitor.breaker_until, time.monotonic() + breaker_seconds
-            )
+            monitor.breaker_until = max(monitor.breaker_until, time.monotonic() + breaker_seconds)
             if LOGGER.isEnabledFor(logging.WARNING):
                 LOGGER.warning(
                     "Circuit breaker active for monitor %s (%ss)",
@@ -427,8 +438,7 @@ class Notifier:
                 )
             if breaker_seconds > 0:
                 critical_message = (
-                    "erro: monitor pausado por "
-                    f"{breaker_seconds}s (muitas falhas consecutivas)"
+                    f"erro: monitor pausado por {breaker_seconds}s (muitas falhas consecutivas)"
                 )
                 for current in self._monitors:
                     if current.key != monitor.key:
@@ -452,11 +462,12 @@ class Notifier:
         )
 
     def scan_once(self) -> None:
+        """Run a single monitoring scan cycle with a fresh scan context."""
         scan_id = uuid4().hex
         with scan_context(scan_id):
             self._scan_once_impl()
 
-    def _scan_once_impl(self) -> None:
+    def _scan_once_impl(self) -> None:  # noqa: C901
         self.status.set_last_scan(_now_iso())
         any_match = False
         self._last_scan_error = False
@@ -500,8 +511,7 @@ class Notifier:
                     message = f"erro: {exc}"
                     self._handle_monitor_error(monitor, message)
                     LOGGER.exception(
-                        "Scan error: %s",
-                        exc,
+                        "Scan error",
                         extra={"category": "error", "event": "scan_error"},
                     )
                     self._last_scan_error = True
@@ -536,7 +546,7 @@ class Notifier:
                         removed,
                         extra={"category": "scan"},
                     )
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             send_items, skipped = filter_debounce(
                 normalized,
                 monitor.last_sent,
@@ -612,9 +622,7 @@ class Notifier:
                     else:
                         LOGGER.info("Sent message", extra={"category": "send"})
                     sent_at = _now_iso()
-                    self._history.append(
-                        {"text": text, "sent_at": sent_at, "monitor": monitor.key}
-                    )
+                    self._history.append({"text": text, "sent_at": sent_at, "monitor": monitor.key})
                     monitor.last_sent[text] = datetime.fromisoformat(sent_at)
             if normalized:
                 monitor.last_scan_text = normalized[0]
@@ -641,11 +649,10 @@ class Notifier:
     def _persist_state(self) -> None:
         try:
             _save_state(self._state_path, self._history)
-        except Exception as exc:
+        except Exception:
             self._state_write_errors += 1
             LOGGER.exception(
-                "State persistence failed: %s",
-                exc,
+                "State persistence failed",
                 extra={"category": "error"},
             )
 
@@ -672,10 +679,9 @@ class Notifier:
                 self._last_error_notification_at = time.monotonic()
                 self.status.set_last_send(_now_iso())
                 LOGGER.info("Sent error notification", extra={"category": "error"})
-        except Exception as exc:
+        except Exception:
             LOGGER.exception(
-                "Failed to send error notification: %s",
-                exc,
+                "Failed to send error notification",
                 extra={"category": "error"},
             )
 
@@ -734,7 +740,7 @@ class Notifier:
             self._handle_error(error_message)
 
     def _send_healthcheck(self) -> None:
-        uptime_seconds = int((datetime.now(timezone.utc) - self._started_at).total_seconds())
+        uptime_seconds = int((datetime.now(UTC) - self._started_at).total_seconds())
         self.status.set_uptime_seconds(uptime_seconds)
         snapshot = self.status.snapshot()
         try:
@@ -781,7 +787,7 @@ class Notifier:
         if snapshot.last_match_at:
             try:
                 last_match_at = datetime.fromisoformat(snapshot.last_match_at)
-                match_age_seconds = int((datetime.now(timezone.utc) - last_match_at).total_seconds())
+                match_age_seconds = int((datetime.now(UTC) - last_match_at).total_seconds())
             except ValueError:
                 match_age_seconds = 0
         monitor_payload: list[dict[str, Any]] = []
@@ -825,9 +831,9 @@ class Notifier:
         }
         try:
             self._telemetry.write(payload)
-        except Exception as exc:
+        except Exception:
             self._telemetry_write_errors += 1
-            LOGGER.exception("Telemetry write failed: %s", exc, extra={"category": "error"})
+            LOGGER.exception("Telemetry write failed", extra={"category": "error"})
 
     def _ensure_free_disk(self) -> None:
         try:
@@ -878,7 +884,21 @@ class Notifier:
         self._queue_stats = total
         self.status.set_email_queue_stats(total)
 
-    def run_loop(self, stop_event: Event, manual_scan_event: Event | None = None, scan_complete_event: Event | None = None, test_message_event: Event | None = None) -> None:
+    def run_loop(  # noqa: C901
+        self,
+        stop_event: Event,
+        manual_scan_event: Event | None = None,
+        scan_complete_event: Event | None = None,
+        test_message_event: Event | None = None,
+    ) -> None:
+        """Run the main monitoring loop until *stop_event* is set.
+
+        Args:
+            stop_event: Setting this event causes the loop to exit cleanly.
+            manual_scan_event: Optional event to trigger an immediate scan.
+            scan_complete_event: Optional event set after each scan completes.
+            test_message_event: Optional event to trigger a test email send.
+        """
         setup_logging(
             self.config.log_file,
             log_level=self.config.log_level,
@@ -908,6 +928,7 @@ class Notifier:
             self.status.set_started_at(self._started_at)
             self._update_telemetry()
             error_count = 0
+
             def _wait_for_next_scan(wait_seconds: int) -> bool:
                 if wait_seconds <= 0:
                     return False
@@ -981,11 +1002,11 @@ class Notifier:
                 except Exception as exc:
                     message = f"erro: {exc}"
                     self._handle_error(message)
-                    LOGGER.exception("Loop error: %s", exc, extra={"category": "error"})
+                    LOGGER.exception("Loop error", extra={"category": "error"})
                     error_count += 1
                     self.status.increment_error_count()
                 finally:
-                    duration = time.monotonic() - started_at
+                    time.monotonic() - started_at
                     LOGGER.info(
                         "Loop iteration duration %.2fms",
                         (time.perf_counter() - loop_started) * 1000,
@@ -993,7 +1014,7 @@ class Notifier:
                     )
 
                 self.status.set_uptime_seconds(
-                    int((datetime.now(timezone.utc) - self._started_at).total_seconds())
+                    int((datetime.now(UTC) - self._started_at).total_seconds())
                 )
                 now = time.monotonic()
                 if now >= self._next_healthcheck:
@@ -1022,6 +1043,11 @@ class Notifier:
 
 
 def run(config: AppConfig) -> None:
+    """Create a ``Notifier`` from *config* and start the blocking run loop.
+
+    Args:
+        config: Fully validated application configuration.
+    """
     status = StatusStore()
     notifier = Notifier(config=config, status=status)
     stop_event = Event()

@@ -1,14 +1,16 @@
-﻿from __future__ import annotations
+"""SMTP email delivery with retry, disk-based queuing, and auth-error handling."""
+
+from __future__ import annotations
 
 import json
 import logging
 import smtplib
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.message import EmailMessage
 from pathlib import Path
-from typing import Callable
 
 from .config import EmailConfig
 from .email_queue_utils import (
@@ -19,8 +21,8 @@ from .email_queue_utils import (
     parse_timestamp,
     prune_items,
 )
-from .telemetry import atomic_write_text
 from .io_utils import read_json_safe
+from .telemetry import atomic_write_text
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +31,7 @@ class EmailAuthError(RuntimeError):
     """Raised when SMTP authentication fails and sending should be disabled."""
 
 
-class EmailQueued(RuntimeError):
+class EmailQueued(RuntimeError):  # noqa: N818
     """Raised when a message is queued after a transient failure."""
 
 
@@ -55,8 +57,8 @@ def _build_subject(subject: str, category: str) -> str:
         cleaned = base
         for _prefix in ("zwave z7_sentineltray", "z7_sentineltray"):
             while cleaned.lower().startswith(_prefix):
-                cleaned = cleaned[len(_prefix):].strip()
-                cleaned = cleaned.lstrip("-–—:|/").strip()
+                cleaned = cleaned[len(_prefix) :].strip()
+                cleaned = cleaned.lstrip("-\u2013\u2014:|/").strip()
                 if not cleaned:
                     break
         base = cleaned
@@ -99,12 +101,17 @@ def _build_body(message: str) -> tuple[str, str]:
 
 
 class EmailSender:
+    """Abstract base class for email delivery backends."""
+
     def send(self, message: str) -> None:
+        """Send *message*; raise on unrecoverable failure."""
         raise NotImplementedError()
 
 
 @dataclass
 class SmtpEmailSender(EmailSender):
+    """Synchronous SMTP sender with configurable TLS and retry."""
+
     config: EmailConfig
 
     @staticmethod
@@ -115,7 +122,8 @@ class SmtpEmailSender(EmailSender):
             return exc.smtp_code in {534, 535}
         return False
 
-    def send(self, message: str) -> None:
+    def send(self, message: str) -> None:  # noqa: C901
+        """Send *message* via SMTP; raise ``EmailAuthError`` on authentication failure."""
         if not self.config.smtp_host:
             raise ValueError("smtp_host is required")
         if not self.config.from_address:
@@ -152,19 +160,17 @@ class SmtpEmailSender(EmailSender):
                     if self.config.smtp_username or self.config.smtp_password:
                         client.login(self.config.smtp_username, self.config.smtp_password)
                     client.send_message(email)
-                return
             except smtplib.SMTPException as exc:
                 if SmtpEmailSender._is_auth_error(exc):
-                    LOGGER.error(
+                    LOGGER.exception(
                         "SMTP authentication failed (check app password)",
                         extra={"category": "send"},
                     )
                     raise EmailAuthError("SMTP authentication failed") from exc
                 if attempt >= attempts:
-                    LOGGER.error(
-                        "SMTP failure after %s attempts: %s",
+                    LOGGER.exception(
+                        "SMTP failure after %s attempts",
                         attempts + 1,
-                        exc,
                         extra={"category": "send"},
                     )
                     raise
@@ -175,9 +181,12 @@ class SmtpEmailSender(EmailSender):
                 )
                 if backoff:
                     time.sleep(backoff * (2**attempt))
+            else:
+                return
 
 
 def validate_smtp_credentials(config: EmailConfig) -> None:
+    """Validate SMTP credentials by performing a live connection and login."""
     if not config.smtp_host:
         raise ValueError("smtp_host is required")
     if not config.smtp_username and not config.smtp_password:
@@ -194,7 +203,7 @@ def validate_smtp_credentials(config: EmailConfig) -> None:
             client.login(config.smtp_username, config.smtp_password)
     except smtplib.SMTPException as exc:
         if SmtpEmailSender._is_auth_error(exc):
-            LOGGER.error(
+            LOGGER.exception(
                 "SMTP authentication failed during startup validation",
                 extra={"category": "startup"},
             )
@@ -204,6 +213,8 @@ def validate_smtp_credentials(config: EmailConfig) -> None:
 
 @dataclass
 class QueueStats:
+    """Email queue statistics snapshot."""
+
     queued: int
     sent: int
     failed: int
@@ -212,6 +223,8 @@ class QueueStats:
 
 
 class DiskEmailQueue:
+    """Persistent on-disk email queue with retry scheduling."""
+
     def __init__(
         self,
         path: Path,
@@ -228,7 +241,7 @@ class DiskEmailQueue:
         self._retry_base_seconds = retry_base_seconds
 
     def _now(self) -> datetime:
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
     def _load_items(self) -> list[dict[str, object]]:
         if not self._path.exists():
@@ -250,15 +263,15 @@ class DiskEmailQueue:
         payload = json.dumps(items, ensure_ascii=False, indent=2)
         try:
             atomic_write_text(self._path, payload, encoding="utf-8")
-        except Exception as exc:
-            LOGGER.error(
-                "Failed to persist email queue: %s",
-                exc,
+        except Exception:
+            LOGGER.exception(
+                "Failed to persist email queue",
                 extra={"category": "send"},
             )
             raise
 
     def enqueue(self, message: str) -> None:
+        """Append *message* to the queue and prune stale items."""
         items = self._load_items()
         items.append(build_new_item(message, self._now()))
         items = prune_items(
@@ -271,6 +284,7 @@ class DiskEmailQueue:
         self._save_items(items)
 
     def drain(self, send_func: Callable[[str], None]) -> QueueStats:
+        """Attempt to send all queued messages using *send_func*; return stats."""
         items = self._load_items()
         if not items:
             return QueueStats(queued=0, sent=0, failed=0, deferred=0, oldest_age_seconds=0)
@@ -285,9 +299,7 @@ class DiskEmailQueue:
             message = str(item.get("message", ""))
             next_attempt_raw = item.get("next_attempt_at")
             next_attempt_at = (
-                parse_timestamp(next_attempt_raw)
-                if isinstance(next_attempt_raw, str)
-                else None
+                parse_timestamp(next_attempt_raw) if isinstance(next_attempt_raw, str) else None
             )
             if next_attempt_at and next_attempt_at > now:
                 deferred += 1
@@ -330,6 +342,7 @@ class DiskEmailQueue:
         )
 
     def get_stats(self) -> QueueStats:
+        """Return queue statistics without attempting any sends."""
         items = self._load_items()
         if not items:
             return QueueStats(queued=0, sent=0, failed=0, deferred=0, oldest_age_seconds=0)
@@ -346,10 +359,13 @@ class DiskEmailQueue:
 
 @dataclass
 class QueueingEmailSender(EmailSender):
+    """Email sender that drains a ``DiskEmailQueue`` before attempting live sends."""
+
     sender: SmtpEmailSender
     queue: DiskEmailQueue
 
     def send(self, message: str) -> None:
+        """Drain the queue, then send *message*; queue on transient failure."""
         try:
             self.drain()
         except EmailAuthError:
@@ -369,19 +385,20 @@ class QueueingEmailSender(EmailSender):
             )
             try:
                 self.queue.enqueue(message)
-            except Exception as queue_exc:
-                LOGGER.error(
-                    "Failed to enqueue message after send failure: %s",
-                    queue_exc,
+            except Exception:
+                LOGGER.exception(
+                    "Failed to enqueue message after send failure",
                     extra={"category": "send"},
                 )
                 raise
             raise EmailQueued("Message queued for retry") from exc
 
     def drain(self) -> QueueStats:
+        """Drain the underlying queue and return stats."""
         return self.queue.drain(self.sender.send)
 
     def get_queue_stats(self) -> QueueStats:
+        """Return queue stats without sending."""
         return self.queue.get_stats()
 
 
@@ -394,6 +411,7 @@ def build_sender(
     queue_max_attempts: int = 10,
     queue_retry_base_seconds: int = 30,
 ) -> EmailSender:
+    """Build a ``QueueingEmailSender`` wrapping a ``SmtpEmailSender`` and ``DiskEmailQueue``."""
     base_sender = SmtpEmailSender(config=config)
     queue = DiskEmailQueue(
         queue_path,

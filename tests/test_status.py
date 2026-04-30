@@ -1,4 +1,4 @@
-﻿from z7_sentineltray.status import StatusStore, format_status
+from z7_sentineltray.status import StatusStore, format_status
 
 
 def test_status_store_snapshot() -> None:

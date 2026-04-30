@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import pytest
 
@@ -11,5 +11,3 @@ def test_detector_requires_pywinauto_when_missing(monkeypatch: pytest.MonkeyPatc
     detector = WindowTextDetector("APP")
     with pytest.raises(RuntimeError, match="pywinauto is required"):
         detector._get_window()
-
-

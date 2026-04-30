@@ -1,6 +1,4 @@
-﻿from __future__ import annotations
-
-from pathlib import Path
+from __future__ import annotations
 
 from z7_sentineltray.config_reconcile import apply_template_to_config_text
 
@@ -38,12 +36,12 @@ extra_key: 'keep'
 
 
 def test_apply_template_with_real_template_keeps_template_keys() -> None:
-  template_text = """
+    template_text = """
 log_level: 'INFO'
 email_queue_file: 'logs/email_queue.json'
 email_queue_max_items: 500
 """
-  legacy = """
+    legacy = """
 window_title_regex: 'APP'
 phrase_regex: 'ALERT'
 log_level: 'DEBUG'
@@ -61,7 +59,7 @@ email:
   retry_backoff_seconds: 1
 """
 
-  merged = apply_template_to_config_text(legacy, template_text)
+    merged = apply_template_to_config_text(legacy, template_text)
 
-  assert "log_level: DEBUG" in merged or "log_level: 'DEBUG'" in merged
-  assert "email_queue_file" in merged
+    assert "log_level: DEBUG" in merged or "log_level: 'DEBUG'" in merged
+    assert "email_queue_file" in merged

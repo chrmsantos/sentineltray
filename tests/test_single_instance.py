@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 
@@ -44,10 +44,10 @@ def test_single_instance_acquires_mutex_and_writes_pid(
 
 def test_mutex_returns_false_when_exists(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeKernel32:
-        def CreateMutexW(self, *_args):
+        def CreateMutexW(self, *_args):  # noqa: N802
             return 123
 
-        def GetLastError(self) -> int:
+        def GetLastError(self) -> int:  # noqa: N802
             return 183
 
     class FakeWindll:
@@ -60,10 +60,10 @@ def test_mutex_returns_false_when_exists(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_mutex_returns_true_on_success(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeKernel32:
-        def CreateMutexW(self, *_args):
+        def CreateMutexW(self, *_args):  # noqa: N802
             return 123
 
-        def GetLastError(self) -> int:
+        def GetLastError(self) -> int:  # noqa: N802
             return 0
 
     class FakeWindll:
@@ -78,14 +78,14 @@ def test_mutex_falls_back_to_local_when_global_fails(monkeypatch: pytest.MonkeyP
     calls: list[str] = []
 
     class FakeKernel32:
-        def CreateMutexW(self, *_args):
+        def CreateMutexW(self, *_args):  # noqa: N802
             name = _args[2] if len(_args) > 2 else ""
             calls.append(str(name))
             if "Global" in str(name):
                 raise RuntimeError("access denied")
             return 123
 
-        def GetLastError(self) -> int:
+        def GetLastError(self) -> int:  # noqa: N802
             return 0
 
     class FakeWindll:

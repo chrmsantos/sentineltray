@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from z7_sentineltray.telemetry import atomic_write_text
 

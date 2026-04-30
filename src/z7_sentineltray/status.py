@@ -1,12 +1,19 @@
+"""Thread-safe status store and snapshot model for the running application."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from threading import Lock
 
 
 @dataclass(frozen=True)
 class StatusSnapshot:
+    """Immutable point-in-time snapshot of application status.
+
+    All fields are read-only; a new snapshot is created for each read.
+    """
+
     running: bool
     last_scan: str
     last_scan_result: str
@@ -25,6 +32,13 @@ class StatusSnapshot:
 
 
 class StatusStore:
+    """Thread-safe container for live application state.
+
+    All setter methods acquire an internal :class:`~threading.Lock` so
+    they are safe to call from any thread.  Call :meth:`snapshot` to
+    obtain an immutable :class:`StatusSnapshot` copy.
+    """
+
     def __init__(self) -> None:
         self._lock = Lock()
         self._running = False
@@ -49,61 +63,77 @@ class StatusStore:
         self._monitor_breakers_active: dict[str, bool] = {}
 
     def set_running(self, value: bool) -> None:
+        """Set the *running* flag."""
         with self._lock:
             self._running = value
 
     def set_last_scan(self, value: str) -> None:
+        """Record the ISO timestamp of the most recent scan."""
         with self._lock:
             self._last_scan = value
 
     def set_last_scan_result(self, value: str) -> None:
+        """Record a brief description of the last scan outcome."""
         with self._lock:
             self._last_scan_result = value
 
     def set_last_match(self, value: str) -> None:
+        """Record the most recently detected match text (sanitised)."""
         with self._lock:
             self._last_match = value
 
     def set_last_match_at(self, value: str) -> None:
+        """Record the ISO timestamp of the last match."""
         with self._lock:
             self._last_match_at = value
 
     def set_last_send(self, value: str) -> None:
+        """Record the ISO timestamp of the last successful e-mail send."""
         with self._lock:
             self._last_send = value
 
     def set_last_error(self, value: str) -> None:
+        """Record the most recent error message (sanitised)."""
         with self._lock:
             self._last_error = value
 
     def set_last_healthcheck(self, value: str) -> None:
+        """Record the ISO timestamp of the last health-check message."""
         with self._lock:
             self._last_healthcheck = value
 
     def set_uptime_seconds(self, value: int) -> None:
+        """Update the cumulative uptime counter in seconds."""
         with self._lock:
             self._uptime_seconds = value
 
     def set_started_at(self, value: datetime | None) -> None:
+        """Record the process start timestamp."""
         with self._lock:
             self._started_at = value
 
     def increment_error_count(self) -> None:
+        """Atomically increment the total error counter by one."""
         with self._lock:
             self._error_count += 1
 
     def set_email_queue_stats(self, value: dict[str, int]) -> None:
+        """Update the e-mail queue statistics dict."""
         with self._lock:
             self._email_queue = dict(value)
 
     def set_monitor_state(self, key: str, *, failure_count: int, breaker_active: bool) -> None:
+        """Update failure count and circuit-breaker state for a named monitor."""
         with self._lock:
             self._monitor_failures[key] = max(0, int(failure_count))
             self._monitor_breakers_active[key] = bool(breaker_active)
 
     def snapshot(self) -> StatusSnapshot:
+        """Return an immutable copy of the current application status."""
         with self._lock:
-            breaker_active_count = sum(1 for active in self._monitor_breakers_active.values() if active)
+            breaker_active_count = sum(
+                1 for active in self._monitor_breakers_active.values() if active
+            )
             return StatusSnapshot(
                 running=self._running,
                 last_scan=self._last_scan,
@@ -134,6 +164,7 @@ def _format_timestamp(value: str) -> str:
 
 
 def format_timestamp(value: str) -> str:
+    """Re-export of the internal timestamp formatter for external callers."""
     return _format_timestamp(value)
 
 
@@ -169,6 +200,17 @@ def format_status(
     phrase_regex: str = "",
     poll_interval_seconds: int | None = None,
 ) -> str:
+    """Format a human-readable status summary from *snapshot*.
+
+    Args:
+        snapshot: Current application status snapshot.
+        window_title_regex: The configured window-title regex (for display).
+        phrase_regex: The configured phrase regex (for display).
+        poll_interval_seconds: Poll interval used to compute the next check time.
+
+    Returns:
+        Multi-line Portuguese status string suitable for the console/GUI display.
+    """
     running = "sim" if snapshot.running else "não"
     phrase_label = phrase_regex or "<qualquer texto>"
     window_label = window_title_regex or "<janela configurada>"

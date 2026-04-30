@@ -1,19 +1,22 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from threading import Event
 
 import pytest
 
 from z7_sentineltray.app import Notifier
-from z7_sentineltray import app as app_module
-from z7_sentineltray.config import AppConfig, EmailConfig, MonitorConfig, get_user_data_dir, get_user_log_dir
+from z7_sentineltray.config import (
+    AppConfig,
+    EmailConfig,
+    MonitorConfig,
+    get_user_data_dir,
+    get_user_log_dir,
+)
 from z7_sentineltray.detector import WindowUnavailableError
 from z7_sentineltray.status import StatusStore
 
 
-def test_run_loop_skips_window_unavailable(
-    monkeypatch: pytest.MonkeyPatch, tmp_path
-) -> None:
+def test_run_loop_skips_window_unavailable(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     base = get_user_data_dir()
     log_root = get_user_log_dir()

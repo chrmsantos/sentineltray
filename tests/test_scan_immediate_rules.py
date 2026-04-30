@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import pytest
 
@@ -65,6 +65,7 @@ def _config() -> AppConfig:
 
 class _TestNotifier(Notifier):
     __test__ = False
+
     def set_sender_for_tests(self, sender: EmailSender) -> None:
         for monitor in self._monitors:
             monitor.sender = sender

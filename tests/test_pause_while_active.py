@@ -1,4 +1,5 @@
-﻿"""Tests for automatic scan pause/unpause based on user idle state."""
+"""Tests for automatic scan pause/unpause based on user idle state."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -81,9 +82,7 @@ class _FakeSender:
         pass
 
 
-def test_scan_skipped_when_user_is_active(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_scan_skipped_when_user_is_active(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """scan_once should not be called when user is active (idle < threshold)."""
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     config = _config()
@@ -116,9 +115,7 @@ def test_scan_skipped_when_user_is_active(
     assert notifier.status.snapshot().last_scan_result == "PAUSADO (usuário ativo)"
 
 
-def test_scan_runs_when_user_is_idle(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_scan_runs_when_user_is_idle(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """scan_once should be called when user has been idle longer than the threshold."""
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     config = _config()
@@ -141,12 +138,11 @@ def test_scan_runs_when_user_is_idle(
     assert len(scan_calls) == 1
 
 
-def test_scan_runs_when_pause_disabled(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_scan_runs_when_pause_disabled(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """scan_once should run regardless of idle state when pause_on_user_active is False."""
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     from dataclasses import replace
+
     base_config = _config()
     config = replace(base_config, pause_on_user_active=False)
     notifier = Notifier(config=config, status=StatusStore())
@@ -168,9 +164,7 @@ def test_scan_runs_when_pause_disabled(
     assert len(scan_calls) == 1
 
 
-def test_manual_scan_bypasses_pause(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_manual_scan_bypasses_pause(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """A manual scan request must bypass the active-user pause."""
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     config = _config()
@@ -204,5 +198,3 @@ def test_manual_scan_bypasses_pause(
     notifier.run_loop(stop_event, manual_scan_event)
 
     assert len(scan_calls) == 1
-
-

@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import importlib
 import sys
@@ -13,6 +13,7 @@ def test_main_inserts_src_on_path() -> None:
 
     try:
         import main
+
         importlib.reload(main)
         assert src_path in sys.path
     finally:

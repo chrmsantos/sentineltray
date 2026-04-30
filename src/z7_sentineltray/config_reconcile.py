@@ -1,10 +1,12 @@
+"""Config template reconciliation: merge, diff, and apply YAML templates."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import io
 import logging
 from collections.abc import MutableMapping
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +24,8 @@ LOGGER = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class TemplateReconcileSummary:
+    """Result of a config template reconciliation run."""
+
     added: int
     changed: int
     template_sha256: str | None
@@ -33,7 +37,7 @@ class TemplateReconcileSummary:
 def _load_yaml_mapping(text: str) -> dict[str, Any]:
     data = yaml.safe_load(text) or {}
     if not isinstance(data, dict):
-        raise ValueError("Config must be a mapping")
+        raise TypeError("Config must be a mapping")
     return data
 
 
@@ -47,7 +51,9 @@ def _merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, An
     return merged
 
 
-def _merge_into_template(template: MutableMapping[str, Any], legacy: MutableMapping[str, Any]) -> None:
+def _merge_into_template(
+    template: MutableMapping[str, Any], legacy: MutableMapping[str, Any]
+) -> None:
     for key, value in legacy.items():
         if (
             key in template
@@ -69,6 +75,7 @@ def _get_ruamel_yaml() -> YAML | None:
 
 
 def read_template_config_text(project_root: Path | None = None) -> str | None:
+    """Read the bundled config template text, or return ``None`` if unavailable."""
     try:
         root = project_root or get_project_root()
         template_path = root / "templates" / "local" / "config.local.yaml"
@@ -80,6 +87,7 @@ def read_template_config_text(project_root: Path | None = None) -> str | None:
 
 
 def apply_template_to_config_text(legacy_text: str, template_text: str | None) -> str:
+    """Merge *legacy_text* values into *template_text*, preserving template structure."""
     if not template_text:
         return legacy_text
     try:
@@ -105,14 +113,16 @@ def apply_template_to_config_text(legacy_text: str, template_text: str | None) -
 
 
 def hash_text(text: str) -> str:
+    """Return the SHA-256 hex digest of *text*."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def load_current_config_text(config_path: Path) -> str:
+    """Read and return the text of the config file at *config_path*."""
     return config_path.read_text(encoding="utf-8")
 
 
-def _diff_counts(old: Any, new: Any) -> tuple[int, int]:
+def _diff_counts(old: Any, new: Any) -> tuple[int, int]:  # noqa: ANN401
     added = 0
     changed = 0
     if isinstance(old, dict) and isinstance(new, dict):
@@ -137,6 +147,7 @@ def ensure_local_config_from_template(
     template_text: str | None = None,
     logger: logging.Logger | None = None,
 ) -> bool:
+    """Write *template_text* to *config_path* if the file is absent or empty."""
     if config_path.exists():
         try:
             if config_path.read_text(encoding="utf-8").strip():
@@ -161,6 +172,7 @@ def reconcile_template_config(
     dry_run: bool,
     logger: logging.Logger | None = None,
 ) -> TemplateReconcileSummary:
+    """Reconcile *config_path* with the bundled template, adding new keys."""
     if template_text is None:
         template_text = read_template_config_text()
     if not template_text:

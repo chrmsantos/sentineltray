@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 
 from z7_sentineltray.detector import WindowTextDetector, WindowUnavailableError
 

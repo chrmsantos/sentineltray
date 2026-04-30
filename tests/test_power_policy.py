@@ -1,4 +1,4 @@
-﻿import types
+import types
 
 from z7_sentineltray import app
 

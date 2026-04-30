@@ -1,10 +1,20 @@
+"""Utilities for deduplication and debounce filtering of scan results."""
+
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable
 
 
 def dedupe_items(items: Iterable[str]) -> tuple[list[str], int]:
+    """Remove duplicate strings while preserving first-occurrence order.
+
+    Args:
+        items: Sequence of strings to deduplicate.
+
+    Returns:
+        A tuple of ``(deduped_list, removed_count)``.
+    """
     deduped: list[str] = []
     seen: set[str] = set()
     removed = 0
@@ -23,6 +33,18 @@ def filter_debounce(
     debounce_seconds: int,
     now: datetime,
 ) -> tuple[list[str], list[tuple[str, int]]]:
+    """Filter *items* by debounce window, suppressing recently sent items.
+
+    Args:
+        items: Candidate strings from the current scan.
+        last_sent: Mapping of text → last-sent timestamp.
+        debounce_seconds: Minimum seconds that must pass before resending.
+        now: Current timestamp used for age comparison.
+
+    Returns:
+        A tuple of ``(selected, skipped)`` where *skipped* contains
+        ``(text, age_seconds)`` pairs for suppressed items.
+    """
     if debounce_seconds <= 0:
         return list(items), []
 
@@ -47,6 +69,22 @@ def filter_min_repeat(
     min_repeat_seconds: int,
     now: datetime,
 ) -> tuple[list[str], list[tuple[str, int]]]:
+    """Filter *items* by minimum repeat interval, skipping items sent too recently.
+
+    Behaves like :func:`filter_debounce` but uses a separate configured
+    threshold (``min_repeat_seconds``) that controls how soon the *same*
+    text can be resent after a successful send.
+
+    Args:
+        items: Candidate strings from the current scan.
+        last_sent: Mapping of text → last-sent timestamp.
+        min_repeat_seconds: Minimum seconds between repeated sends.
+        now: Current timestamp used for age comparison.
+
+    Returns:
+        A tuple of ``(selected, skipped)`` where *skipped* contains
+        ``(text, age_seconds)`` pairs for suppressed items.
+    """
     if min_repeat_seconds <= 0:
         return list(items), []
 

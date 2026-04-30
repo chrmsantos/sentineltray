@@ -1,10 +1,13 @@
-﻿from __future__ import annotations
+"""System-tray icon and console-window visibility management."""
 
+from __future__ import annotations
+
+import contextlib
 import ctypes
 import logging
 import math
 import threading
-from typing import Callable
+from collections.abc import Callable
 
 import pystray  # type: ignore[import]
 from PIL import Image, ImageDraw  # type: ignore[import]
@@ -104,20 +107,23 @@ def _console_hwnd() -> int:
 
 
 def set_console_visible(visible: bool) -> None:
+    """Show or hide the Win32 console window attached to this process.
+
+    Args:
+        visible: ``True`` to show, ``False`` to hide.
+    """
     hwnd = _console_hwnd()
     if not hwnd:
         return
-    try:
+    with contextlib.suppress(Exception):
         ctypes.windll.user32.ShowWindow(hwnd, _SW_SHOW if visible else _SW_HIDE)  # type: ignore[attr-defined]
-    except Exception:
-        pass
 
 
 _CTRL_CLOSE_EVENT = 2
 _HandlerRoutine = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_uint)  # type: ignore[attr-defined]
 
 
-def _install_close_to_tray_handler(tray: "TrayIcon") -> object:
+def _install_close_to_tray_handler(tray: TrayIcon) -> object:
     """Register a SetConsoleCtrlHandler that hides the console on [X] instead of terminating."""
 
     @_HandlerRoutine
@@ -126,10 +132,8 @@ def _install_close_to_tray_handler(tray: "TrayIcon") -> object:
             tray._console_visible = False
             set_console_visible(False)
             if tray._icon is not None:
-                try:
+                with contextlib.suppress(Exception):
                     tray._icon.update_menu()
-                except Exception:
-                    pass
             return True  # suppress default close / terminate
         return False
 

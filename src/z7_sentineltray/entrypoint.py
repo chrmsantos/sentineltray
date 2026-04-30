@@ -1,6 +1,9 @@
-﻿from __future__ import annotations
+"""Application entrypoint: single-instance guard, startup checks, and UI launch."""
+
+from __future__ import annotations
 
 import atexit
+import contextlib
 import ctypes
 import hashlib
 import logging
@@ -8,16 +11,16 @@ import os
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 
-from .config import AppConfig, get_project_root, get_user_data_dir, get_user_log_dir, load_config
-from .logging_setup import setup_logging
-from .dpapi_utils import save_secret
 from . import __release_date__, __version_label__
+from .config import AppConfig, get_project_root, get_user_data_dir, get_user_log_dir, load_config
+from .dpapi_utils import save_secret
+from .logging_setup import setup_logging
 
 LOGGER = logging.getLogger(__name__)
 _mutex_handle = None
+
 
 def _load_config_template() -> str:
     """Return the contents of config.local.yaml.example as the default template.
@@ -41,16 +44,13 @@ def _load_config_template() -> str:
     )
 
 
-
 def _pid_file_path() -> Path:
     base = get_user_data_dir()
     return base / "z7_sentineltray.pid"
 
 
 def _show_already_running_notice() -> None:
-    message = (
-        "Z7_SentinelTray já está em execução.\n\n"
-    )
+    message = "Z7_SentinelTray já está em execução.\n\n"
     try:
         ctypes.windll.user32.MessageBoxW(
             None,
@@ -105,18 +105,15 @@ def _ensure_single_instance() -> None:
     pid_path.parent.mkdir(parents=True, exist_ok=True)
 
     if pid_path.exists():
-        try:
+        with contextlib.suppress(Exception):
             pid_path.read_text(encoding="utf-8").strip()
-        except Exception:
-            pass
 
     pid_path.write_text(str(os.getpid()), encoding="utf-8")
 
     def _cleanup() -> None:
         try:
-            if (
-                pid_path.exists()
-                and pid_path.read_text(encoding="utf-8").strip() == str(os.getpid())
+            if pid_path.exists() and pid_path.read_text(encoding="utf-8").strip() == str(
+                os.getpid()
             ):
                 pid_path.unlink()
         except Exception:
@@ -180,9 +177,14 @@ def _terminate_existing_instance() -> bool:
         )
         return False
     process_name = _get_process_name(pid_value)
-    if process_name is not None and "z7_sentineltray" not in process_name and "python" not in process_name:
+    if (
+        process_name is not None
+        and "z7_sentineltray" not in process_name
+        and "python" not in process_name
+    ):
         LOGGER.warning(
-            "PID %s belongs to '%s', not Z7_SentinelTray; skipping termination to avoid killing an unrelated process",
+            "PID %s belongs to '%s', not Z7_SentinelTray; "
+            "skipping termination to avoid killing an unrelated process",
             pid_value,
             process_name,
             extra={"category": "startup"},
@@ -200,11 +202,10 @@ def _terminate_existing_instance() -> bool:
             capture_output=True,
             text=True,
         )
-    except Exception as exc:
-        LOGGER.error(
-            "Failed to terminate prior instance PID %s: %s",
+    except Exception:
+        LOGGER.exception(
+            "Failed to terminate prior instance PID %s",
             prior_pid,
-            exc,
             extra={"category": "startup"},
         )
         return False
@@ -216,10 +217,8 @@ def _terminate_existing_instance() -> bool:
             extra={"category": "startup"},
         )
         return False
-    try:
+    with contextlib.suppress(Exception):
         pid_path.unlink()
-    except Exception:
-        pass
     return True
 
 
@@ -232,10 +231,8 @@ def _ensure_local_override(path: Path) -> None:
             path,
             extra={"category": "config"},
         )
-        try:
+        with contextlib.suppress(Exception):
             subprocess.Popen(["notepad.exe", str(path)])
-        except Exception:
-            pass
         raise SystemExit(
             "Configuration template created.\n"
             f"File: {path}\n"
@@ -273,7 +270,8 @@ def _reject_extra_args(args: list[str]) -> None:
     if not args:
         return
     if args[0] in ("--version", "-V"):
-        from . import __version_label__, __release_date__
+        from . import __release_date__, __version_label__
+
         print(f"Z7_SentinelTray {__version_label__}  ({__release_date__})")
         raise SystemExit(0)
     if args[0] in ("--help", "-h"):
@@ -286,8 +284,7 @@ def _reject_extra_args(args: list[str]) -> None:
         )
         raise SystemExit(0)
     raise SystemExit(
-        "Usage: run Z7_SentinelTray without arguments.\n"
-        f"Arguments received: {' '.join(args)}"
+        f"Usage: run Z7_SentinelTray without arguments.\nArguments received: {' '.join(args)}"
     )
 
 
@@ -379,11 +376,8 @@ def _run_startup_integrity_checks(local_path: Path) -> None:
     sentinel = data_dir / "migration.done"
     if not sentinel.exists():
         _migrate_legacy_config(local_path)
-        try:
+        with contextlib.suppress(Exception):
             sentinel.write_text("1", encoding="utf-8")
-        except Exception:
-            pass
-
 
 
 def _clear_stored_smtp_password(index: int) -> None:
@@ -411,6 +405,7 @@ def _clear_stored_smtp_password(index: int) -> None:
 
 def _validate_smtp_config(config: AppConfig) -> tuple[list[tuple[int, str]], list[str]]:
     from .email_sender import EmailAuthError, validate_smtp_credentials
+
     auth_failures: list[tuple[int, str]] = []
     auth_messages: list[str] = []
     failures: list[str] = []
@@ -459,6 +454,7 @@ def _missing_smtp_passwords(config: AppConfig) -> list[tuple[int, str]]:
 
 def _prompt_smtp_passwords(missing: list[tuple[int, str]]) -> None:
     from .gui_app import prompt_smtp_password_gui
+
     if not missing:
         return
     for index, username in missing:
@@ -487,6 +483,7 @@ def _first_run_gui_setup(path: Path) -> None:
     Raises SystemExit if the user closes the editor without saving.
     """
     import tkinter as tk
+
     from .gui_app import ConfigEditorWindow
 
     template_content = _load_config_template()
@@ -510,10 +507,8 @@ def _first_run_gui_setup(path: Path) -> None:
     editor.show()
     if editor._win is not None:
         root.wait_window(editor._win)
-    try:
+    with contextlib.suppress(Exception):
         root.destroy()
-    except Exception:
-        pass
 
     if not saved[0]:
         raise SystemExit(
@@ -523,7 +518,8 @@ def _first_run_gui_setup(path: Path) -> None:
         )
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901
+    """Parse CLI args, load configuration, and launch the appropriate UI."""
     _setup_boot_logging()
     _ensure_single_instance()
     args = [arg for arg in sys.argv[1:] if arg]
@@ -549,6 +545,7 @@ def main() -> int:
     try:
         if config_error_message is not None:
             from .console_app import run_console_config_error
+
             run_console_config_error(config_error_message)
         else:
             if config is None:
@@ -556,16 +553,15 @@ def main() -> int:
 
             _captured_local_path = local_path
 
-            def _smtp_validator(root, config_holder, reload_notifier) -> None:
+            def _smtp_validator(root: object, config_holder: list, reload_notifier: object) -> None:
                 import threading
 
                 def _bg() -> None:
                     try:
                         auth_failures, _ = _validate_smtp_config(config_holder[0])
-                    except Exception as exc:
-                        LOGGER.error(
-                            "SMTP validation error during startup: %s",
-                            exc,
+                    except Exception:
+                        LOGGER.exception(
+                            "SMTP validation error during startup",
                             extra={"category": "config"},
                         )
                         return
@@ -581,10 +577,9 @@ def main() -> int:
                             return
                         try:
                             new_cfg = load_config(str(_captured_local_path))
-                        except Exception as exc:
-                            LOGGER.error(
-                                "Failed to reload config after SMTP re-prompt: %s",
-                                exc,
+                        except Exception:
+                            LOGGER.exception(
+                                "Failed to reload config after SMTP re-prompt",
                                 extra={"category": "config"},
                             )
                             return
@@ -595,10 +590,11 @@ def main() -> int:
                 threading.Thread(target=_bg, daemon=True, name="smtp-validator").start()
 
             from .gui_app import run_gui
+
             run_gui(config, smtp_validator=_smtp_validator)
-    except Exception as exc:
-        LOGGER.error("Failed to start console UI: %s", exc, extra={"category": "startup"})
-        raise SystemExit("Failed to start console UI.") from exc
+    except Exception:
+        LOGGER.exception("Failed to start console UI", extra={"category": "startup"})
+        raise SystemExit("Failed to start console UI.") from None
     return 0
 
 

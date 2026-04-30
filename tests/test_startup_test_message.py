@@ -1,4 +1,4 @@
-﻿from z7_sentineltray.app import Notifier
+from z7_sentineltray.app import Notifier
 from z7_sentineltray.config import AppConfig, EmailConfig, MonitorConfig
 from z7_sentineltray.status import StatusStore
 

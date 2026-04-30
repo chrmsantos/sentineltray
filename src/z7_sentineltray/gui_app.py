@@ -1,64 +1,94 @@
-﻿from __future__ import annotations
+"""Tkinter-based GUI: main status window, config editor, and alert-recipient dialog."""
 
+from __future__ import annotations
+
+import contextlib
 import json
 import logging
 import re
+import tkinter as tk
 import webbrowser
-from datetime import datetime, timedelta, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Event, Thread
-from typing import Callable
-
-import tkinter as tk
 from tkinter import messagebox
 
 from .app import Notifier
 from .config import AppConfig, get_project_root, get_user_data_dir, load_config
 from .status import StatusStore, format_timestamp
-from .validation_utils import validate_email_address
 from .tray_app import TrayIcon, set_console_visible
+from .validation_utils import validate_email_address
 
 LOGGER = logging.getLogger(__name__)
 _PROJECT_REPO_URL = "https://github.com/chrmsantos/z7_sentineltray"
 
 # ── GitHub-dark-inspired palette ─────────────────────────────────────────────
-_BG      = "#0d1117"   # main background
-_SURFACE = "#161b22"   # header / footer surface
-_CARD    = "#1c2128"   # card background
-_BORDER  = "#30363d"   # borders
-_GREEN   = "#3fb950"   # primary accent (running)
-_GREEN2  = "#196127"   # dark green
-_RED     = "#f85149"   # error / stopped
-_AMBER   = "#d29922"   # warning
-_BLUE    = "#58a6ff"   # scan button
-_TEAL    = "#1b5e76"   # recipients button
-_TEXT    = "#c9d1d9"   # primary text
-_MUTED   = "#8b949e"   # secondary text
-_WHITE   = "#e6edf3"   # bright text
-_BTN_DIM = "#21262d"   # dim button bg
+_BG = "#0d1117"  # main background
+_SURFACE = "#161b22"  # header / footer surface
+_CARD = "#1c2128"  # card background
+_BORDER = "#30363d"  # borders
+_GREEN = "#3fb950"  # primary accent (running)
+_GREEN2 = "#196127"  # dark green
+_RED = "#f85149"  # error / stopped
+_AMBER = "#d29922"  # warning
+_BLUE = "#58a6ff"  # scan button
+_TEAL = "#1b5e76"  # recipients button
+_TEXT = "#c9d1d9"  # primary text
+_MUTED = "#8b949e"  # secondary text
+_WHITE = "#e6edf3"  # bright text
+_BTN_DIM = "#21262d"  # dim button bg
 
 
 # ── Theme palettes ────────────────────────────────────────────────────────────
 _DARK_PALETTE: dict[str, str] = {
-    "bg": _BG, "surface": _SURFACE, "card": _CARD, "border": _BORDER,
-    "green": _GREEN, "green2": _GREEN2, "red": _RED, "amber": _AMBER,
-    "blue": _BLUE, "text": _TEXT, "muted": _MUTED, "white": _WHITE,
-    "btn_dim": _BTN_DIM, "exit_btn": "#5a1a1a", "select_bg": "#264f78",
+    "bg": _BG,
+    "surface": _SURFACE,
+    "card": _CARD,
+    "border": _BORDER,
+    "green": _GREEN,
+    "green2": _GREEN2,
+    "red": _RED,
+    "amber": _AMBER,
+    "blue": _BLUE,
+    "text": _TEXT,
+    "muted": _MUTED,
+    "white": _WHITE,
+    "btn_dim": _BTN_DIM,
+    "exit_btn": "#5a1a1a",
+    "select_bg": "#264f78",
 }
 
 _LIGHT_PALETTE: dict[str, str] = {
-    "bg": "#ffffff", "surface": "#f6f8fa", "card": "#ffffff", "border": "#d0d7de",
-    "green": "#1a7f37", "green2": "#2da44e", "red": "#cf222e", "amber": "#9a6700",
-    "blue": "#0969da", "text": "#1f2328", "muted": "#656d76", "white": "#1f2328",
-    "btn_dim": "#e6eaef", "exit_btn": "#ffd8d8", "select_bg": "#b6d3fb",
+    "bg": "#ffffff",
+    "surface": "#f6f8fa",
+    "card": "#ffffff",
+    "border": "#d0d7de",
+    "green": "#1a7f37",
+    "green2": "#2da44e",
+    "red": "#cf222e",
+    "amber": "#9a6700",
+    "blue": "#0969da",
+    "text": "#1f2328",
+    "muted": "#656d76",
+    "white": "#1f2328",
+    "btn_dim": "#e6eaef",
+    "exit_btn": "#ffd8d8",
+    "select_bg": "#b6d3fb",
 }
 
 
 def _apply_theme_walk(root: tk.Widget, old_pal: dict, new_pal: dict) -> None:
     """Recursively remap palette colors across all widgets."""
     color_map = {v: new_pal[k] for k, v in old_pal.items()}
-    _OPTS = ("bg", "fg", "activebackground", "activeforeground",
-             "insertbackground", "selectbackground")
+    _OPTS = (  # noqa: N806
+        "bg",
+        "fg",
+        "activebackground",
+        "activeforeground",
+        "insertbackground",
+        "selectbackground",
+    )
 
     def _remap(w: tk.Widget) -> None:
         for opt in _OPTS:
@@ -117,6 +147,7 @@ class _ThemeState:
 # ─────────────────────────────────────────────────────────────────────────────
 # SMTP password dialog
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def prompt_smtp_password_gui(username: str, monitor_index: int) -> str | None:
     """Show a modal dialog to collect the SMTP password.
@@ -218,6 +249,7 @@ def prompt_smtp_password_gui(username: str, monitor_index: int) -> str | None:
 # In-app YAML config editor
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class ConfigEditorWindow:
     """Modal-like Toplevel that lets the user edit config.local.yaml in-app."""
 
@@ -226,7 +258,7 @@ class ConfigEditorWindow:
         parent: tk.Tk,
         *,
         on_saved: Callable[[AppConfig], None],
-        theme_state: "_ThemeState | None" = None,
+        theme_state: _ThemeState | None = None,
     ) -> None:
         self._parent = parent
         self._on_saved = on_saved
@@ -242,6 +274,7 @@ class ConfigEditorWindow:
     # ── Public ────────────────────────────────────────────────────────────────
 
     def show(self) -> None:
+        """Show the config editor window, raising it if already open."""
         if self._win is not None and self._win.winfo_exists():
             self._win.lift()
             self._win.focus_force()
@@ -271,12 +304,16 @@ class ConfigEditorWindow:
         # ── Toolbar ───────────────────────────────────────────────────────────
         toolbar = tk.Frame(win, bg=_SURFACE, pady=8)
         toolbar.pack(fill=tk.X)
-        tk.Label(toolbar, text="⚙  config.local.yaml",
-                 font=("Segoe UI", 10, "bold"), fg=_GREEN, bg=_SURFACE).pack(
-            side=tk.LEFT, padx=14)
-        tk.Label(toolbar, text=str(self._cfg_path),
-                 font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE).pack(
-            side=tk.LEFT, padx=(0, 14))
+        tk.Label(
+            toolbar,
+            text="⚙  config.local.yaml",
+            font=("Segoe UI", 10, "bold"),
+            fg=_GREEN,
+            bg=_SURFACE,
+        ).pack(side=tk.LEFT, padx=14)
+        tk.Label(
+            toolbar, text=str(self._cfg_path), font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE
+        ).pack(side=tk.LEFT, padx=(0, 14))
         tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
 
         # ── Editor area ───────────────────────────────────────────────────────
@@ -286,9 +323,16 @@ class ConfigEditorWindow:
         # Line-number gutter
         ln = tk.Text(
             editor_frame,
-            width=4, padx=6, takefocus=0, state="disabled",
-            font=("Consolas", 11), bg="#0d1117", fg=_MUTED,
-            relief=tk.FLAT, bd=0, wrap=tk.NONE,
+            width=4,
+            padx=6,
+            takefocus=0,
+            state="disabled",
+            font=("Consolas", 11),
+            bg="#0d1117",
+            fg=_MUTED,
+            relief=tk.FLAT,
+            bd=0,
+            wrap=tk.NONE,
             cursor="arrow",
         )
         ln.pack(side=tk.LEFT, fill=tk.Y)
@@ -305,10 +349,12 @@ class ConfigEditorWindow:
         txt = tk.Text(
             text_container,
             font=("Consolas", 11),
-            bg="#0d1117", fg=_TEXT,
+            bg="#0d1117",
+            fg=_TEXT,
             insertbackground=_GREEN,
             selectbackground="#264f78",
-            relief=tk.FLAT, bd=0,
+            relief=tk.FLAT,
+            bd=0,
             wrap=tk.NONE,
             yscrollcommand=vsb.set,
             xscrollcommand=hsb.set,
@@ -334,8 +380,14 @@ class ConfigEditorWindow:
         tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
         status_bar = tk.Frame(win, bg=_SURFACE, pady=4)
         status_bar.pack(fill=tk.X)
-        sl = tk.Label(status_bar, textvariable=self._status_var,
-                      font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE, anchor="w")
+        sl = tk.Label(
+            status_bar,
+            textvariable=self._status_var,
+            font=("Segoe UI", 8),
+            fg=_MUTED,
+            bg=_SURFACE,
+            anchor="w",
+        )
         sl.pack(side=tk.LEFT, padx=14, fill=tk.X, expand=True)
         self._status_lbl = sl
         self._status_var.set("Pronto — Ctrl+S para salvar")
@@ -345,13 +397,15 @@ class ConfigEditorWindow:
         footer = tk.Frame(win, bg=_SURFACE, pady=10)
         footer.pack(fill=tk.X)
         self._make_btn(footer, "✓  Validar", self._validate, _BTN_DIM).pack(
-            side=tk.LEFT, padx=(14, 6))
+            side=tk.LEFT, padx=(14, 6)
+        )
         self._make_btn(footer, "💾  Salvar e Aplicar", self._save_apply, _GREEN2).pack(
-            side=tk.LEFT, padx=(0, 6))
-        self._make_btn(footer, "↺  Restaurar valores padrão", self._restore_defaults, _BTN_DIM).pack(
-            side=tk.LEFT, padx=(0, 6))
-        self._make_btn(footer, "Cancelar", win.destroy, "#5a1a1a").pack(
-            side=tk.RIGHT, padx=(0, 14))
+            side=tk.LEFT, padx=(0, 6)
+        )
+        self._make_btn(
+            footer, "↺  Restaurar valores padrão", self._restore_defaults, _BTN_DIM
+        ).pack(side=tk.LEFT, padx=(0, 6))
+        self._make_btn(footer, "Cancelar", win.destroy, "#5a1a1a").pack(side=tk.RIGHT, padx=(0, 14))
 
         # Keyboard shortcut
         win.bind("<Control-s>", lambda e: self._save_apply())
@@ -363,18 +417,26 @@ class ConfigEditorWindow:
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _make_btn(self, parent: tk.Frame, text: str,
-                  cmd: Callable[[], None], bg: str) -> tk.Button:
+    def _make_btn(self, parent: tk.Frame, text: str, cmd: Callable[[], None], bg: str) -> tk.Button:
         return tk.Button(
-            parent, text=text, command=cmd,
+            parent,
+            text=text,
+            command=cmd,
             font=("Segoe UI", 9, "bold"),
-            fg=_WHITE, bg=bg, activeforeground=_WHITE, activebackground=bg,
-            relief=tk.FLAT, cursor="hand2", padx=12, pady=5, bd=0,
+            fg=_WHITE,
+            bg=bg,
+            activeforeground=_WHITE,
+            activebackground=bg,
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=12,
+            pady=5,
+            bd=0,
         )
 
     def _restore_defaults(self) -> None:
         import sys
-        from tkinter import messagebox
+
         if not messagebox.askyesno(
             "Restaurar valores padrão",
             "Isso substituirá o conteúdo do editor pelo template padrão.\n"
@@ -409,6 +471,7 @@ class ConfigEditorWindow:
         self._cfg_path.parent.mkdir(parents=True, exist_ok=True)
         if not self._cfg_path.exists():
             import sys
+
             meipass = getattr(sys, "_MEIPASS", None)
             candidates = []
             if meipass:
@@ -431,7 +494,7 @@ class ConfigEditorWindow:
         if self._text:
             self._text.delete("1.0", tk.END)
             self._text.insert("1.0", content)
-            self._text.edit_reset()          # clear undo stack
+            self._text.edit_reset()  # clear undo stack
             self._text.edit_modified(False)  # clear modified flag
         self._update_linenos()
         self._set_status("Arquivo carregado — Ctrl+S para salvar", _MUTED)
@@ -486,15 +549,14 @@ class ConfigEditorWindow:
             tmp.write_text(content, encoding="utf-8")
             cfg = load_config(str(tmp))
             self._set_status("✓ Configuração válida", _GREEN)
-            return cfg
         except Exception as exc:
             self._set_status(f"✗ {exc}", _RED)
             return None
+        else:
+            return cfg
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 tmp.unlink(missing_ok=True)
-            except Exception:
-                pass
 
     def _save_apply(self) -> None:
         cfg = self._validate()
@@ -518,6 +580,7 @@ class ConfigEditorWindow:
 # Edit to_addresses dialog
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class EditToAddressesDialog:
     """Modal dialog to quickly edit to_addresses for all monitors."""
 
@@ -528,7 +591,7 @@ class EditToAddressesDialog:
         cfg_path: Path,
         get_config: Callable[[], AppConfig],
         on_saved: Callable[[AppConfig], None],
-        theme_state: "_ThemeState | None" = None,
+        theme_state: _ThemeState | None = None,
     ) -> None:
         self._parent = parent
         self._cfg_path = cfg_path
@@ -538,13 +601,14 @@ class EditToAddressesDialog:
         self._win: tk.Toplevel | None = None
 
     def show(self) -> None:
+        """Show the alert-recipient editor window, raising it if already open."""
         if self._win is not None and self._win.winfo_exists():
             self._win.lift()
             self._win.focus_force()
             return
         self._build()
 
-    def _build(self) -> None:
+    def _build(self) -> None:  # noqa: C901
         cfg = self._get_config()
         monitors = cfg.monitors
 
@@ -561,8 +625,11 @@ class EditToAddressesDialog:
         header = tk.Frame(win, bg=_SURFACE, pady=10)
         header.pack(fill=tk.X)
         tk.Label(
-            header, text="✉  Destinatários de Alerta",
-            font=("Segoe UI", 11, "bold"), fg=_GREEN, bg=_SURFACE,
+            header,
+            text="✉  Destinatários de Alerta",
+            font=("Segoe UI", 11, "bold"),
+            fg=_GREEN,
+            bg=_SURFACE,
         ).pack(side=tk.LEFT, padx=16)
         tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
 
@@ -572,8 +639,11 @@ class EditToAddressesDialog:
         tk.Label(
             body,
             text="Informe os endereços de e-mail que receberão os alertas.\n"
-                 "Separe múltiplos endereços com vírgula.",
-            font=("Segoe UI", 9), fg=_MUTED, bg=_BG, justify="left",
+            "Separe múltiplos endereços com vírgula.",
+            font=("Segoe UI", 9),
+            fg=_MUTED,
+            bg=_BG,
+            justify="left",
         ).pack(anchor="w", pady=(0, 12))
 
         entries: list[tk.Entry] = []
@@ -584,13 +654,17 @@ class EditToAddressesDialog:
             tk.Label(
                 body,
                 text=f"Monitor {idx} — {title}:",
-                font=("Segoe UI", 9, "bold"), fg=_TEXT, bg=_BG, anchor="w",
+                font=("Segoe UI", 9, "bold"),
+                fg=_TEXT,
+                bg=_BG,
+                anchor="w",
             ).pack(anchor="w")
             current = ", ".join(monitor.email.to_addresses)
             entry = tk.Entry(
                 body,
                 font=("Segoe UI", 9),
-                bg=_SURFACE, fg=_TEXT,
+                bg=_SURFACE,
+                fg=_TEXT,
                 insertbackground=_TEXT,
                 relief="flat",
                 width=56,
@@ -601,8 +675,13 @@ class EditToAddressesDialog:
 
         status_var = tk.StringVar()
         status_lbl = tk.Label(
-            body, textvariable=status_var,
-            font=("Segoe UI", 8), fg=_RED, bg=_BG, anchor="w", wraplength=440,
+            body,
+            textvariable=status_var,
+            font=("Segoe UI", 8),
+            fg=_RED,
+            bg=_BG,
+            anchor="w",
+            wraplength=440,
         )
         status_lbl.pack(anchor="w", pady=(0, 4))
 
@@ -651,10 +730,8 @@ class EditToAddressesDialog:
                 status_lbl.configure(fg=_RED)
                 return
             finally:
-                try:
+                with contextlib.suppress(Exception):
                     tmp.unlink(missing_ok=True)
-                except Exception:
-                    pass
 
             try:
                 self._cfg_path.write_text(patched, encoding="utf-8")
@@ -670,16 +747,34 @@ class EditToAddressesDialog:
             win.destroy()
 
         tk.Button(
-            footer, text="✓  Salvar", command=on_save,
-            font=("Segoe UI", 9, "bold"), fg=_WHITE, bg=_GREEN2,
-            activeforeground=_WHITE, activebackground=_GREEN2,
-            relief=tk.FLAT, cursor="hand2", padx=14, pady=6, bd=0,
+            footer,
+            text="✓  Salvar",
+            command=on_save,
+            font=("Segoe UI", 9, "bold"),
+            fg=_WHITE,
+            bg=_GREEN2,
+            activeforeground=_WHITE,
+            activebackground=_GREEN2,
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=14,
+            pady=6,
+            bd=0,
         ).pack(side=tk.LEFT, padx=(16, 6))
         tk.Button(
-            footer, text="Cancelar", command=on_cancel,
-            font=("Segoe UI", 9, "bold"), fg=_TEXT, bg=_BTN_DIM,
-            activeforeground=_TEXT, activebackground=_BTN_DIM,
-            relief=tk.FLAT, cursor="hand2", padx=14, pady=6, bd=0,
+            footer,
+            text="Cancelar",
+            command=on_cancel,
+            font=("Segoe UI", 9, "bold"),
+            fg=_TEXT,
+            bg=_BTN_DIM,
+            activeforeground=_TEXT,
+            activebackground=_BTN_DIM,
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=14,
+            pady=6,
+            bd=0,
         ).pack(side=tk.LEFT)
 
         win.bind("<Escape>", lambda _e: on_cancel())
@@ -711,7 +806,7 @@ class StatusWindow:
         on_open_config: Callable[[], None],
         on_edit_recipients: Callable[[], None],
         on_exit: Callable[[], None],
-        theme_state: "_ThemeState | None" = None,
+        theme_state: _ThemeState | None = None,
     ) -> None:
         self._root = root
         self._status = status
@@ -738,7 +833,8 @@ class StatusWindow:
 
     def _build_ui(self) -> None:
         r = self._root
-        from . import __version_label__, __release_date__
+        from . import __release_date__, __version_label__
+
         r.title(f"Z7_SentinelTray {__version_label__} ({__release_date__}) — Status")
         r.configure(bg=_BG)
         r.resizable(True, True)
@@ -749,13 +845,14 @@ class StatusWindow:
         # App icon
         try:
             from .path_utils import get_project_root as _gpr  # type: ignore[attr-defined]
+
             ico = _gpr() / "assets" / "icon.ico"
             if ico.exists():
                 r.iconbitmap(str(ico))
         except Exception:
             pass
 
-        W, H = 1080, 580
+        W, H = 1080, 580  # noqa: N806
         self._center(W, H)
         r.geometry(f"{W}x{H}")
 
@@ -770,17 +867,28 @@ class StatusWindow:
         title_frame = tk.Frame(header, bg=_SURFACE)
         title_frame.pack(side=tk.LEFT)
         tk.Label(
-            title_frame, text="Z7_SentinelTray",
-            font=("Segoe UI", 15, "bold"), fg=_GREEN, bg=_SURFACE, anchor="w"
+            title_frame,
+            text="Z7_SentinelTray",
+            font=("Segoe UI", 15, "bold"),
+            fg=_GREEN,
+            bg=_SURFACE,
+            anchor="w",
         ).pack(anchor="w")
         tk.Label(
-            title_frame, text="Monitor de Janelas e Alertas",
-            font=("Segoe UI", 9), fg=_MUTED, bg=_SURFACE, anchor="w"
+            title_frame,
+            text="Monitor de Janelas e Alertas",
+            font=("Segoe UI", 9),
+            fg=_MUTED,
+            bg=_SURFACE,
+            anchor="w",
         ).pack(anchor="w")
 
         tk.Label(
-            header, text=f"v{__version_label__}  ·  {__release_date__}",
-            font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE
+            header,
+            text=f"v{__version_label__}  ·  {__release_date__}",
+            font=("Segoe UI", 8),
+            fg=_MUTED,
+            bg=_SURFACE,
         ).pack(side=tk.RIGHT, padx=18)
 
         tk.Frame(r, bg=_BORDER, height=1).pack(fill=tk.X)
@@ -816,46 +924,58 @@ class StatusWindow:
         uc, uc_c = self._make_card(row1, "TEMPO ATIVO")
         uc.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(6, 0))
         tk.Label(
-            uc_c, textvariable=self._uptime_var,
-            font=("Consolas", 20, "bold"), fg=_TEXT, bg=_CARD
+            uc_c, textvariable=self._uptime_var, font=("Consolas", 20, "bold"), fg=_TEXT, bg=_CARD
         ).pack(pady=6)
 
         # ── LEFT: Scan Status ─────────────────────────────────────────────────
-        self._kv_section(left, "VERIFICAÇÃO", [
-            ("last_scan",   "Última Verificação"),
-            ("next_scan",   "Próxima Verificação"),
-            ("last_result", "Último Resultado"),
-        ])
+        self._kv_section(
+            left,
+            "VERIFICAÇÃO",
+            [
+                ("last_scan", "Última Verificação"),
+                ("next_scan", "Próxima Verificação"),
+                ("last_result", "Último Resultado"),
+            ],
+        )
 
         # ── LEFT: Alerts ──────────────────────────────────────────────────────
-        self._kv_section(left, "ALERTAS", [
-            ("last_match",    "Última Detecção"),
-            ("last_match_at", "Horário da Detecção"),
-            ("last_send",     "Último Alerta Enviado"),
-        ])
+        self._kv_section(
+            left,
+            "ALERTAS",
+            [
+                ("last_match", "Última Detecção"),
+                ("last_match_at", "Horário da Detecção"),
+                ("last_send", "Último Alerta Enviado"),
+            ],
+        )
 
         # ── RIGHT: Errors ─────────────────────────────────────────────────────
-        self._kv_section(right, "ERROS", [
-            ("error_count",    "Total de Erros"),
-            ("last_error",     "Último Erro"),
-            ("breaker_active", "Disjuntores"),
-        ])
+        self._kv_section(
+            right,
+            "ERROS",
+            [
+                ("error_count", "Total de Erros"),
+                ("last_error", "Último Erro"),
+                ("breaker_active", "Disjuntores"),
+            ],
+        )
 
         # ── RIGHT: Email Queue ────────────────────────────────────────────────
         eq_outer, eq_c = self._make_card(right, "FILA DE E-MAIL")
         eq_outer.pack(fill=tk.X, pady=(10, 0))
         for key, label, color in (
-            ("q_pending",  "Pendente",  _AMBER),
-            ("q_sent",     "Enviado",   _GREEN),
-            ("q_failed",   "Falhou",    _RED),
-            ("q_deferred", "Adiado",    _MUTED),
+            ("q_pending", "Pendente", _AMBER),
+            ("q_sent", "Enviado", _GREEN),
+            ("q_failed", "Falhou", _RED),
+            ("q_deferred", "Adiado", _MUTED),
         ):
             cell = tk.Frame(eq_c, bg=_CARD)
             cell.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=4)
             var = tk.StringVar(value="0")
             self._vars[key] = var
-            tk.Label(cell, textvariable=var,
-                     font=("Consolas", 22, "bold"), fg=color, bg=_CARD).pack()
+            tk.Label(
+                cell, textvariable=var, font=("Consolas", 22, "bold"), fg=color, bg=_CARD
+            ).pack()
             tk.Label(cell, text=label, font=("Segoe UI", 8), fg=_MUTED, bg=_CARD).pack()
 
         # ── RIGHT: Monitors ───────────────────────────────────────────────────
@@ -869,30 +989,43 @@ class StatusWindow:
         footer.pack(fill=tk.X)
 
         self._make_btn(footer, "⟳  Verificar Agora", self._trigger_scan, _BLUE).pack(
-            side=tk.LEFT, padx=(18, 6))
+            side=tk.LEFT, padx=(18, 6)
+        )
         self._make_btn(footer, "✉  Destinatários", self._on_edit_recipients, _TEAL).pack(
-            side=tk.LEFT, padx=(0, 6))
+            side=tk.LEFT, padx=(0, 6)
+        )
         self._make_btn(footer, "⚙  Avançado", self._on_open_config, _BTN_DIM).pack(
-            side=tk.LEFT, padx=(0, 6))
-        self._make_btn(footer, "↗  Repositório",
-                       lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM).pack(
-            side=tk.LEFT)
+            side=tk.LEFT, padx=(0, 6)
+        )
+        self._make_btn(
+            footer, "↗  Repositório", lambda: webbrowser.open(_PROJECT_REPO_URL), _BTN_DIM
+        ).pack(side=tk.LEFT)
         theme_label = "☀  Tema Claro" if self._theme.is_dark else "🌙  Tema Escuro"
         self._theme_btn = self._make_btn(footer, theme_label, self._toggle_theme, _BTN_DIM)
         self._theme_btn.pack(side=tk.LEFT, padx=(6, 0))
-        tk.Label(footer, text="Z7_SentinelTray • Licenced under GPLv3 •  Câmara Municipal de Santa Bárbara d'Oeste/SP  • Christian Martin dos Santos",
-                 font=("Segoe UI", 8), fg=_MUTED, bg=_SURFACE).pack(
-            side=tk.LEFT, padx=(12, 0))
+        tk.Label(
+            footer,
+            text=(
+                "Z7_SentinelTray • Licenced under GPLv3"
+                " •  Câmara Municipal de Santa Bárbara d'Oeste/SP"
+                "  • Christian Martin dos Santos"
+            ),
+            font=("Segoe UI", 8),
+            fg=_MUTED,
+            bg=_SURFACE,
+        ).pack(side=tk.LEFT, padx=(12, 0))
         self._make_btn(footer, "Sair  ✕", self._on_exit, "#5a1a1a").pack(
-            side=tk.RIGHT, padx=(0, 18))
+            side=tk.RIGHT, padx=(0, 18)
+        )
 
     def _make_card(self, parent: tk.Widget, title: str) -> tuple[tk.Frame, tk.Frame]:
         """Create a styled card. Returns (outer, content). Caller packs outer."""
         outer = tk.Frame(parent, bg=_BORDER, padx=1, pady=1)
         inner = tk.Frame(outer, bg=_CARD)
         inner.pack(fill=tk.BOTH, expand=True)
-        tk.Label(inner, text=title, font=("Segoe UI", 7, "bold"),
-                 fg=_GREEN, bg=_CARD, anchor="w").pack(fill=tk.X, padx=12, pady=(8, 2))
+        tk.Label(
+            inner, text=title, font=("Segoe UI", 7, "bold"), fg=_GREEN, bg=_CARD, anchor="w"
+        ).pack(fill=tk.X, padx=12, pady=(8, 2))
         tk.Frame(inner, bg=_BORDER, height=1).pack(fill=tk.X, padx=12)
         content = tk.Frame(inner, bg=_CARD)
         content.pack(fill=tk.BOTH, expand=True, padx=12, pady=(6, 10))
@@ -911,21 +1044,43 @@ class StatusWindow:
             self._vars[key] = var
             row = tk.Frame(content, bg=_CARD)
             row.pack(fill=tk.X, pady=1)
-            tk.Label(row, text=label + ":", font=("Segoe UI", 9),
-                     fg=_MUTED, bg=_CARD, width=20, anchor="w").pack(side=tk.LEFT)
-            lbl = tk.Label(row, textvariable=var, font=("Segoe UI", 9),
-                           fg=_TEXT, bg=_CARD, anchor="w", wraplength=320, justify="left")
+            tk.Label(
+                row,
+                text=label + ":",
+                font=("Segoe UI", 9),
+                fg=_MUTED,
+                bg=_CARD,
+                width=20,
+                anchor="w",
+            ).pack(side=tk.LEFT)
+            lbl = tk.Label(
+                row,
+                textvariable=var,
+                font=("Segoe UI", 9),
+                fg=_TEXT,
+                bg=_CARD,
+                anchor="w",
+                wraplength=320,
+                justify="left",
+            )
             lbl.pack(side=tk.LEFT, fill=tk.X, expand=True)
             self._value_labels[key] = lbl
 
-    def _make_btn(
-        self, parent: tk.Frame, text: str, cmd: Callable[[], None], bg: str
-    ) -> tk.Button:
+    def _make_btn(self, parent: tk.Frame, text: str, cmd: Callable[[], None], bg: str) -> tk.Button:
         return tk.Button(
-            parent, text=text, command=cmd,
+            parent,
+            text=text,
+            command=cmd,
             font=("Segoe UI", 9, "bold"),
-            fg=_WHITE, bg=bg, activeforeground=_WHITE, activebackground=bg,
-            relief=tk.FLAT, cursor="hand2", padx=14, pady=6, bd=0,
+            fg=_WHITE,
+            bg=bg,
+            activeforeground=_WHITE,
+            activebackground=bg,
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=14,
+            pady=6,
+            bd=0,
         )
 
     def _draw_eye(self, canvas: tk.Canvas, size: int) -> None:
@@ -952,6 +1107,7 @@ class StatusWindow:
     # ── Visibility ────────────────────────────────────────────────────────────
 
     def show(self) -> None:
+        """Make the main window visible and schedule the refresh loop."""
         self._visible = True
         self._root.deiconify()
         self._root.state("zoomed")
@@ -960,23 +1116,20 @@ class StatusWindow:
         self._schedule_refresh()
 
     def hide(self) -> None:
+        """Hide the main window and cancel any pending refresh."""
         self._visible = False
         self._root.withdraw()
         if self._after_id:
-            try:
+            with contextlib.suppress(Exception):
                 self._root.after_cancel(self._after_id)
-            except Exception:
-                pass
             self._after_id = None
 
     # ── Refresh loop ──────────────────────────────────────────────────────────
 
     def _schedule_refresh(self) -> None:
         if self._after_id:
-            try:
+            with contextlib.suppress(Exception):
                 self._root.after_cancel(self._after_id)
-            except Exception:
-                pass
         self._after_id = self._root.after(self._REFRESH_MS, self._refresh)
 
     def _refresh(self) -> None:
@@ -1004,7 +1157,7 @@ class StatusWindow:
 
         # ── Uptime ────────────────────────────────────────────────────────────
         if snap.started_at is not None:
-            elapsed = int((datetime.now(timezone.utc) - snap.started_at).total_seconds())
+            elapsed = int((datetime.now(UTC) - snap.started_at).total_seconds())
         else:
             elapsed = snap.uptime_seconds
         h, rem = divmod(max(0, elapsed), 3600)
@@ -1026,17 +1179,25 @@ class StatusWindow:
         self._set("error_count", str(snap.error_count))
         lbl = self._value_labels.get("error_count")
         if lbl:
-            lbl.configure(fg=self._theme.palette["red"] if snap.error_count else self._theme.palette["green"])
+            lbl.configure(
+                fg=self._theme.palette["red"] if snap.error_count else self._theme.palette["green"]
+            )
 
         self._set("last_error", snap.last_error or "—")
         lbl = self._value_labels.get("last_error")
         if lbl:
-            lbl.configure(fg=self._theme.palette["red"] if snap.last_error else self._theme.palette["muted"])
+            lbl.configure(
+                fg=self._theme.palette["red"] if snap.last_error else self._theme.palette["muted"]
+            )
 
         self._set("breaker_active", str(snap.breaker_active_count))
         lbl = self._value_labels.get("breaker_active")
         if lbl:
-            lbl.configure(fg=self._theme.palette["red"] if snap.breaker_active_count else self._theme.palette["text"])
+            lbl.configure(
+                fg=self._theme.palette["red"]
+                if snap.breaker_active_count
+                else self._theme.palette["text"]
+            )
 
         # ── Email queue ───────────────────────────────────────────────────────
         q = snap.email_queue
@@ -1060,8 +1221,13 @@ class StatusWindow:
             w.destroy()
         if not cfg.monitors:
             p = self._theme.palette
-            tk.Label(self._monitors_content, text="Nenhum monitor configurado.",
-                     font=("Segoe UI", 9), fg=p["muted"], bg=p["card"]).pack(anchor="w")
+            tk.Label(
+                self._monitors_content,
+                text="Nenhum monitor configurado.",
+                font=("Segoe UI", 9),
+                fg=p["muted"],
+                bg=p["card"],
+            ).pack(anchor="w")
             return
         failures = getattr(snap, "monitor_failures", {})
         breakers = getattr(snap, "monitor_breakers_active", {})
@@ -1079,15 +1245,26 @@ class StatusWindow:
             row = tk.Frame(self._monitors_content, bg=p["card"])
             row.pack(fill=tk.X, pady=2)
             tk.Label(row, text="●", font=("Segoe UI", 11), fg=dot_fg, bg=p["card"]).pack(
-                side=tk.LEFT, padx=(0, 8))
+                side=tk.LEFT, padx=(0, 8)
+            )
             title = monitor.window_title_regex or f"Monitor {idx}"
             if len(title) > 48:
                 title = title[:45] + "..."
-            tk.Label(row, text=f"Monitor {idx}:  {title}",
-                     font=("Segoe UI", 9), fg=p["text"], bg=p["card"]).pack(side=tk.LEFT)
+            tk.Label(
+                row,
+                text=f"Monitor {idx}:  {title}",
+                font=("Segoe UI", 9),
+                fg=p["text"],
+                bg=p["card"],
+            ).pack(side=tk.LEFT)
             if note:
-                tk.Label(row, text=note, font=("Segoe UI", 9),
-                         fg=p["red"] if breaker else p["amber"], bg=p["card"]).pack(side=tk.LEFT)
+                tk.Label(
+                    row,
+                    text=note,
+                    font=("Segoe UI", 9),
+                    fg=p["red"] if breaker else p["amber"],
+                    bg=p["card"],
+                ).pack(side=tk.LEFT)
 
     def _trigger_scan(self) -> None:
         self._on_manual_scan()
@@ -1098,12 +1275,16 @@ class StatusWindow:
             p = self._theme.palette
             label = "☀  Tema Claro" if self._theme.is_dark else "🌙  Tema Escuro"
             self._theme_btn.configure(
-                text=label, bg=p["btn_dim"], fg=p["white"],
-                activebackground=p["btn_dim"], activeforeground=p["white"],
+                text=label,
+                bg=p["btn_dim"],
+                fg=p["white"],
+                activebackground=p["btn_dim"],
+                activeforeground=p["white"],
             )
 
 
 # ── Module-level helpers ──────────────────────────────────────────────────────
+
 
 def _patch_to_addresses(yaml_text: str, addresses_per_monitor: list[list[str]]) -> str:
     """Replace each to_addresses line in *yaml_text* with the given address lists.
@@ -1120,7 +1301,7 @@ def _patch_to_addresses(yaml_text: str, addresses_per_monitor: list[list[str]]) 
             "Use o editor de configuração completo."
         )
     result = yaml_text
-    for match, new_addrs in zip(reversed(matches), reversed(addresses_per_monitor)):
+    for match, new_addrs in zip(reversed(matches), reversed(addresses_per_monitor), strict=False):
         indent = match.group(1)  # e.g. "    to_addresses:"
         addrs_yaml = "[" + ", ".join(f"'{a}'" for a in new_addrs) + "]"
         new_line = f"{indent} {addrs_yaml}"
@@ -1134,16 +1315,17 @@ def _fmt_next_scan(last_scan: str, poll_interval_seconds: int) -> str:
     try:
         last = datetime.fromisoformat(last_scan)
         if last.tzinfo is None:
-            last = last.replace(tzinfo=timezone.utc)
+            last = last.replace(tzinfo=UTC)
         remaining = (
-            last + timedelta(seconds=poll_interval_seconds) - datetime.now(timezone.utc)
+            last + timedelta(seconds=poll_interval_seconds) - datetime.now(UTC)
         ).total_seconds()
+    except (ValueError, TypeError):
+        return "—"
+    else:
         if remaining <= 0:
             return "iminente"
         m, s = divmod(int(remaining), 60)
         return f"em {m}m {s:02d}s" if m else f"em {s}s"
-    except (ValueError, TypeError):
-        return "—"
 
 
 def _start_notifier(
@@ -1166,7 +1348,8 @@ def _start_notifier(
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
+
+def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
     """GUI entry point — opens the status window on startup."""
     set_console_visible(False)
 
@@ -1179,8 +1362,12 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
     stop_holder: list[Event] = [Event()]
     thread_holder: list[Thread] = [
         _start_notifier(
-            config, status, stop_holder[0],
-            manual_scan_event, scan_complete_event, test_message_event,
+            config,
+            status,
+            stop_holder[0],
+            manual_scan_event,
+            scan_complete_event,
+            test_message_event,
         )
     ]
     config_holder: list[AppConfig] = [config]
@@ -1196,16 +1383,18 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
     def _reload_notifier(new_cfg: AppConfig) -> None:
         old_stop = stop_holder[0]
         old_stop.set()
-        try:
+        with contextlib.suppress(Exception):
             thread_holder[0].join(timeout=5)
-        except Exception:
-            pass
         new_stop = Event()
         stop_holder[0] = new_stop
         status.set_last_error("")
         thread_holder[0] = _start_notifier(
-            new_cfg, status, new_stop,
-            manual_scan_event, scan_complete_event, test_message_event,
+            new_cfg,
+            status,
+            new_stop,
+            manual_scan_event,
+            scan_complete_event,
+            test_message_event,
         )
         config_holder[0] = new_cfg
 
@@ -1266,10 +1455,8 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
         if exit_event.is_set():
             stop_holder[0].set()
             tray.stop()
-            try:
+            with contextlib.suppress(Exception):
                 root.quit()
-            except Exception:
-                pass
             return
         root.after(300, _check_exit)
 
@@ -1278,8 +1465,8 @@ def run_gui(config: AppConfig, *, smtp_validator=None) -> None:
     # ── Run mainloop ──────────────────────────────────────────────────────────
     try:
         root.mainloop()
-    except Exception as exc:
-        LOGGER.error("GUI mainloop error: %s", exc, extra={"category": "startup"})
+    except Exception:
+        LOGGER.exception("GUI mainloop error", extra={"category": "startup"})
     finally:
         stop_holder[0].set()
         tray.stop()

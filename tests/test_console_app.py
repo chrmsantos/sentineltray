@@ -1,8 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import pytest
 
@@ -82,6 +83,7 @@ def test_run_console_exit(
             calls["joined"] = True
 
     monkeypatch.setattr(console_app, "_create_config_editor", fake_create_editor)
+
     def fake_start_notifier(config: AppConfig, *_args: object, **_kwargs: object) -> DummyThread:
         notifier_configs.append(config)
         return DummyThread()
@@ -91,6 +93,7 @@ def test_run_console_exit(
     class DummyTray:
         def start(self) -> None:
             pass
+
         def stop(self) -> None:
             pass
 
@@ -102,7 +105,10 @@ def test_run_console_exit(
     monkeypatch.setattr(console_app.time, "sleep", noop_sleep)
 
     inputs: Iterator[str] = iter(["q"])
-    def fake_read_command(_prompt: str, _refresh_event: object, _exit_event: object = None) -> str | None:
+
+    def fake_read_command(
+        _prompt: str, _refresh_event: object, _exit_event: object = None
+    ) -> str | None:
         return next(inputs)
 
     monkeypatch.setattr(console_app, "_read_command", fake_read_command)

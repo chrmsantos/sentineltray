@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 
 from z7_sentineltray.email_sender import DiskEmailQueue, EmailQueued, QueueingEmailSender
 

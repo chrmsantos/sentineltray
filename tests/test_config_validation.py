@@ -1,13 +1,11 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 
 from z7_sentineltray.config import get_user_log_dir, load_config
 
 
-def test_invalid_poll_interval_rejected(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_invalid_poll_interval_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     config_path = tmp_path / "config.yaml"
     config_path.write_text(
@@ -106,9 +104,7 @@ def test_log_paths_are_rehomed_to_user_logs(
     assert config.log_file == str(log_root / "z7_sentineltray.log")
 
 
-def test_invalid_config_version_rejected(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_invalid_config_version_rejected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     config_path = tmp_path / "config.yaml"
     config_path.write_text(

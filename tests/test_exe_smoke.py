@@ -1,4 +1,4 @@
-﻿"""Smoke tests for the built Z7_SentinelTray.exe.
+"""Smoke tests for the built Z7_SentinelTray.exe.
 
 These tests launch the actual compiled executable and verify:
 1. --version exits cleanly with code 0.
@@ -8,15 +8,14 @@ These tests launch the actual compiled executable and verify:
 
 Run with: pytest tests/test_exe_smoke.py -v
 """
+
 from __future__ import annotations
 
-import json
 import os
-import signal
 import subprocess
-import sys
 import textwrap
 import time
+from contextlib import suppress
 from pathlib import Path
 
 import pytest
@@ -124,14 +123,12 @@ def _parse_log_lines(log_files: list[Path]) -> list[dict]:
 
 def _kill_tree(pid: int) -> None:
     """Kill a process and all its children using taskkill /F /T."""
-    try:
+    with suppress(Exception):
         subprocess.run(
             ["taskkill", "/F", "/T", "/PID", str(pid)],
             capture_output=True,
             timeout=10,
         )
-    except Exception:
-        pass
 
 
 def _run_exe(
@@ -147,7 +144,11 @@ def _run_exe(
     then the entire process tree is killed (including children that may have
     inherited pipe handles), and the result is collected.
     """
-    env = {**os.environ, "Z7_SENTINELTRAY_ROOT": str(root), "Z7_SENTINELTRAY_DATA_DIR": str(root / "config")}
+    env = {
+        **os.environ,
+        "Z7_SENTINELTRAY_ROOT": str(root),
+        "Z7_SENTINELTRAY_DATA_DIR": str(root / "config"),
+    }
     if kill_after is not None:
         proc = subprocess.Popen(
             [str(EXE_PATH), *args],
@@ -192,6 +193,7 @@ def _run_exe(
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.skipif(not _exe_available(), reason=f"Executable not found: {EXE_PATH}")
 def test_exe_version_flag(tmp_path: Path) -> None:
@@ -240,7 +242,12 @@ def test_exe_startup_creates_log_files(tmp_path: Path) -> None:
     assert log_files, (
         "No run log files found after startup.\n"
         f"Expected logs under: {root / 'config' / 'logs'}\n"
-        "Contents: " + str(list((root / 'config' / 'logs').iterdir()) if (root / 'config' / 'logs').exists() else [])
+        "Contents: "
+        + str(
+            list((root / "config" / "logs").iterdir())
+            if (root / "config" / "logs").exists()
+            else []
+        )
     )
 
 
@@ -278,9 +285,7 @@ def test_exe_startup_no_critical_errors(tmp_path: Path) -> None:
     log_files = _collect_run_logs(root)
     entries = _parse_log_lines(log_files)
     critical = [e["raw"] for e in entries if "CRITICAL" in e["level"]]
-    assert not critical, (
-        f"Found {len(critical)} CRITICAL log entries:\n" + "\n".join(critical[:10])
-    )
+    assert not critical, f"Found {len(critical)} CRITICAL log entries:\n" + "\n".join(critical[:10])
 
 
 @pytest.mark.skipif(not _exe_available(), reason=f"Executable not found: {EXE_PATH}")
@@ -292,17 +297,13 @@ def test_exe_startup_no_unexpected_errors(tmp_path: Path) -> None:
     entries = _parse_log_lines(log_files)
     error_lines = [e["raw"] for e in entries if e["level"].startswith("ERROR")]
     # Filter out known-benign patterns (telemetry write race on shutdown, etc.)
-    _BENIGN_RE = [
-        "Telemetry write failed",    # race on shutdown / permission
+    _benign_re = [
+        "Telemetry write failed",  # race on shutdown / permission
         "State persistence failed",  # race on shutdown
     ]
-    unexpected = [
-        line for line in error_lines
-        if not any(pat in line for pat in _BENIGN_RE)
-    ]
-    assert not unexpected, (
-        f"Found {len(unexpected)} unexpected ERROR log entries:\n"
-        + "\n".join(unexpected[:10])
+    unexpected = [line for line in error_lines if not any(pat in line for pat in _benign_re)]
+    assert not unexpected, f"Found {len(unexpected)} unexpected ERROR log entries:\n" + "\n".join(
+        unexpected[:10]
     )
 
 

@@ -1,6 +1,6 @@
-﻿"""Z7_SentinelTray package."""
+"""Z7_SentinelTray package."""
 
 __author__ = "Christian Martin dos Santos"
-__version__ = "5.6.1"
-__version_label__ = "5.6.1"
-__release_date__ = "28-04-2026"
+__version__ = "5.7.0"
+__version_label__ = "5.7.0"
+__release_date__ = "29-04-2026"

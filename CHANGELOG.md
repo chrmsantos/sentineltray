@@ -1,5 +1,13 @@
 ﻿# Changelog
 
+## 2026-04-29 (5.7.0)
+
+- Qualidade: refatoração abrangente de boas práticas Python em todos os 21 módulos do pacote `z7_sentineltray` — docstrings no estilo Google, anotações de tipo completas, anti-padrões corrigidos (TRY/SIM/N/C90/ANN/RUF).
+- Qualidade: configuração de ferramentas adicionada ao `pyproject.toml` — Ruff (linter + formatter, 0 erros em `src/` e `tests/`), mypy em modo estrito, pre-commit hooks (ruff + mypy + formatadores padrão).
+- Qualidade: marcador PEP 561 `py.typed` adicionado ao pacote para sinalizar suporte a type-checking estático.
+- Qualidade: suite de testes aprimorada — PT017/PT011/SIM105/N802/E402 corrigidos nos arquivos de teste; arquivo de conflito duplicado removido; 144 testes passando.
+- Limpeza: artefatos de saída de build e testes (`.txt`) removidos da raiz do projeto; `.gitignore` atualizado com padrões para prevenir reacumulação.
+
 ## 2026-04-29 (5.6.2)
 
 - Melhoria: qualidade visual do ícone do app aprimorada — supersampling elevado de 4× para 6×; limbal ring adicionado ao redor da íris; textura de fibras radiais (28 raios) na íris; segundo reflexo de luz na pupila; arco de pálpebra superior separado; 7 cílios com comprimento variável; sombra projetada sob o olho; brilho em duas camadas (haze amplo + núcleo quente); esclera com branco levemente quente; fundo com vignette central sutil.

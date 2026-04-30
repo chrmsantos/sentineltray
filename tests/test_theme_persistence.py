@@ -1,4 +1,5 @@
 """Tests for UI theme persistence across sessions (_ThemeState)."""
+
 from __future__ import annotations
 
 import json
@@ -8,10 +9,10 @@ import pytest
 
 from z7_sentineltray.gui_app import _ThemeState
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _prefs_path(data_dir: Path) -> Path:
     return data_dir / "ui_prefs.json"
@@ -21,6 +22,7 @@ def _prefs_path(data_dir: Path) -> Path:
 # Default behaviour
 # ---------------------------------------------------------------------------
 
+
 def test_default_theme_is_dark(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Without a saved preference file, dark mode is the default."""
     monkeypatch.setenv("Z7_SENTINELTRAY_DATA_DIR", str(tmp_path))
@@ -28,9 +30,7 @@ def test_default_theme_is_dark(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     assert state.is_dark is True
 
 
-def test_default_palette_is_dark_palette(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_default_palette_is_dark_palette(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("Z7_SENTINELTRAY_DATA_DIR", str(tmp_path))
     state = _ThemeState()
     # Dark palette has a very dark background colour
@@ -40,6 +40,7 @@ def test_default_palette_is_dark_palette(
 # ---------------------------------------------------------------------------
 # Save / load round-trip
 # ---------------------------------------------------------------------------
+
 
 def test_save_writes_json_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("Z7_SENTINELTRAY_DATA_DIR", str(tmp_path))
@@ -72,22 +73,16 @@ def test_load_restores_dark_theme(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     """Dark preference is also preserved across sessions."""
     monkeypatch.setenv("Z7_SENTINELTRAY_DATA_DIR", str(tmp_path))
 
-    _prefs_path(tmp_path).write_text(
-        json.dumps({"dark_theme": True}), encoding="utf-8"
-    )
+    _prefs_path(tmp_path).write_text(json.dumps({"dark_theme": True}), encoding="utf-8")
 
     state = _ThemeState()
     assert state.is_dark is True
 
 
-def test_light_palette_loaded_after_save(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_light_palette_loaded_after_save(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("Z7_SENTINELTRAY_DATA_DIR", str(tmp_path))
 
-    _prefs_path(tmp_path).write_text(
-        json.dumps({"dark_theme": False}), encoding="utf-8"
-    )
+    _prefs_path(tmp_path).write_text(json.dumps({"dark_theme": False}), encoding="utf-8")
 
     state = _ThemeState()
     assert state.is_dark is False
@@ -99,6 +94,7 @@ def test_light_palette_loaded_after_save(
 # Resilience
 # ---------------------------------------------------------------------------
 
+
 def test_corrupted_prefs_falls_back_to_dark(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -109,9 +105,7 @@ def test_corrupted_prefs_falls_back_to_dark(
     assert state.is_dark is True
 
 
-def test_save_creates_parent_directory(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_save_creates_parent_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """_save() must create the config directory if it doesn't exist yet."""
     data_dir = tmp_path / "nested" / "config"
     monkeypatch.setenv("Z7_SENTINELTRAY_DATA_DIR", str(data_dir))

@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from z7_sentineltray.app import Notifier
 from z7_sentineltray.config import AppConfig, EmailConfig, MonitorConfig
@@ -50,7 +50,7 @@ def test_debounce_skips_recent_messages(monkeypatch) -> None:
     status = StatusStore()
     notifier = Notifier(config=config, status=status)
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     for monitor in notifier._monitors:
         monitor.last_sent = {
             "recent": now,

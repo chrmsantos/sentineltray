@@ -1,4 +1,5 @@
-﻿"""Tests for _build_alert_message — delta enrichment on alert notifications."""
+"""Tests for _build_alert_message — delta enrichment on alert notifications."""
+
 from __future__ import annotations
 
 from z7_sentineltray.app import _build_alert_message

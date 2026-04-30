@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import pytest
 
@@ -10,7 +10,7 @@ def test_validate_regex_accepts_valid() -> None:
 
 
 def test_validate_regex_rejects_invalid() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="invalid regex"):
         validate_regex("pattern", r"[")
 
 
@@ -19,5 +19,5 @@ def test_validate_email_address_accepts_valid() -> None:
 
 
 def test_validate_email_address_rejects_invalid() -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="valid email address"):
         validate_email_address("email", "invalid")
