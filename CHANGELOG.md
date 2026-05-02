@@ -1,5 +1,11 @@
 ﻿# Changelog
 
+## 2026-05-02 (5.8.0)
+
+- Novo: tela de splash exibida quase imediatamente após a proteção de instância única, antes de qualquer I/O ou carregamento de configuração — evita que o usuário tente abrir o app múltiplas vezes sem feedback.
+- Melhoria: `splash.py` usa thread daemon com interpretador Tcl/Tk isolado, sem interferência com a UI principal; anima "Iniciando···" a cada 400 ms; fecha automaticamente antes de qualquer janela subsequente (editor de config, prompt de senha SMTP ou janela principal).
+- Melhoria: import de `dpapi_utils` movido para dentro de `_prompt_smtp_passwords()` — módulo carregado apenas quando de fato necessário (senha SMTP ausente), reduzindo levemente o tempo de inicialização no caminho normal.
+
 ## 2026-04-30 (5.7.0)
 
 - Qualidade: refatoração abrangente de boas práticas Python em todos os 21 módulos do pacote `z7_sentineltray` — docstrings no estilo Google, anotações de tipo completas, anti-padrões corrigidos (TRY/SIM/N/C90/ANN/RUF).
