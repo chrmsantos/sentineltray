@@ -1454,9 +1454,9 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
     def _check_exit() -> None:
         if exit_event.is_set():
             stop_holder[0].set()
-            tray.stop()
             with contextlib.suppress(Exception):
                 root.quit()
+            tray.stop()
             return
         root.after(300, _check_exit)
 

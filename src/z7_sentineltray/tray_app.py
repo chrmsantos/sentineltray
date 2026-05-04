@@ -183,7 +183,7 @@ class TrayIcon:
             self._on_open_status()
 
     def _on_exit(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
-        icon.stop()
+        self.stop()  # nullifies self._icon to prevent a second stop() call from _check_exit
         self._on_exit_requested()
 
     # ------------------------------------------------------------------

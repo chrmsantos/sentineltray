@@ -1,5 +1,10 @@
 ﻿# Changelog
 
+## 2026-05-04 (6.0.0)
+
+- Correção: ao clicar em "Sair" o executável travava — `_on_exit` agora chama `self.stop()` (que zera `self._icon = None`) em vez de `icon.stop()` diretamente, evitando que `_check_exit` chame `stop()` numa instância pystray já encerrada e bloqueie o processo indefinidamente.
+- Correção: `_check_exit` chama `root.quit()` antes de `tray.stop()`, garantindo que o mainloop do Tkinter encerre imediatamente independentemente do tempo de cleanup do tray.
+
 ## 2026-05-02 (5.8.0)
 
 - Novo: tela de splash exibida quase imediatamente após a proteção de instância única, antes de qualquer I/O ou carregamento de configuração — evita que o usuário tente abrir o app múltiplas vezes sem feedback.
