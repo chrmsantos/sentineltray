@@ -89,14 +89,14 @@ class SplashScreen:
                 bg=self._BG,
             ).place(relx=0.5, y=80, anchor="center")
 
-            _dot_var = tk.StringVar(value="Iniciando   ")
-            tk.Label(
+            _label_dot = tk.Label(
                 inner,
-                textvariable=_dot_var,
+                text="Iniciando   ",
                 font=("Segoe UI", 9),
                 fg=self._TEXT,
                 bg=self._BG,
-            ).place(relx=0.5, y=112, anchor="center")
+            )
+            _label_dot.place(relx=0.5, y=112, anchor="center")
 
             _root.lift()
             _root.attributes("-topmost", True)
@@ -115,7 +115,7 @@ class SplashScreen:
 
         # Create non-optional local aliases for the type checker.
         root_nn: tk.Tk = _root  # type: ignore[assignment]
-        dot_nn: tk.StringVar = _dot_var  # type: ignore[assignment]
+        label_dot_nn: tk.Label = _label_dot  # type: ignore[assignment]
         tick_count = [0]
 
         def _tick() -> None:
@@ -127,7 +127,7 @@ class SplashScreen:
             # Advance dot animation every 8 ticks × 50 ms = 400 ms
             if tick_count[0] % 8 == 0:
                 phase = (tick_count[0] // 8) % 4
-                dot_nn.set("Iniciando" + ("." * phase).ljust(3))
+                label_dot_nn.configure(text="Iniciando" + ("." * phase).ljust(3))
             root_nn.after(50, _tick)
 
         root_nn.after(0, _tick)
