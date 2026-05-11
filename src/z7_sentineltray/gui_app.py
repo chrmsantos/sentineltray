@@ -1736,17 +1736,6 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
         )
         config_holder[0] = new_cfg
 
-    editor = ConfigEditorWindow(
-        root,
-        on_saved=_reload_notifier,
-        on_edit_recipients=open_recipients,
-        on_edit_smtp_credentials=open_smtp_credentials,
-        theme_state=theme,
-    )
-
-    def open_config() -> None:
-        root.after(0, editor.show)
-
     cfg_path = get_user_data_dir() / "config.local.yaml"
     recipients_editor = EditToAddressesDialog(
         root,
@@ -1769,6 +1758,17 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
 
     def open_smtp_credentials() -> None:
         root.after(0, smtp_credentials_dialog.show)
+
+    editor = ConfigEditorWindow(
+        root,
+        on_saved=_reload_notifier,
+        on_edit_recipients=open_recipients,
+        on_edit_smtp_credentials=open_smtp_credentials,
+        theme_state=theme,
+    )
+
+    def open_config() -> None:
+        root.after(0, editor.show)
 
     # ── Status window ─────────────────────────────────────────────────────────
     window = StatusWindow(
@@ -1827,10 +1827,6 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
     def _check_exit() -> None:
         if exit_event.is_set():
             stop_holder[0].set()
-            # Run tray.stop() in a daemon thread so the Tkinter main thread is
-            # never blocked by pystray's internal join — which would cause the
-            # window to become "not responding" and be killed by Windows.
-            Thread(target=tray.stop, daemon=True, name="tray-cleanup").start()
             with contextlib.suppress(Exception):
                 root.quit()
             return
@@ -1845,6 +1841,12 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
         LOGGER.exception("GUI mainloop error", extra={"category": "startup"})
     finally:
         stop_holder[0].set()
-        # Also non-blocking in the finally path (icon may already be None if
-        # _on_exit or _check_exit's daemon thread already completed).
+        # Destroy Tk explicitly here — before Python's interpreter-level shutdown
+        # — so Tcl's finalizer runs while the main thread is in a clean state.
+        # Leaving root alive causes a hang when Python's GC calls root.__del__
+        # after the Tcl/Tk DLLs have already started tearing down.
+        with contextlib.suppress(Exception):
+            root.destroy()
+        # Stop the tray icon in a daemon thread; pystray's stop() joins its own
+        # setup thread (up to 5 s) so we must not block the main thread here.
         Thread(target=tray.stop, daemon=True, name="tray-cleanup-final").start()

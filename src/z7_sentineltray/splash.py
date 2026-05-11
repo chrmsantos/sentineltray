@@ -140,5 +140,12 @@ class SplashScreen:
                 root_nn.destroy()
 
     def close(self) -> None:
-        """Signal the splash to close. Safe to call multiple times from any thread."""
+        """Signal the splash to close and wait for the thread to exit.
+
+        Waits for the background Tcl/Tk interpreter to be fully destroyed before
+        returning, so it is safe to create a new ``tk.Tk()`` in the main thread
+        immediately after this call returns.  Safe to call multiple times from
+        any thread.
+        """
         self._close.set()
+        self._thread.join(timeout=3)
