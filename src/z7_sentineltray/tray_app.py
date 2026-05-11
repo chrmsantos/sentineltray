@@ -183,8 +183,16 @@ class TrayIcon:
             self._on_open_status()
 
     def _on_exit(self, icon: pystray.Icon, item: pystray.MenuItem) -> None:
-        self.stop()  # nullifies self._icon to prevent a second stop() call from _check_exit
+        # Null _icon immediately so _check_exit / watchdog won't attempt a second stop.
+        # The actual icon.stop() is dispatched to a daemon thread to avoid blocking
+        # the pystray callback thread (which may be the Win32 WndProc thread).
+        icon_ref = self._icon
+        self._icon = None
         self._on_exit_requested()
+        if icon_ref is not None:
+            threading.Thread(
+                target=icon_ref.stop, daemon=True, name="tray-exit-stop"
+            ).start()
 
     # ------------------------------------------------------------------
     # Public interface

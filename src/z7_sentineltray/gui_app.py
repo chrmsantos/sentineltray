@@ -260,10 +260,14 @@ class ConfigEditorWindow:
         parent: tk.Tk,
         *,
         on_saved: Callable[[AppConfig], None],
+        on_edit_recipients: Callable[[], None] | None = None,
+        on_edit_smtp_credentials: Callable[[], None] | None = None,
         theme_state: _ThemeState | None = None,
     ) -> None:
         self._parent = parent
         self._on_saved = on_saved
+        self._on_edit_recipients = on_edit_recipients
+        self._on_edit_smtp_credentials = on_edit_smtp_credentials
         self._theme = theme_state
         self._win: tk.Toplevel | None = None
         self._text: tk.Text | None = None
@@ -407,6 +411,14 @@ class ConfigEditorWindow:
         self._make_btn(
             footer, "↺  Restaurar valores padrão", self._restore_defaults, _BTN_DIM
         ).pack(side=tk.LEFT, padx=(0, 6))
+        if self._on_edit_recipients is not None:
+            self._make_btn(footer, "✉  Destinatários", self._on_edit_recipients, _TEAL).pack(
+                side=tk.LEFT, padx=(0, 6)
+            )
+        if self._on_edit_smtp_credentials is not None:
+            self._make_btn(
+                footer, "🔑  Credenciais SMTP", self._on_edit_smtp_credentials, _AMBER
+            ).pack(side=tk.LEFT, padx=(0, 6))
         self._make_btn(footer, "Cancelar", win.destroy, "#5a1a1a").pack(side=tk.RIGHT, padx=(0, 14))
 
         # Keyboard shortcut
@@ -1091,8 +1103,6 @@ class StatusWindow:
         get_config: Callable[[], AppConfig],
         on_manual_scan: Callable[[], None],
         on_open_config: Callable[[], None],
-        on_edit_recipients: Callable[[], None],
-        on_edit_smtp_credentials: Callable[[], None],
         on_exit: Callable[[], None],
         theme_state: _ThemeState | None = None,
     ) -> None:
@@ -1101,8 +1111,6 @@ class StatusWindow:
         self._get_config = get_config
         self._on_manual_scan = on_manual_scan
         self._on_open_config = on_open_config
-        self._on_edit_recipients = on_edit_recipients
-        self._on_edit_smtp_credentials = on_edit_smtp_credentials
         self._on_exit = on_exit
         self._theme = theme_state or _ThemeState()
         self._visible = False
@@ -1279,12 +1287,6 @@ class StatusWindow:
 
         self._make_btn(footer, "⟳  Verificar Agora", self._trigger_scan, _BLUE).pack(
             side=tk.LEFT, padx=(18, 6)
-        )
-        self._make_btn(footer, "✉  Destinatários", self._on_edit_recipients, _TEAL).pack(
-            side=tk.LEFT, padx=(0, 6)
-        )
-        self._make_btn(footer, "🔑  Credenciais SMTP", self._on_edit_smtp_credentials, _AMBER).pack(
-            side=tk.LEFT, padx=(0, 6)
         )
         self._make_btn(footer, "⚙  Avançado", self._on_open_config, _BTN_DIM).pack(
             side=tk.LEFT, padx=(0, 6)
@@ -1734,7 +1736,13 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
         )
         config_holder[0] = new_cfg
 
-    editor = ConfigEditorWindow(root, on_saved=_reload_notifier, theme_state=theme)
+    editor = ConfigEditorWindow(
+        root,
+        on_saved=_reload_notifier,
+        on_edit_recipients=open_recipients,
+        on_edit_smtp_credentials=open_smtp_credentials,
+        theme_state=theme,
+    )
 
     def open_config() -> None:
         root.after(0, editor.show)
@@ -1770,8 +1778,6 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
         get_config=lambda: config_holder[0],
         on_manual_scan=manual_scan_event.set,
         on_open_config=open_config,
-        on_edit_recipients=open_recipients,
-        on_edit_smtp_credentials=open_smtp_credentials,
         on_exit=exit_event.set,
         theme_state=theme,
     )
@@ -1821,9 +1827,12 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
     def _check_exit() -> None:
         if exit_event.is_set():
             stop_holder[0].set()
+            # Run tray.stop() in a daemon thread so the Tkinter main thread is
+            # never blocked by pystray's internal join — which would cause the
+            # window to become "not responding" and be killed by Windows.
+            Thread(target=tray.stop, daemon=True, name="tray-cleanup").start()
             with contextlib.suppress(Exception):
                 root.quit()
-            tray.stop()
             return
         root.after(300, _check_exit)
 
@@ -1836,4 +1845,6 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
         LOGGER.exception("GUI mainloop error", extra={"category": "startup"})
     finally:
         stop_holder[0].set()
-        tray.stop()
+        # Also non-blocking in the finally path (icon may already be None if
+        # _on_exit or _check_exit's daemon thread already completed).
+        Thread(target=tray.stop, daemon=True, name="tray-cleanup-final").start()
