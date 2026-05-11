@@ -1791,10 +1791,29 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
 
     # ── Watchdog thread ───────────────────────────────────────────────────────
     def _watchdog() -> None:
+        def _maybe_reload() -> None:
+            # Re-check under the main thread to avoid racing with GUI-triggered reloads.
+            if not thread_holder[0].is_alive() and not stop_holder[0].is_set():
+                _reload_notifier(config_holder[0])
+
         while not exit_event.wait(5):
+            # Restart notifier if it died unexpectedly.
             if not thread_holder[0].is_alive() and not stop_holder[0].is_set():
                 LOGGER.warning("Notifier died; restarting", extra={"category": "startup"})
-                _reload_notifier(config_holder[0])
+                root.after(0, _maybe_reload)
+            # Restart tray icon if its run loop exited unexpectedly (e.g. after
+            # system suspend/resume or a Win32 message-queue error).
+            if not tray.is_running() and not exit_event.is_set():
+                LOGGER.warning("Tray icon died; restarting", extra={"category": "startup"})
+                try:
+                    tray.stop()
+                    tray.start()
+                except Exception as exc:
+                    LOGGER.exception(
+                        "Failed to restart tray icon: %s",
+                        exc,
+                        extra={"category": "startup"},
+                    )
 
     Thread(target=_watchdog, daemon=True, name="gui-watchdog").start()
 

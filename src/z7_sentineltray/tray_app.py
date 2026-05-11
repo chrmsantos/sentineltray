@@ -245,3 +245,7 @@ class TrayIcon:
             except Exception as exc:
                 LOGGER.debug("Tray icon stop error: %s", exc, extra={"category": "startup"})
             self._icon = None
+
+    def is_running(self) -> bool:
+        """Return ``True`` if the tray icon thread is alive."""
+        return self._thread is not None and self._thread.is_alive()
