@@ -61,9 +61,9 @@ monitors:
     # Após todas as tentativas falharem, a mensagem vai para a fila persistente.
     retry_attempts: 2
 
-    # Tempo de espera (em segundos) entre tentativas consecutivas de reenvio.
-    # Segue estratégia de backoff linear: cada tentativa espera esse valor multiplicado
-    # pelo número da tentativa.
+    # Tempo de espera base (em segundos) entre tentativas consecutivas de reenvio.
+    # Segue estratégia de backoff exponencial: a espera dobra a cada tentativa
+    # (backoff_seconds * 2^tentativa).
     retry_backoff_seconds: 3
 
 # ─────────────────────────────────────────────────────────────────────────────

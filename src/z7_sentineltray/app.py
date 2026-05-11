@@ -183,15 +183,24 @@ def _get_commit_hash() -> str:
         if not head_path.exists():
             return ""
         ref = head_path.read_text(encoding="utf-8").strip()
-        if ref.startswith("ref:"):
-            ref_path = base / ".git" / ref.replace("ref:", "").strip()
-            if ref_path.exists():
-                return ref_path.read_text(encoding="utf-8").strip()
+        if not ref.startswith("ref:"):
+            return ref  # detached HEAD — already a commit hash
+        ref_name = ref.replace("ref:", "").strip()
+        ref_path = base / ".git" / ref_name
+        if ref_path.exists():
+            return ref_path.read_text(encoding="utf-8").strip()
+        # Fallback: check packed-refs
+        packed = base / ".git" / "packed-refs"
+        if packed.exists():
+            for line in packed.read_text(encoding="utf-8").splitlines():
+                if line.startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) == 2 and parts[1] == ref_name:  # noqa: PLR2004
+                    return parts[0]
+        return ""
     except Exception:
         return ""
-    else:
-        return ref
-    return ""
 
 
 def _check_smtp_health(config: AppConfig) -> None:

@@ -345,6 +345,65 @@ def _read_command(prompt: str, refresh_event: Event, exit_event: Event | None = 
             time.sleep(0.05)
 
 
+def _update_smtp_credentials_console(config: AppConfig) -> None:
+    """Prompt for updated SMTP credentials for all monitors and persist them."""
+    print("\nAtualizar Credenciais SMTP")
+    print("-" * 30)
+    for index, monitor in enumerate(config.monitors, start=1):
+        old_username = str(monitor.email.smtp_username or "").strip()
+        old_from = str(monitor.email.from_address or "").strip()
+        print(f"\nMonitor {index} — Usuário atual: {old_username or '(não definido)'}")
+        try:
+            new_username = input(f"  Novo usuário [{old_username}]: ").strip()
+        except KeyboardInterrupt:
+            print("\nCancelado.")
+            return
+        if not new_username:
+            new_username = old_username
+        password = prompt_smtp_password_gui(new_username, index)
+        if password is None:
+            print("  Senha não informada — mantendo a senha atual.")
+            password = ""
+        else:
+            password = password.strip()
+        if new_username != old_username:
+            local_path = get_user_data_dir() / "config.local.yaml"
+            try:
+                yaml_text = local_path.read_text(encoding="utf-8")
+                # Patch this single monitor's username
+                monitors_count = len(config.monitors)
+                all_usernames = [
+                    new_username if i == index - 1 else str(m.email.smtp_username or "")
+                    for i, m in enumerate(config.monitors)
+                ]
+                from .gui_app import _patch_from_address, _patch_smtp_username
+
+                patched = _patch_smtp_username(yaml_text, all_usernames)
+                if old_from == old_username:
+                    all_from = [
+                        new_username if i == index - 1 else str(m.email.from_address or "")
+                        for i, m in enumerate(config.monitors)
+                    ]
+                    patched = _patch_from_address(patched, all_from)
+                local_path.write_text(patched, encoding="utf-8")
+                print(f"  Usuário atualizado para: {new_username}")
+                if old_from == old_username:
+                    print(f"  Remetente (from_address) sincronizado: {new_username}")
+            except Exception as exc:
+                LOGGER.warning("Failed to update SMTP username in config: %s", exc)
+                print(f"  AVISO: falha ao atualizar usuário no config: {exc}")
+        if password:
+            os.environ[f"Z7_SENTINELTRAY_SMTP_PASSWORD_{index}"] = password
+            try:
+                secret_path = get_user_data_dir() / f"smtp_password_{index}.dpapi"
+                save_secret(secret_path, password)
+                print("  Senha salva com segurança (DPAPI).")
+            except Exception as exc:
+                LOGGER.warning("Failed to store SMTP password securely: %s", exc)
+                print(f"  AVISO: falha ao salvar senha: {exc}")
+    print("")
+
+
 def run_console(config: AppConfig) -> None:  # noqa: C901
     """Start the interactive console loop with tray icon support."""
     status = StatusStore()
@@ -458,6 +517,7 @@ def run_console(config: AppConfig) -> None:  # noqa: C901
                 print(line)
             print("Comandos:")
             print("  [C] Editar config")
+            print("  [P] Credenciais SMTP")
             print("  [R] Repositório")
             print("  [Q] Sair")
             print("")
@@ -474,6 +534,29 @@ def run_console(config: AppConfig) -> None:  # noqa: C901
             if command in ("c", "config"):
                 apply_config_edit()
                 on_open()
+            elif command in ("p", "smtp", "credenciais"):
+                _update_smtp_credentials_console(config)
+                local_path = get_user_data_dir() / "config.local.yaml"
+                try:
+                    config = load_config(str(local_path))
+                    stop_event.set()
+                    try:
+                        notifier_thread.join(timeout=5)
+                    except Exception as exc:
+                        LOGGER.warning("Failed to stop notifier for SMTP reload: %s", exc)
+                    stop_event = Event()
+                    status.set_last_error("")
+                    notifier_thread = _start_notifier(
+                        config,
+                        status,
+                        stop_event,
+                        manual_scan_event,
+                        scan_complete_event,
+                        test_message_event,
+                    )
+                except Exception as exc:
+                    print(f"Falha ao recarregar config: {exc}")
+                    time.sleep(2)
             elif command in ("r", "repo", "repositório", "repositorio"):
                 webbrowser.open(_PROJECT_REPO_URL)
             apply_config_edit()

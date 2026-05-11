@@ -178,7 +178,7 @@ class AppConfig:
     email_queue_max_age_seconds: int = 86400
     email_queue_max_attempts: int = 10
     email_queue_retry_base_seconds: int = 30
-    pause_on_user_active: bool = False
+    pause_on_user_active: bool = True
     pause_idle_threshold_seconds: int = 180
     monitors: list[MonitorConfig] = field(default_factory=lambda: cast(list[MonitorConfig], []))
     config_version: int = 1

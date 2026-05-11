@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import os
 import re
 import tkinter as tk
 import webbrowser
@@ -16,6 +17,7 @@ from tkinter import messagebox
 
 from .app import Notifier
 from .config import AppConfig, get_project_root, get_user_data_dir, load_config
+from .dpapi_utils import save_secret
 from .status import StatusStore, format_timestamp
 from .tray_app import TrayIcon, set_console_visible
 from .validation_utils import validate_email_address
@@ -790,6 +792,291 @@ class EditToAddressesDialog:
         win.geometry(f"+{sx}+{sy}")
 
 
+class SmtpCredentialsDialog:
+    """Modal dialog to update SMTP username and password for all monitors."""
+
+    def __init__(
+        self,
+        parent: tk.Tk,
+        *,
+        cfg_path: Path,
+        get_config: Callable[[], AppConfig],
+        on_saved: Callable[[AppConfig], None],
+        theme_state: _ThemeState | None = None,
+    ) -> None:
+        self._parent = parent
+        self._cfg_path = cfg_path
+        self._get_config = get_config
+        self._on_saved = on_saved
+        self._theme = theme_state
+        self._win: tk.Toplevel | None = None
+
+    def show(self) -> None:
+        """Show the SMTP credentials editor, raising it if already open."""
+        if self._win is not None and self._win.winfo_exists():
+            self._win.lift()
+            self._win.focus_force()
+            return
+        self._build()
+
+    def _build(self) -> None:  # noqa: C901
+        cfg = self._get_config()
+        monitors = cfg.monitors
+        # Snapshot old usernames to detect whether from_address should be auto-synced
+        old_usernames = [str(m.email.smtp_username or "") for m in monitors]
+        old_from_addresses = [str(m.email.from_address or "") for m in monitors]
+
+        win = tk.Toplevel(self._parent)
+        self._win = win
+        win.title("Z7_SentinelTray — Credenciais SMTP")
+        win.configure(bg=_BG)
+        win.resizable(False, False)
+        win.transient(self._parent)
+        win.grab_set()
+        win.focus_force()
+
+        # Header
+        header = tk.Frame(win, bg=_SURFACE, pady=10)
+        header.pack(fill=tk.X)
+        tk.Label(
+            header,
+            text="🔑  Credenciais SMTP",
+            font=("Segoe UI", 11, "bold"),
+            fg=_AMBER,
+            bg=_SURFACE,
+        ).pack(side=tk.LEFT, padx=16)
+        tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
+
+        body = tk.Frame(win, bg=_BG, padx=20, pady=14)
+        body.pack(fill=tk.BOTH)
+
+        tk.Label(
+            body,
+            text="Informe o usuário e a senha SMTP para cada monitor.\n"
+            "Deixe a senha em branco para manter a senha atual.",
+            font=("Segoe UI", 9),
+            fg=_MUTED,
+            bg=_BG,
+            justify="left",
+        ).pack(anchor="w", pady=(0, 12))
+
+        user_entries: list[tk.Entry] = []
+        pass_entries: list[tk.Entry] = []
+
+        def _make_label(parent: tk.Frame, text: str) -> None:
+            tk.Label(
+                parent, text=text, font=("Segoe UI", 9), fg=_MUTED, bg=_BG, width=8, anchor="w"
+            ).pack(side=tk.LEFT)
+
+        for idx, monitor in enumerate(monitors, start=1):
+            title = monitor.window_title_regex or f"Monitor {idx}"
+            if len(title) > 50:
+                title = title[:47] + "..."
+            tk.Label(
+                body,
+                text=f"Monitor {idx} — {title}:",
+                font=("Segoe UI", 9, "bold"),
+                fg=_TEXT,
+                bg=_BG,
+                anchor="w",
+            ).pack(anchor="w")
+
+            # Username row
+            row_u = tk.Frame(body, bg=_BG)
+            row_u.pack(fill=tk.X, pady=(2, 4))
+            _make_label(row_u, "Usuário:")
+            user_entry = tk.Entry(
+                row_u,
+                font=("Segoe UI", 9),
+                bg=_SURFACE,
+                fg=_TEXT,
+                insertbackground=_TEXT,
+                relief="flat",
+                width=44,
+            )
+            user_entry.insert(0, str(monitor.email.smtp_username or ""))
+            user_entry.pack(side=tk.LEFT, padx=(0, 8))
+            user_entries.append(user_entry)
+
+            # Password row with show/hide toggle
+            row_p = tk.Frame(body, bg=_BG)
+            row_p.pack(fill=tk.X, pady=(0, 10))
+            _make_label(row_p, "Senha:")
+            pass_entry = tk.Entry(
+                row_p,
+                show="*",
+                font=("Segoe UI", 9),
+                bg=_SURFACE,
+                fg=_TEXT,
+                insertbackground=_TEXT,
+                relief="flat",
+                width=38,
+            )
+            pass_entry.pack(side=tk.LEFT, padx=(0, 4))
+            pass_entries.append(pass_entry)
+
+            show_var = tk.BooleanVar(value=False)
+
+            def _make_toggle(entry: tk.Entry, var: tk.BooleanVar) -> Callable[[], None]:
+                def _toggle() -> None:
+                    entry.config(show="" if var.get() else "*")
+                return _toggle
+
+            tk.Checkbutton(
+                row_p,
+                text="Mostrar",
+                variable=show_var,
+                command=_make_toggle(pass_entry, show_var),
+                font=("Segoe UI", 8),
+                bg=_BG,
+                fg=_MUTED,
+                activebackground=_BG,
+                activeforeground=_TEXT,
+                selectcolor=_SURFACE,
+                relief=tk.FLAT,
+                bd=0,
+            ).pack(side=tk.LEFT)
+
+        status_var = tk.StringVar()
+        status_lbl = tk.Label(
+            body,
+            textvariable=status_var,
+            font=("Segoe UI", 8),
+            fg=_RED,
+            bg=_BG,
+            anchor="w",
+            wraplength=480,
+        )
+        status_lbl.pack(anchor="w", pady=(0, 4))
+
+        tk.Frame(win, bg=_BORDER, height=1).pack(fill=tk.X)
+        footer = tk.Frame(win, bg=_SURFACE, pady=10)
+        footer.pack(fill=tk.X)
+
+        def on_save() -> None:
+            new_usernames = [e.get().strip() for e in user_entries]
+            new_passwords = [e.get() for e in pass_entries]
+
+            for idx, username in enumerate(new_usernames, start=1):
+                if not username:
+                    status_var.set(f"✗ Monitor {idx}: o usuário SMTP não pode estar vazio.")
+                    status_lbl.configure(fg=_RED)
+                    return
+
+            try:
+                yaml_text = self._cfg_path.read_text(encoding="utf-8")
+            except Exception as exc:
+                status_var.set(f"✗ Falha ao ler arquivo: {exc}")
+                status_lbl.configure(fg=_RED)
+                return
+
+            try:
+                patched = _patch_smtp_username(yaml_text, new_usernames)
+            except ValueError as exc:
+                status_var.set(f"✗ {exc}")
+                status_lbl.configure(fg=_RED)
+                return
+
+            # Auto-sync from_address when it previously matched smtp_username
+            synced_from = [
+                new_usernames[i]
+                if old_from_addresses[i] == old_usernames[i] and new_usernames[i] != old_usernames[i]
+                else old_from_addresses[i]
+                for i in range(len(monitors))
+            ]
+            if synced_from != old_from_addresses:
+                try:
+                    patched = _patch_from_address(patched, synced_from)
+                except ValueError as exc:
+                    status_var.set(f"✗ {exc}")
+                    status_lbl.configure(fg=_RED)
+                    return
+
+            tmp = self._cfg_path.with_suffix(".yaml.smtp_tmp")
+            try:
+                tmp.write_text(patched, encoding="utf-8")
+                new_cfg = load_config(str(tmp))
+            except Exception as exc:
+                status_var.set(f"✗ Config inválida: {exc}")
+                status_lbl.configure(fg=_RED)
+                return
+            finally:
+                with contextlib.suppress(Exception):
+                    tmp.unlink(missing_ok=True)
+
+            try:
+                self._cfg_path.write_text(patched, encoding="utf-8")
+            except Exception as exc:
+                status_var.set(f"✗ Falha ao salvar: {exc}")
+                status_lbl.configure(fg=_RED)
+                return
+
+            # Persist new passwords securely via DPAPI
+            for idx, password in enumerate(new_passwords, start=1):
+                if not password:
+                    continue
+                os.environ[f"Z7_SENTINELTRAY_SMTP_PASSWORD_{idx}"] = password
+                try:
+                    secret_path = get_user_data_dir() / f"smtp_password_{idx}.dpapi"
+                    save_secret(secret_path, password)
+                except Exception as exc:
+                    LOGGER.warning(
+                        "Failed to store SMTP password for monitor %s: %s",
+                        idx,
+                        exc,
+                        extra={"category": "config"},
+                    )
+
+            self._on_saved(new_cfg)
+            win.destroy()
+
+        def on_cancel() -> None:
+            win.destroy()
+
+        tk.Button(
+            footer,
+            text="✓  Salvar",
+            command=on_save,
+            font=("Segoe UI", 9, "bold"),
+            fg=_WHITE,
+            bg=_GREEN2,
+            activeforeground=_WHITE,
+            activebackground=_GREEN2,
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=14,
+            pady=6,
+            bd=0,
+        ).pack(side=tk.LEFT, padx=(16, 6))
+        tk.Button(
+            footer,
+            text="Cancelar",
+            command=on_cancel,
+            font=("Segoe UI", 9, "bold"),
+            fg=_TEXT,
+            bg=_BTN_DIM,
+            activeforeground=_TEXT,
+            activebackground=_BTN_DIM,
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=14,
+            pady=6,
+            bd=0,
+        ).pack(side=tk.LEFT)
+
+        win.bind("<Escape>", lambda _e: on_cancel())
+        win.protocol("WM_DELETE_WINDOW", on_cancel)
+
+        if self._theme is not None and not self._theme.is_dark:
+            _apply_theme_walk(win, _DARK_PALETTE, _LIGHT_PALETTE)
+
+        win.update_idletasks()
+        w, h = win.winfo_reqwidth(), win.winfo_reqheight()
+        sx = (win.winfo_screenwidth() - w) // 2
+        sy = (win.winfo_screenheight() - h) // 2
+        win.geometry(f"+{sx}+{sy}")
+
+
 class StatusWindow:
     """Beautiful tkinter status window for Z7_SentinelTray."""
 
@@ -805,6 +1092,7 @@ class StatusWindow:
         on_manual_scan: Callable[[], None],
         on_open_config: Callable[[], None],
         on_edit_recipients: Callable[[], None],
+        on_edit_smtp_credentials: Callable[[], None],
         on_exit: Callable[[], None],
         theme_state: _ThemeState | None = None,
     ) -> None:
@@ -814,6 +1102,7 @@ class StatusWindow:
         self._on_manual_scan = on_manual_scan
         self._on_open_config = on_open_config
         self._on_edit_recipients = on_edit_recipients
+        self._on_edit_smtp_credentials = on_edit_smtp_credentials
         self._on_exit = on_exit
         self._theme = theme_state or _ThemeState()
         self._visible = False
@@ -992,6 +1281,9 @@ class StatusWindow:
             side=tk.LEFT, padx=(18, 6)
         )
         self._make_btn(footer, "✉  Destinatários", self._on_edit_recipients, _TEAL).pack(
+            side=tk.LEFT, padx=(0, 6)
+        )
+        self._make_btn(footer, "🔑  Credenciais SMTP", self._on_edit_smtp_credentials, _AMBER).pack(
             side=tk.LEFT, padx=(0, 6)
         )
         self._make_btn(footer, "⚙  Avançado", self._on_open_config, _BTN_DIM).pack(
@@ -1309,6 +1601,50 @@ def _patch_to_addresses(yaml_text: str, addresses_per_monitor: list[list[str]]) 
     return result
 
 
+def _patch_smtp_username(yaml_text: str, usernames_per_monitor: list[str]) -> str:
+    """Replace each smtp_username line in *yaml_text* with the given values.
+
+    Preserves all other content (comments, keys, order). Raises ValueError if the
+    number of smtp_username fields in the file differs from *usernames_per_monitor*.
+    """
+    pattern = re.compile(r"^( *smtp_username:)[ \t].*$", re.MULTILINE)
+    matches = list(pattern.finditer(yaml_text))
+    if len(matches) != len(usernames_per_monitor):
+        raise ValueError(
+            f"Número de campos smtp_username no arquivo ({len(matches)}) "
+            f"difere do número de monitores ({len(usernames_per_monitor)}). "
+            "Use o editor de configuração completo."
+        )
+    result = yaml_text
+    for match, new_user in zip(reversed(matches), reversed(usernames_per_monitor), strict=False):
+        indent = match.group(1)  # e.g. "    smtp_username:"
+        new_line = f"{indent} '{new_user}'"
+        result = result[: match.start()] + new_line + result[match.end() :]
+    return result
+
+
+def _patch_from_address(yaml_text: str, addresses_per_monitor: list[str]) -> str:
+    """Replace each from_address line in *yaml_text* with the given values.
+
+    Preserves all other content (comments, keys, order). Raises ValueError if the
+    number of from_address fields in the file differs from *addresses_per_monitor*.
+    """
+    pattern = re.compile(r"^( *from_address:)[ \t].*$", re.MULTILINE)
+    matches = list(pattern.finditer(yaml_text))
+    if len(matches) != len(addresses_per_monitor):
+        raise ValueError(
+            f"Número de campos from_address no arquivo ({len(matches)}) "
+            f"difere do número de monitores ({len(addresses_per_monitor)}). "
+            "Use o editor de configuração completo."
+        )
+    result = yaml_text
+    for match, new_addr in zip(reversed(matches), reversed(addresses_per_monitor), strict=False):
+        indent = match.group(1)
+        new_line = f"{indent} '{new_addr}'"
+        result = result[: match.start()] + new_line + result[match.end() :]
+    return result
+
+
 def _fmt_next_scan(last_scan: str, poll_interval_seconds: int) -> str:
     if not last_scan or not poll_interval_seconds:
         return "—"
@@ -1415,6 +1751,17 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
     def open_recipients() -> None:
         root.after(0, recipients_editor.show)
 
+    smtp_credentials_dialog = SmtpCredentialsDialog(
+        root,
+        cfg_path=cfg_path,
+        get_config=lambda: config_holder[0],
+        on_saved=_reload_notifier,
+        theme_state=theme,
+    )
+
+    def open_smtp_credentials() -> None:
+        root.after(0, smtp_credentials_dialog.show)
+
     # ── Status window ─────────────────────────────────────────────────────────
     window = StatusWindow(
         root,
@@ -1424,6 +1771,7 @@ def run_gui(config: AppConfig, *, smtp_validator: object = None) -> None:
         on_manual_scan=manual_scan_event.set,
         on_open_config=open_config,
         on_edit_recipients=open_recipients,
+        on_edit_smtp_credentials=open_smtp_credentials,
         on_exit=exit_event.set,
         theme_state=theme,
     )
